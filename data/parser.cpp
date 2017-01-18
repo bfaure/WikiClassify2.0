@@ -391,6 +391,8 @@ public:
 	}
 };
 
+
+// helper function for the parse_categories_2 use case
 void check_for_save(vector<category> &buf, int save_per_file, string save_folder, bool force_save=false)
 {
 	if ((buf.size() >= save_per_file) or force_save)
@@ -415,12 +417,10 @@ void check_for_save(vector<category> &buf, int save_per_file, string save_folder
 // describing a category (for example, something like this: 
 // https://en.wikipedia.org/wiki/Category:1950_in_New_Zealand). The data is saved to the meta/
 // directory (same as investigate_meta outputs to)
-
 void parse_categories_2(string datadump_filename, int save_count=100, int per_file=10000)
 {
-	// namespace 14 is alloted to Category pages
-	string save_parent = "meta";
-	string save_folder = save_parent+"/parse_categories_2-"+to_string(time(0));
+	string save_parent = "outputs";
+	string save_folder = save_parent+"/parsed_categories-"+to_string(time(0));
 	create_directory("/"+save_folder);
 
 	int num_saved = 0;
@@ -468,9 +468,12 @@ void parse_categories_2(string datadump_filename, int save_count=100, int per_fi
 
 int main()
 {
-	string filename = "data/sources/enwiki-latest-pages-articles.xml";
+	// change this to the location of your data dump
+	string datadump_path = "sources/enwiki-latest-pages-articles.xml";
 
 	parse_categories_2(filename,10000000);
+
+	
 
 	cout<<"\nClosing program...\n";
 	return 1;
