@@ -102,7 +102,7 @@ void flush_single_buffer(vector<wikiPage> &buf, string &buf_cat, string dir)
 // are of the same category, called by the save_categories function
 void flush_category_buffer(vector<wikiPage> &buf, string &buf_cat, int articles_per_file)
 {
-	string dir = "data/parsed/test-"+to_string(exec_time)+"/";
+	string dir = "outputs/text/test-"+to_string(exec_time)+"/";
 	vector<wikiPage> file_buf;
 	for (int i=0; i<buf.size(); i++)
 	{
@@ -164,7 +164,7 @@ void save_categories(vector<vector<wikiPage>> &buf, vector<string> &buf_cats, in
 			flush_category_buffer(buf[i],buf_cats[i],articles_per_file);
 			buf.erase(buf.begin()+i);
 			buf_cats.erase(buf_cats.begin()+i);
-			// calling recursively to avoid problems with for loop indices
+			// calling recursively to avoid problems with for-loop indices
 			save_categories(buf,buf_cats,buffer_size,articles_per_file); 
 		}
 	}
@@ -188,44 +188,50 @@ void parse_categories(string filename, vector<string> categories, int buffer_siz
 
 	time_t start = clock();
 	exec_time = time(0);
-	string folder = "/data/parsed/test-"+to_string(exec_time);
+	string folder = "/outputs/text/test-"+to_string(exec_time);
 	create_directory(folder);
 
 	bool eof = false;
 	bool leave_formatting = false;
 
-	while(data.eof()==false){
+	while(data.eof()==false)
+	{
 		string page;
 		getPage(data,eof,page);
-		wikiPage temp(page,leave_formatting);
-
-		if (temp.isJunk)
-		{	
-			cout<<"\r                                                                    ";
-			cout<<"\rCaught junk page: "<<temp.title<<"\n";
-			continue;
-		}
-
-		string match = check_cats(categories,temp);
-
-		if (match != "no matches")
-		{
-			cout<<"\r                                                                    ";
-			cout<<"\rFound "<<temp.title<<" in category "<<match<<"\n";
-			add_to_buf(buf,buf_cats,match,temp);
-			foundCt++;
-		}
-
-		save_categories(buf,buf_cats,buffer_size,articles_per_file);
+		wikiPage temp(page,leave_formatting,"categories",categories);
 
 		pageCt++;
 		pageCtFloat = pageCt;
 
-		cout<<"\r                                                                        ";
+		if (temp.temp == "*none*"){ continue;}
+		foundCt++;
+
+		if (temp.isJunk)
+		{	
+			cout.flush();
+			cout<<"\r                                                                    ";
+			cout<<"\rCaught junk page in category: "<<temp.title<<"\n";
+			cout.flush();
+			continue;
+		}
+		if (temp.is_article==false)
+		{
+			cout.flush();
+			cout<<"\r                                                                    ";
+			cout<<"\rCaught \"Category\" page in category: "<<temp.title<<"\n";
+			cout.flush();
+			continue;
+		}
+
+		add_to_buf(buf,buf_cats,temp.temp,temp);
+		save_categories(buf,buf_cats,buffer_size,articles_per_file);
+		
 		cout.flush();
+		cout<<"\r                                                                        ";
 		cout<<"\rSearched:\t"<<pageCt<<"\tFound:\t"<<foundCt<<"\tArt/Second: "<<(pageCtFloat/((clock()-start)/CLOCKS_PER_SEC));
 		cout.flush();
 	}
+
 	cout<<"\n";
 	save_categories(buf,buf_cats,1,articles_per_file);
 }
@@ -391,7 +397,6 @@ public:
 	}
 };
 
-
 // helper function for the parse_categories_2 use case
 void check_for_save(vector<category> &buf, int save_per_file, string save_folder, bool force_save=false)
 {
@@ -462,17 +467,18 @@ void parse_categories_2(string datadump_filename, int save_count=100, int per_fi
 	}
 }
 
+//---------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------
 
-//---------------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------------
 
 int main()
 {
 	// change this to the location of your data dump
 	string datadump_path = "sources/enwiki-latest-pages-articles.xml";
+	//parse_categories_2(datadump_path,10000000);
 
-	parse_categories_2(filename,10000000);
-
+	vector<string> cats = {"fire","water"};
+	parse_categories(datadump_path,cats);
 	
 
 	cout<<"\nClosing program...\n";

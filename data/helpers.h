@@ -13,6 +13,7 @@ using namespace std;
 #include <sys/stat.h>
 #include <algorithm>
 #include <iostream>
+#include <ctype.h>
 
 void 	rebase_periods(string &page);
 void 	removeBetween(string &temp, string target, vector<string> endtargets);
@@ -53,6 +54,28 @@ void 	getFileHeader(ifstream &wikiFile, string &subject);
 void 	getFileHeader(ifstream &wikiFile, int &subject);
 void 	getFileHeader(ifstream &wikiFile, short &subject);
 void 	getFileHeader(ifstream &wikiFile, bool &subject);
+
+
+// convert a string to lowercase
+string to_lowercase(string &input)
+{
+	std::transform(input.begin(),input.end(),input.begin(),::tolower);
+	return input;
+
+	int i=0;
+	vector<char> str(input.c_str(), input.c_str()+input.size()+1);
+
+	char c;
+	while(str[i])
+	{
+		c = str[i];
+		putchar(tolower(c));
+		i++;
+	}
+	string temp(str.begin(),str.end());
+	return temp;
+}
+
 
 vector<string> split(const string &cat_str, string delim);
 
@@ -461,7 +484,8 @@ void fix_cat(vector<string> &cat){
     vector<string> temp;
     for(int i=0; i<cat.size(); i++){
         string str = cat[i];
-        removeTarget(str, "|");
+        replaceTarget(str,"|"," --> ");
+        //removeTarget(str, "|");
         temp.push_back(str);
     }
     cat = temp;

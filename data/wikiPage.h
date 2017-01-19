@@ -35,9 +35,14 @@ public:
     string          classification;
     unsigned long   size;
     string          save_location;
+    string          temp; // for message passing
+
+    // false if the page is not an article, i.e. it could have a title like
+    // "Category:XXX" or could be a talk page
+    bool            is_article;
 
 	wikiPage(ifstream &wikiFile);// reload from file
-	wikiPage(string pagestr, bool leave_wikitext, string code); // from string (choose formatting)
+	wikiPage(string pagestr, bool leave_wikitext, string code, vector<string> targs); // from string (choose formatting)
 	void save(ofstream &file);
 	void saveHTML(ofstream &file);
 	void removeFormatting();
@@ -45,7 +50,74 @@ public:
 };
 
 // wikipage constructor, leave_wikitext=false then remove formatting
-wikiPage::wikiPage(string pagestr, bool leave_wikitext=false, string code="multi_strict") {
+wikiPage::wikiPage(string pagestr, bool leave_wikitext=false, string code="multi_strict",vector<string> targs={"null"}) 
+{
+    is_article = true; // set to true by default
+
+    // only save if the article contains is in one of the requested categories
+    if(code=="categories")
+    {
+        parse(pagestr,"[[Category:", "]]", categories);
+        fix_cat(categories);
+        //checking if I have any of the categories
+        temp = "*none*";
+
+        // check if the article fits into one of the provided categories
+        for(int i=0; i<categories.size(); i++)
+        {
+            string cur = categories[i];
+            cur = to_lowercase(cur);
+
+            for(int k=0; k<targs.size(); k++)
+            {
+                if (cur == targs[k])
+                {
+                    temp = cur;
+                    break;
+                }
+            }
+
+            if (temp!="*none*")
+            {
+                break;
+            }
+        }
+
+        // if this article fits into one of the designated categories
+        if (temp!="*none*")
+        {
+            title = parse(pagestr, "<title>", "</title>"); // get the title
+
+            // if the article is a category page, mark it
+            if (title.find("Category:")!=string::npos)
+            {
+                is_article = false;
+                return;
+            }
+
+            text = get_article_body(pagestr);
+            if (text=="")
+            {
+                // page is junk so mark it and return from constructor
+                isJunk = true;
+                return;
+            }
+            isRedirect = false;
+            if(isWithin(text, "#REDIRECT"))
+                isRedirect = true;
+            isJunk = false;
+            size = sizeof(pagestr);
+            removeFormatting();
+            if (text=="")
+            {
+                // page is junk so mark it and return from constructor
+                isJunk = true;
+                return;
+            }
+            rebase_periods(text);
+            return;
+        }
+    }
 
     // only parsing out the title and the article body and categories
     if(code=="category")
@@ -240,7 +312,7 @@ void wikiPage::removeFormatting(){
     removeTarget(temp,"&lt;references;"); // remove references opener
     removeTarget(temp,"&lt;/references;"); // remove references closer
     //removeTarget(text,"&lt;gallery;"); // remove gallery operer
-    //removeTarget(text,"&lt;/gallery;"); // remove gallery closer
+    removeTarget(text,"&lt;/gallery;"); // remove gallery closer
     text = temp;
     return;
 }
