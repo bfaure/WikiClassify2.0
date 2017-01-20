@@ -4,6 +4,8 @@
 // (2) parse_categories()	--> scans datadump for articles in certain cats
 // (3) parse_meta() 		--> gets all article titles & categories
 // (4) investigate_meta() 	--> gets largest categories and their articles
+// (5) parse_categories2()  --> parses thru dump to find "Category:" articles
+// (6) parse_to_corpus()	--> parses thru dump and saves all parsed article bodies
 
 using namespace std;
 
@@ -37,7 +39,7 @@ void save_simple(vector<wikiPage> &buf, int buffer_size, int articles_per_file, 
 			if (buf[i].text.size()<400){
 				continue;
 			}
-			ofstream file("data/parsed/test-"+to_string(exec_time)+"/"+buf[i].title+".txt");
+			ofstream file("outputs/simple/test-"+to_string(exec_time)+"/"+buf[i].title+".txt");
 			buf[i].save(file);
 		}
 		buf.clear();
@@ -58,7 +60,7 @@ void parse_simple(string filename,int buffer_size=1, int articles_per_file=1)
 	vector<wikiPage> buf;
 	time_t start = clock();
 	exec_time = time(0);
-	string folder = "/data/parsed/test-"+to_string(exec_time);
+	string folder = "/outputs/simple/test-"+to_string(exec_time);
 	create_directory(folder);
 
 	bool eof = false;
@@ -285,7 +287,7 @@ void parse_meta(string filename, int buffer_size=10000)
 
 	time_t start = clock();
 	exec_time = time(0);
-	string folder = "data/parsed/meta-"+to_string(exec_time);
+	string folder = "outputs/articles/meta-"+to_string(exec_time);
 	create_directory("/"+folder);
 	ofstream readme(folder+"/readme.txt");
 
@@ -470,6 +472,82 @@ void parse_categories_2(string datadump_filename, int save_count=100, int per_fi
 //---------------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------------
 
+// helper function for parse_to_corpus
+void save_to_corpus(vector<wikiPage> &buf, string &path)
+{
+	string filename = path+"/"+to_string(time(0))+".txt";
+	cout<<"\r                                                                  ";
+	cout<<"\rWriting to "<<filename<<"\n";
+	ofstream file(filename);
+	string content = "";
+	for (int i=0; i<buf.size(); i++)
+	{
+		content += buf[i].text;
+	}
+	file<<content;
+	buf.clear();
+}
+
+// saves only the text portion of each article and saves all articles in the same file, does
+// not save by category. The number of articles saved per file is specified below.
+void parse_to_corpus(string datadump_filename, int num_to_save=50000)
+{
+	int per_file = 10000;
+	unsigned long num_saved = 0;
+
+	ifstream data(datadump_filename);
+	unsigned long long pageCt = 0;
+	float pageCtFloat = 0;
+	
+	vector<wikiPage> buf; // holds the found pages
+
+	time_t start = clock();
+	exec_time = time(0);
+	string folder = "outputs/simple/test-"+to_string(exec_time);
+	create_directory("/"+folder);
+
+	bool eof = false;
+
+	while(data.eof()==false){
+		string page; 
+		getPage(data,eof,page); // fetch an unprepped page
+		wikiPage wikipage_t(page,false,"body"); // parse page into wikiPage
+
+		if (wikipage_t.isJunk)
+		{
+			pageCt++;
+			continue;
+		}
+
+		buf.push_back(wikipage_t); // add to buffer
+
+		if (buf.size() >= per_file)
+		{ 
+			save_to_corpus(buf,folder); 
+			num_saved += per_file;
+
+			if (num_saved >= num_to_save)
+			{
+				return;
+			}
+		}
+
+		pageCt++;
+		pageCtFloat = pageCt;
+
+		cout<<"\r                                                                                   ";
+		cout.flush();
+		cout<<"\rSearched:\t"<<pageCt<<"\tArt/Second: "<<(pageCtFloat/((clock()-start)/CLOCKS_PER_SEC));
+		cout.flush();
+	}
+	cout<<"\n";
+	save_to_corpus(buf,folder);
+}
+
+//---------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------
+
+
 
 int main()
 {
@@ -477,9 +555,10 @@ int main()
 	string datadump_path = "sources/enwiki-latest-pages-articles.xml";
 	//parse_categories_2(datadump_path,10000000);
 
-	vector<string> cats = {"fire","water"};
-	parse_categories(datadump_path,cats);
+	//vector<string> cats = {"fire","water"};
+	//parse_categories(datadump_path,cats);
 	
+	parse_to_corpus(datadump_path);
 
 	cout<<"\nClosing program...\n";
 	return 1;

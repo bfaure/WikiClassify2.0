@@ -53,6 +53,38 @@ public:
 wikiPage::wikiPage(string pagestr, bool leave_wikitext=false, string code="multi_strict",vector<string> targs={"null"}) 
 {
     is_article = true; // set to true by default
+    isJunk = false; // set to false by default
+
+    // parse out only the body of the article
+    if(code=="body")
+    {
+        title = parse(pagestr, "<title>", "</title>"); // get the title
+        // if the article is a category page, mark it
+        if (title.find("Category:")!=string::npos)
+        {
+            isJunk = true;
+            return;
+        }
+        text = get_article_body(pagestr);
+        if (text=="")
+        {
+            isJunk = true;
+            return;
+        }
+        if(isWithin(text,"#REDIRECT"))
+        {
+            isJunk = true;
+            return;
+        }
+        removeFormatting();
+        if (text=="")
+        {
+            isJunk = true;
+            return;
+        }
+        rebase_periods(text);
+        return;
+    }
 
     // only save if the article contains is in one of the requested categories
     if(code=="categories")
