@@ -177,8 +177,11 @@ void save_categories(vector<vector<wikiPage>> &buf, vector<string> &buf_cats, in
 // category will be bundled together when they are saved. Recommend large buffer
 // and articles_per_file sizes. Each category will have it's own buffer. This can be
 // run with the full data dump easily
-void parse_categories(string filename, vector<string> categories, int buffer_size=10000, int articles_per_file=10000)
+void parse_categories(string filename, vector<string> categories, int buffer_size=25000, int articles_per_file=25000)
 {
+	// converting all of the input categories to lowercase before proceeding...
+	categories = to_lowercase(categories);
+
 	ifstream data(filename);
 
 	unsigned long long pageCt = 0;
@@ -196,8 +199,17 @@ void parse_categories(string filename, vector<string> categories, int buffer_siz
 	bool eof = false;
 	bool leave_formatting = false;
 
+	unsigned long long redir_ct = 0;
+	int refresh_rate = 100;
+
 	while(data.eof()==false)
 	{
+		cout.flush();
+		if (pageCt % refresh_rate == 0)
+			cout<<"\r                                                                                            ";
+		cout<<"\rSearched: "<<pageCt<<"\tFound: "<<foundCt<<"\tArt/Second: "<<(pageCtFloat/((clock()-start)/CLOCKS_PER_SEC))<<"\tRedir: "<<redir_ct;
+		cout.flush();
+
 		string page;
 		getPage(data,eof,page);
 		wikiPage temp(page,leave_formatting,"categories",categories);
@@ -205,33 +217,34 @@ void parse_categories(string filename, vector<string> categories, int buffer_siz
 		pageCt++;
 		pageCtFloat = pageCt;
 
+		if (temp.isRedirect)
+		{
+			redir_ct++;
+			continue;
+		}
+
 		if (temp.temp == "*none*"){ continue;}
 		foundCt++;
 
 		if (temp.isJunk)
 		{	
 			cout.flush();
-			cout<<"\r                                                                    ";
-			cout<<"\rCaught junk page in category: "<<temp.title<<"\n";
+			cout<<"\r                                                                                       ";
+			cout<<"\rCaught junk page: "<<temp.title<<"\n";
 			cout.flush();
 			continue;
 		}
 		if (temp.is_article==false)
 		{
 			cout.flush();
-			cout<<"\r                                                                    ";
-			cout<<"\rCaught \"Category\" page in category: "<<temp.title<<"\n";
+			cout<<"\r                                                                                       ";
+			cout<<"\rCaught \"Category\" page: "<<temp.title<<"\n";
 			cout.flush();
 			continue;
 		}
 
 		add_to_buf(buf,buf_cats,temp.temp,temp);
 		save_categories(buf,buf_cats,buffer_size,articles_per_file);
-		
-		cout.flush();
-		cout<<"\r                                                                        ";
-		cout<<"\rSearched:\t"<<pageCt<<"\tFound:\t"<<foundCt<<"\tArt/Second: "<<(pageCtFloat/((clock()-start)/CLOCKS_PER_SEC));
-		cout.flush();
 	}
 
 	cout<<"\n";
@@ -553,12 +566,13 @@ int main()
 {
 	// change this to the location of your data dump
 	string datadump_path = "sources/enwiki-latest-pages-articles.xml";
+	//datadump_path = "sources/Wikipedia-20170120202524.xml";
 	//parse_categories_2(datadump_path,10000000);
 
-	//vector<string> cats = {"fire","water"};
-	//parse_categories(datadump_path,cats);
+	vector<string> cats = {"Living people","American films","Association football defenders","Named minor planets","Villages in Turkey","Rivers of Romania","Moths of Europe"};
+	parse_categories(datadump_path,cats);
 	
-	parse_to_corpus(datadump_path);
+	//parse_to_corpus(datadump_path);
 
 	cout<<"\nClosing program...\n";
 	return 1;

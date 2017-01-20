@@ -89,6 +89,11 @@ wikiPage::wikiPage(string pagestr, bool leave_wikitext=false, string code="multi
     // only save if the article contains is in one of the requested categories
     if(code=="categories")
     {
+        if(pagestr.find("#REDIRECT")!=string::npos)
+        {
+            isRedirect = true;
+            return;
+        }
         parse(pagestr,"[[Category:", "]]", categories);
         fix_cat(categories);
         //checking if I have any of the categories
@@ -135,8 +140,6 @@ wikiPage::wikiPage(string pagestr, bool leave_wikitext=false, string code="multi
                 return;
             }
             isRedirect = false;
-            if(isWithin(text, "#REDIRECT"))
-                isRedirect = true;
             isJunk = false;
             size = sizeof(pagestr);
             removeFormatting();
@@ -254,32 +257,30 @@ void wikiPage::removeFormatting(){
     string endtarget = "]]";
     removeBetween(temp, target, endtarget);
 
+    // remove all embedded urls
+    target = "[http://";
+    endtarget = "]";
+    removeBetween(temp,target,endtarget);
+
     // remove all content between [[File: ]]
     remove_file_references(temp);
 
     // remove all content between [[Image: ]] tags
     remove_image_references(temp);
 
-    // remove region within triple periods: ...[[this is a |... test]]
-    target = "[[";
-    endtarget = "|";
-    r_removeBetween(temp, target, endtarget);
-
-    // remove all ]]
-    target = "]]";
-    removeTarget(temp, target);
-
-    // remove all [[
-    target = "[[";
-    removeTarget(temp, target);
-
     // remove all '''
     target = "'''";
     removeTarget(temp, target);
 
+    target = "&amp;nbsp;";
+    replaceTarget(temp,target," ");
 
     target = "&lt;ref";
     vector<string> endtargets = {"/ref&gt;","/&gt;"};
+    removeBetween(temp,target,endtargets);
+
+    target = "{|";
+    endtargets = {"|}","}"};
     removeBetween(temp,target,endtargets);
 
     target = "&lt;references";
@@ -306,6 +307,10 @@ void wikiPage::removeFormatting(){
     endtargets = {"/hiddentext&gt;","/&gt;"};
 	removeBetween(temp,target,endtargets);    
 
+    target = "&lt;div";
+    endtargets = {"/div&gt;","/&gt;"};
+    removeBetween(temp,target,endtargets);
+
     target = "==";
     endtarget = "==";
     removeBetween(temp, target, endtarget);
@@ -329,7 +334,6 @@ void wikiPage::removeFormatting(){
     removeTarget(temp,"#");
     removeTarget(temp, "&gt");
     removeBetween(temp, "(;", ")");
-    removeBetween(temp, "{|", "}");
     removeBetween(temp, "<ref name", ";", "strict");
     removeTarget(temp, "—");
     removeTarget(temp, "()");
@@ -345,6 +349,20 @@ void wikiPage::removeFormatting(){
     removeTarget(temp,"&lt;/references;"); // remove references closer
     //removeTarget(text,"&lt;gallery;"); // remove gallery operer
     removeTarget(text,"&lt;/gallery;"); // remove gallery closer
+
+    // remove region within triple periods: ...[[this is a |... test]]
+    target = "[[";
+    endtarget = "|";
+    r_removeBetween(temp, target, endtarget);
+
+    // remove all ]]
+    target = "]]";
+    removeTarget(temp, target);
+
+    // remove all [[
+    target = "[[";
+    removeTarget(temp, target);
+
     text = temp;
     return;
 }

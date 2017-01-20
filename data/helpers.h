@@ -76,6 +76,17 @@ string to_lowercase(string &input)
 	return temp;
 }
 
+// converts a vector of strings to lowercase
+vector<string> to_lowercase(vector<string> &input)
+{
+	vector<string> lowered;
+	for (int i=0; i<input.size(); i++)
+	{
+		string cur = input[i];
+		lowered.push_back(to_lowercase(cur));
+	}
+	return lowered;
+}
 
 vector<string> split(const string &cat_str, string delim);
 
