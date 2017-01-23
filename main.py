@@ -62,31 +62,6 @@ def load_documents_from_directory(path):
 	print("Found "+str(len(documents))+" documents.")
 	return documents
 
-# removes all stop words from the set of documents provided, takes in 
-# a list of strings and returns a list of string sequences (lists of strings)
-def remove_stopwords(documents):
-	fixed = []
-	stop_words = load_stopwords()
-	stop_words.append(".")
-	stop_words.append(",")
-	stop_words.append("(")
-	stop_words.append(")")
-	stop_words.append("+")
-	stop_words.append("-")
-	stop_words.append(";")
-	stop_words.append(" ")
-	stop_words.append("")
-	stop_words.append("\'s")
-	stop_words.append(":")
-
-	doc_num = 0
-	for doc in documents:
-		doc_num+=1
-		new_body = get_words(doc,stop_words)
-		fixed.append(new_body)
-		print("Document "+str(doc_num)+" has "+str(len(new_body))+" words.")
-	return fixed
-
 # prints out the topics for an lda model
 def print_model_topics(LDA_model,num_topics=10):
 	items = LDA_model.print_topics(num_topics)
@@ -96,10 +71,8 @@ def print_model_topics(LDA_model,num_topics=10):
 		num+=1
 
 def main():
-	path_to_data = "data/outputs/text/prototype/"
-	#path_to_data = "data/outputs/text/test-1484845313/"
+	path_to_data = "data/output"
 	documents = load_documents_from_directory(path_to_data)
-	texts = remove_stopwords(documents)
 
 	dictionary = corpora.Dictionary(texts)
 	#dictionary.save('text.txtdic')
