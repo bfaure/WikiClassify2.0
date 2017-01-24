@@ -1,4 +1,4 @@
-#include "wikidump.h"
+#include "code/wikidump.h"
 
 int main(int argc, const char * argv[]) {
 	if (argc == 2) {
