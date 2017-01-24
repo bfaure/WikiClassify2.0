@@ -8,8 +8,12 @@ import os
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
-from code.read      import text_corpa
-from code.vectorize import doc_encoder
+from code.read      import doc_corpus
+from code.read      import bag_corpus
+
+from code.vectorize import doc2vec
+from code.vectorize import LDA
+
 from code.visualize import plot_vectors
 
 #                            Main function
@@ -17,13 +21,23 @@ from code.visualize import plot_vectors
 
 def main():
 
-    encoder = doc_encoder('wiki')
-    docs    = text_corpa('../WikiParse/data/output/')
-    encoder.train(docs, 'models')
+    data_dir = '../WikiParse/data/output/'
 
-    encoder.nearest()
-    encoder.outlier()
-    encoder.analogy()
+    docs     = doc_corpus(data_dir+'documents.txt')
+    encoder  = doc2vec('wiki')
+    encoder.train(docs, 'models')
+    for doc in encoder.get_docs(docs):
+        print(doc)
+
+    bags     = bag_corpus(data_dir+'documents.txt', data_dir+'dictionary.txt')
+    encoder  = LDA('wiki')
+    encoder.train(bags, 'models')
+    for bag in bags:
+        print(encoder.encode_bag(bag))
+
+    #encoder.nearest()
+    #encoder.outlier()
+    #encoder.analogy()
 
     #names, vecs = encoder.get_vocab(docs)
     #plot_vectors(vecs[:100], names[:100])
