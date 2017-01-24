@@ -48,7 +48,7 @@ using std::transform;
 class wikidump {
 
 private:
-	unsigned articles_read;
+	unsigned long long articles_read;
     ifstream           dump_input;
     ifstream::pos_type dump_size;
 
