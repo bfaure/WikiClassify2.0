@@ -13,13 +13,13 @@ import numpy as np                                  # numpy dependency
 np.random.seed(0)
 
 from gensim.models import Doc2Vec                   # doc2vec model
-
+from gensim.models.ldamodel import LdaModel # LDA model
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
-class doc_encoder(object):
+class doc2vec(object):
 
-    def __init__(self, name='text_encoder'):
+    def __init__(self, name='doc2vec_model'):
         print('Initializing text encoder...')
         self.name = name
         self.build()
@@ -75,9 +75,9 @@ class doc_encoder(object):
         context_window=8
 
         self.features = features
-        self.model = Doc2Vec(min_count=10, size=features, window=context_window, sample=1e-5, negative=5, workers=7)
+        self.model = Doc2Vec(min_count=10, size=features, window=context_window, sample=1e-5, negative=5, workers=3)
 
-    def train(self, data, save_dir, epoch=30):
+    def train(self, data, save_dir, epochs=30):
         print("\tTraining doc2vec model...")
         
         self.path = save_dir + '/' + self.name
@@ -168,6 +168,9 @@ class doc_encoder(object):
     def encode_doc(self, sentence):
         return np.expand_dims(self.model.infer_vector(sentence.split()), axis=0)
 
+#                           LDA encoder
+#-----------------------------------------------------------------------------#
+
 '''
 # LDA method
 
@@ -182,30 +185,25 @@ lda.update(other_corpus)
 
 # model persistency can be achieved through its load/save methods
 '''
-import os
-from gensim import corpora
-from gensim.models.ldamodel import LdaModel
-## prints out the topics for an lda model
-#def print_model_topics(LDA_model,num_topics=10):
-#    items = LDA_model.print_topics(num_topics)
-#    num = 0
-#    for item in items:
-#        print("Topic #"+str(num)+":",item)
-#        num+=1
-#
-#def main():
-#    path_to_data = "data/output"
-#    documents = load_documents_from_directory(path_to_data)
-#
-#    dictionary = corpora.Dictionary(texts)
-#    #dictionary.save('text.txtdic')
-#    corpus = [dictionary.doc2bow(text) for text in texts]
-#
-#    num_topics = 10
-#    lda = LdaModel(corpus=corpus,id2word=dictionary,num_topics=num_topics,update_every=1,chunksize=1000,passes=1)
-#    print_model_topics(lda,num_topics)
-#
-#    print("Done.")#
+
+class LDA(object):
+
+    def __init__(self, name='LDA_model'):
+        self.name = name
+
+    # prints out the topics for an lda model
+    def print_topics(self, num_topics=10, num_words=10):
+        for i, item in enumerate(self.model.show_topics(num_topics, num_words)):
+            print("Topic #%i: %s" % (i, item))
+
+    # For Wikipedia, use 5k-10k topics
+    def train(self, data, save_dir, epochs=30, num_topics=100):
+        print("\tTraining LDA model...")
+
+        self.model = LdaModel(corpus=data,num_topics=num_topics)
+
+    def encode_bag(self, bag):
+        return [x[1] for x in self.model.get_document_topics(bag, minimum_probability=0.0)]
 
 '''Taken from text sequence generator:'''
 

@@ -2,7 +2,8 @@
 #include "wikipage.h"
 #include "string_utils.h"
 
-ofstream dump_output("output.txt");
+ofstream dump_output("documents.txt");
+
 void read_page(string page) {
     //cout<<"Reading page!"<<endl;
     wikipage wp(page);
