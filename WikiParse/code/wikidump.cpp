@@ -21,12 +21,15 @@ wikidump::wikidump(string path) {
 }
 
 void wikidump::read() {
-    streampos offset;
-    streampos buffer_size = 5000000;
+
+    const streampos buffer_size = 1000000;
     char     buffer[(unsigned)buffer_size];
+    streampos offset;
     while (dump_input.read(buffer, sizeof(buffer))) {
         offset = parse_all(buffer, "\n  <page>\n", "\n  </page>\n", read_page);
         dump_input.seekg(dump_input.tellg()-buffer_size+offset);
+        cout.flush();
         cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done!";
+        cout.flush();
     }
 }

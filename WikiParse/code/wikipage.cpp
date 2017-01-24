@@ -150,3 +150,224 @@ void wikipage::save(ofstream &file){
         file<<text<<endl;
     }
 }
+
+void wikipage::percent_decoding() {
+    replace_target(text, "&lt;", "<");
+    replace_target(text, "&gt;", ">");
+    replace_target(text, "&nbsp;", " ");
+    replace_target(text, "&amp;", "&");
+    replace_target(text, "&quot;", "\"");
+    replace_target(text, "&apos;", "'");
+}
+
+void wikipage::remove_templates() {
+    // remove all double bracket regions
+    string open     = "{{";
+    string close    = "}}";
+    while(true){
+        size_t location = text.find(open);
+        if (location!=string::npos) {
+            int openCt  = 1;
+            int ct      = 0;
+            remove_nested(open, close, text, location, location, openCt, ct);
+
+            if (text=="") {
+                return;
+
+            }
+            if (ct>=300) {
+                return;
+            }
+        }
+        else {
+            return;
+        }
+    }
+}
+
+// nested type removal of [[File: ]]
+void wikipage::remove_file_references(){
+
+    string first = "[[File:";
+    string begin = "[[";
+    string end = "]]";
+
+    size_t loc = 0;
+
+    while (true)
+    {
+        loc = text.find(first,loc);
+
+        if (loc==string::npos)
+        {
+            return;
+        }
+
+        int openct = 1;
+        int ct = 0;
+
+        remove_nested(begin,end,text,loc,loc,openct,ct);
+        if (ct >= 300){
+            return;
+        }
+    }
+}
+
+// nested type removal of [[Image: ]]
+void wikipage::remove_image_references(){
+
+    string first = "[[Image:";
+    string begin = "[[";
+    string end = "]]";
+
+    size_t loc = 0;
+
+    while (true)
+    {
+        loc = text.find(first,loc);
+
+        if (loc==string::npos)
+        {
+            return;
+        }
+
+        int openct = 1;
+        int ct = 0;
+
+        remove_nested(begin,end,text,loc,loc,openct,ct);
+        if (ct >= 300){
+            return;
+        }
+    }
+}
+
+void wikipage::remove_html_elements() {
+    string target = "<ref";
+    vector<string> endtargets = {"/ref>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<references";
+    endtargets = {"/references>","/ref>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<nowiki";
+    endtargets = {"/nowiki>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<math";
+    endtargets = {"/math>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<gallery";
+    endtargets = {"/gallery>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<hiddentext";
+    endtargets = {"/hiddentext>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<div";
+    endtargets = {"/div>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<sub";
+    endtargets = {"/sub>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<sup";
+    endtargets = {"/sup>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<blockquote";
+    endtargets = {"/blockquote>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<references";
+    endtargets = {"/references>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<gallery";
+    endtargets = {"/gallery>","/>"};
+    remove_between(text,target,endtargets);
+}
+
+// removes various wikitext and xml
+void wikipage::clean_text(){
+
+    percent_decoding();
+    remove_templates();
+
+    // remove all category headers
+    string target = "[[Category:";
+    string endtarget = "]]";
+    remove_between(text, target, endtarget);
+
+    // remove all embedded urls
+    target = "[http://";
+    endtarget = "]";
+    remove_between(text,target,endtarget);
+
+    // remove all content between [[File: ]]
+    remove_file_references();
+
+    // remove all content between [[Image: ]] tags
+    remove_image_references();
+
+    target = "{|";
+    endtarget = "}";
+    remove_between(text,target,endtarget);
+
+    target = "<!--";
+    endtarget = "-->";
+    remove_between(text,target,endtarget);
+
+    remove_html_elements();
+
+    // remove all '''
+    target = "'''";
+    remove_target(text, target);
+
+    target = "==";
+    endtarget = "==";
+    remove_between(text, target, endtarget);
+
+    target = "===";
+    endtarget = "===";
+    remove_between(text, target, endtarget);
+
+    replace_target(text, {"     ","    ","  "}, " ");
+    remove_target(text, "\"");
+    remove_target(text, "''");
+    remove_target(text, "&");
+    vector<string> vec{"...",".."};
+    replace_target(text, vec, ".");
+    replace_target(text, "=", " ");
+    remove_references(text);
+    remove_target(text,"#");
+    remove_between(text, "(;", ")");
+    remove_target(text, "—");
+    remove_target(text, "()");
+    replace_target(text, ".", ". ", "strict");
+    replace_target(text, ".   ", ".  ", "string");
+
+    // remove link portion of: [[this is a |test]]
+    target = "[[";
+    endtarget = "|";
+    remove_between_r(text, target, endtarget);
+
+    // remove all ]]
+    target = "]]";
+    remove_target(text, target);
+
+    // remove all [[
+    target = "[[";
+    remove_target(text, target);
+
+    // Remove all \n
+    target = "\n";
+    remove_target(text, target);
+
+    text = trim(text);
+
+    return;
+}

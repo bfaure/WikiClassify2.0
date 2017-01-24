@@ -6,4 +6,11 @@ int main(int argc, const char * argv[]) {
         dump.read();            // Start scraping
         return 0;
 	}
+	else
+	{
+		string filename = "data/input/simplewiki-latest-pages-articles.xml";
+		wikidump dump(filename);
+		dump.read();
+		return 0;
+	}
 }
