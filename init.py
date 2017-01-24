@@ -3,9 +3,8 @@ import os
 print("Creating directory structure...")
 
 # Creating directories in the /data folder...
-curr_dir = "data/"
-for directory in ["input", "output"]:
+for directory in ["WikiParse/data/input", "WikiParse/data/output", "WikiLearn/models"]:
 	if not os.path.exists(directory):
-		os.makedirs(curr_dir+directory)
+		os.makedirs(directory)
 
 print("\tDone!")
