@@ -151,6 +151,19 @@ void wikipage::save(ofstream &file){
     }
 }
 
+void wikipage::save_json(ofstream &file)
+{
+    // outputs in json format on a single line of the file
+    if(!text.empty())
+    {
+        string output = "{title:\"";
+        output += title+"\",namespace:\"";
+        output += ns+"\",text:\"";
+        output += text+"\"}\n";
+        file<<output;
+    }
+}
+
 void wikipage::percent_decoding() {
     replace_target(text, "&lt;", "<");
     replace_target(text, "&gt;", ">");
