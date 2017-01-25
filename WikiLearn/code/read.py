@@ -31,26 +31,8 @@ def get_words(s):
     s = s.replace("'", " '")
     return utils.to_unicode(s).split()
 
-class doc_corpus(object):
-
-    def __init__(self, documents):
-        print("Initializing sources...")
-        self.documents  = documents
-
-    def __iter__(self):
-        i = -1
-        with open(self.documents, 'rb') as fin:
-            for line in fin:
-                i += 1
-                yield TaggedDocument(get_words(line), [i])
-
-    def get_vocab(self):
-        print("Getting vocab...")
-        vocab = set()
-        for doc in self:
-            for word in doc.words:
-                vocab.add(word)
-        return sorted(list(vocab))
+#                         Streamed LDA input
+#-----------------------------------------------------------------------------#
 
 class bag_corpus(object):
 
@@ -65,6 +47,25 @@ class bag_corpus(object):
             for line in fin:
                 i += 1
                 yield self.dictionary.doc2bow(get_words(line))
+
+    def get_word_map(self):
+        return dict((v,k) for k,v in self.dictionary.token2id.iteritems())
+
+#                       Streamed doc2vec input
+#-----------------------------------------------------------------------------#
+
+class doc_corpus(object):
+
+    def __init__(self, documents):
+        print("Initializing sources...")
+        self.documents  = documents
+
+    def __iter__(self):
+        i = -1
+        with open(self.documents, 'rb') as fin:
+            for line in fin:
+                i += 1
+                yield TaggedDocument(get_words(line), [i])
 
     def get_vocab(self):
         print("Getting vocab...")

@@ -4,27 +4,116 @@ from __future__ import print_function
 
 #                          Standard imports
 #-----------------------------------------------------------------------------#
-import os, linecache, time, math
+import os, re, time, math
 import random
 random.seed(0)
+
 #                         Third-party imports
 #-----------------------------------------------------------------------------#
-import numpy as np                                  # numpy dependency
+import numpy as np                          # numpy dependency
 np.random.seed(0)
 
-from gensim.models import Doc2Vec                   # doc2vec model
+from gensim.models import Doc2Vec           # doc2vec model
 from gensim.models.ldamodel import LdaModel # LDA model
+from gensim import corpora
+from gensim import utils
+
+#                            Local imports
+#-----------------------------------------------------------------------------#
+from read import doc_corpus
+from read import bag_corpus
+
+#                           LDA encoder
+#-----------------------------------------------------------------------------#
+
+class LDA(object):
+    '''
+    LDA method
+    '''
+
+    def __init__(self, model_name, save_dir, path_to_docs, path_to_dictionary):
+
+        self.docs = bag_corpus(path_to_docs, path_to_dictionary)
+        self.word_map = self.docs.get_word_map()
+
+        self.name = model_name
+        self.save_dir = save_dir
+        if os.path.exists('{0}/{1}/LDA'.format(self.save_dir, self.name)):
+            retrain = raw_input("\t'%s' exists. Retrain? y/N: " % self.name)
+            if retrain.lower() == 'n' or retrain == '':
+                self.load()
+                print(self.get_topics())
+                return
+        self.build()
+        self.train()
+        self.save()
+        #for bag in bags:
+        #    print(encoder.encode_bag(bag))
+
+    # User Interfaces: None yet!
+
+    # Model I/O
+
+    def build(self, features=30):
+        print("\tBuilding LDA model...")
+        self.features = features
+
+    def train(self, epochs=1):
+        '''For Wikipedia, use at least 5k-10k topics
+        Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
+        print("\tTraining LDA model...")
+
+        self.model = LdaModel(corpus=self.docs, num_topics=self.features, id2word=self.word_map, passes=epochs)
+
+    def save(self):
+        print("\tSaving LDA model...")
+        if not os.path.exists(self.save_dir+'/'+self.name):
+            os.makedirs(self.save_dir+'/'+self.name)
+        self.model.save('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
+
+    def load(self):
+        print("\tLoading LDA model...")
+        self.model = LdaModel.load('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
+        self.features = self.model.num_topics
+
+    def get_topics(self):
+        '''Returns all topics'''
+        return [x[1] for x in self.model.show_topics(num_topics=-1,num_words=10,formatted=False)]
+
+    # Model methods
+
+    # Encode/decode at word, words, and doc level
+
+    def encode_doc(self, doc):
+        return np.array([x[1] for x in self.model.get_document_topics(doc, minimum_probability=0.0)])
+
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
 class doc2vec(object):
+    '''
+    doc2vec method
+    '''
 
-    def __init__(self, name='doc2vec_model'):
+    def __init__(self, model_name, save_dir, path_to_docs):
         print('Initializing text encoder...')
-        self.name = name
-        self.build()
 
-    # User Interfaces!
+        self.docs = doc_corpus(path_to_docs)
+
+        self.name = model_name
+        self.save_dir = save_dir
+        if os.path.exists('{0}/{1}/word2vec'.format(self.save_dir, self.name)):
+            retrain = raw_input("\t'%s' exists. Retrain? y/N: " % self.name)
+            if retrain.lower() == 'n' or retrain == '':
+                self.load()
+        else:
+            self.build()
+            self.train()
+            self.save()
+        #for bag in bags:
+        #    print(encoder.encode_bag(bag))
+
+    # User Interfaces
 
     def nearest(self):
     
@@ -77,43 +166,33 @@ class doc2vec(object):
         self.features = features
         self.model = Doc2Vec(min_count=10, size=features, window=context_window, sample=1e-5, negative=5, workers=3)
 
-    def train(self, data, save_dir, epoch=10):
+    def train(self, epochs=30):
         print("\tTraining doc2vec model...")
-        
-        self.path = save_dir + '/' + self.name
-        if os.path.exists(self.path):
-            retrain = raw_input("\t'%s' exists. Retrain? y/N: " % self.name)
-            if retrain.lower() == 'n' or retrain == '':
-                self.load()
-                return
 
         # Main Training Method
-        self.model.build_vocab(data)
+        self.model.build_vocab(self.docs)
 
         times = []
-        for i in xrange(epoch):
+        for i in xrange(epochs):
             start = time.time()
             
             print("\t\tEpoch %s" % (i+1))
-            self.model.train(data)
+            self.model.train(self.docs)
             
             times.append(time.time()-start)
-            remaining = sum(times)*(epoch-i-1)/len(times)/60
+            remaining = sum(times)*(epochs-i-1)/len(times)/60
             print('\t\t%0.1f minutes remaining...\n' % remaining)
         #self.model.init_sims(replace=True)
-
-        # Save Trained Model
-        self.save()
         
     def save(self):
         print("\tSaving doc2vec model...")
-        if not os.path.exists(self.path):
-            os.makedirs(self.path)
-        self.model.save('{0}/{1}.d2v'.format(self.path,self.name))
+        if not os.path.exists(self.save_dir+'/'+self.name):
+            os.makedirs(self.save_dir+'/'+self.name)
+        self.model.save('{0}/{1}/word2vec/{1}.d2v'.format(self.save_dir,self.name))
     
     def load(self):
         print("\tLoading doc2vec model...")
-        self.model = Doc2Vec.load('{0}/{1}.d2v'.format(self.path,self.name))
+        self.model = Doc2Vec.load('{0}/{1}/word2vec/{1}.d2v'.format(self.save_dir,self.name))
         self.features = self.model.docvecs[0].shape[0]
     
     def get_vectors(self):
@@ -167,134 +246,3 @@ class doc2vec(object):
 
     def encode_doc(self, sentence):
         return np.expand_dims(self.model.infer_vector(sentence.split()), axis=0)
-
-#                           LDA encoder
-#-----------------------------------------------------------------------------#
-
-'''
-# LDA method
-
-# constructor estimates LDA model parameters based on training corpus
-lda = LdaModel(corpus, num_topics=10)
-
-# infer topic distributions on new, unseen documents
-doc_lda = lda[doc_bow]
-
-# train model (update) w/ new documents via
-lda.update(other_corpus)
-
-# model persistency can be achieved through its load/save methods
-'''
-
-class LDA(object):
-
-    def __init__(self, name='LDA_model'):
-        self.name = name
-
-    # prints out the topics for an lda model
-    def print_topics(self, num_topics=10, num_words=10):
-        for i, item in enumerate(self.model.show_topics(num_topics, num_words)):
-            print("Topic #%i: %s" % (i, item))
-
-    # For Wikipedia, use 5k-10k topics
-    def train(self, data, save_dir, epochs=30, num_topics=100):
-        print("\tTraining LDA model...")
-
-        self.model = LdaModel(corpus=data,num_topics=num_topics)
-
-    def encode_bag(self, bag):
-        return [x[1] for x in self.model.get_document_topics(bag, minimum_probability=0.0)]
-
-'''Taken from text sequence generator:'''
-
-##!/usr/bin/env python
-## -*- coding: utf-8 -*-
-#from __future__ import print_function
-#
-##                          Standard imports
-##-----------------------------------------------------------------------------#
-#import os, random
-#random.seed(0)
-#
-##                          Third-party imports
-##-----------------------------------------------------------------------------#
-#from keras.models import Sequential, model_from_json
-#from keras.layers import Dense, Activation, Dropout, LSTM
-#from keras.callbacks import EarlyStopping
-#import numpy as np                                  # numpy dependency
-#np.random.seed(0)
-#
-##                            Sequence generator
-##-----------------------------------------------------------------------------#
-#
-#class sequence_generator(object):
-#
-#    def __init__(self, name, vecs=None, input_length=10, input_features=100):
-#        print("Initializing sequence generator...")
-#        self.name = name
-#        self.path = './quicklearn/models/generators/%s' % self.name
-#        self.length = input_length
-#        self.features = input_features
-#        
-#        if os.path.exists(self.path):
-#            train = raw_input("\t'%s' exists. Retrain? y/N: " % self.name)
-#            if train.lower() == 'n' or train == '':
-#                self.load(); return
-#                
-#        self.build()
-#        self.train(vecs)
-#        self.save()
-#
-#    # Build model
-#    def build(self):
-#    
-#        print("\tBuilding Model...")
-#        self.model = Sequential()
-#        self.model.add(LSTM(self.features, return_sequences=True, input_shape=(self.length, self.features)))
-#
-#    # Train model
-#    def train(self, sequence_list):
-#    
-#        X = []
-#        y = []
-#        for sequence in sequence_list:
-#            for i in range(0, sequence.shape[0]-self.length-1, self.length//2):
-#                X.append(sequence[i:i+self.length]); y.append(sequence[i+1:i+self.length+1])
-#        random.shuffle(X);       random.shuffle(y)
-#        X = np.array(X[:30000]); y = np.array(y[:30000])
-#    
-#        print("\tCompiling Model...")
-#        self.model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
-#        
-#        print("\tTraining Model...")
-#        self.model.fit(X, y, batch_size=X.shape[0]//20, nb_epoch=100, validation_split=0.15, callbacks=[EarlyStopping(monitor='val_loss', patience=2)])
-#            
-#    # Save model
-#    def save(self):
-#    
-#        print("\tSaving Model...")
-#        if not os.path.exists(self.path):
-#            os.makedirs(self.path)
-#        open(self.path + '/meta.json', 'w').write(self.model.to_json())
-#        self.model.save_weights(self.path + '/data.h5', overwrite=True)
-#    
-#    # Load model
-#    def load(self):
-#    
-#        print("\tLoading Model...")
-#        self.model = model_from_json(open(self.path + '/meta.json').read())
-#        self.model.load_weights(self.path + '/data.h5')
-#        self.model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
-#    
-#    # Use model
-#    def run(self, X, steps=40):
-#    
-#        print(np.isnan(X).any())
-#    
-#        X = X[:self.length]
-#        result = []
-#        for i in xrange(steps):
-#            prediction = self.model.predict(np.expand_dims(X, axis=0))[:,-1]
-#            result.append(prediction)
-#            X = np.append(X[1:],prediction,axis=0)
-#        return(np.vstack(result))#
