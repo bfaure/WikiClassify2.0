@@ -77,7 +77,7 @@ class doc2vec(object):
         self.features = features
         self.model = Doc2Vec(min_count=10, size=features, window=context_window, sample=1e-5, negative=5, workers=3)
 
-    def train(self, data, save_dir, epochs=30):
+    def train(self, data, save_dir, epoch=10):
         print("\tTraining doc2vec model...")
         
         self.path = save_dir + '/' + self.name
