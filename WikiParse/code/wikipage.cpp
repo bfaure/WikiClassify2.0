@@ -11,12 +11,13 @@ wikipage::wikipage(string page) {
             //get_timestamp(page);
             //get_contributor(page);
             //get_comment(page);
-            get_text(page);
-            clean_text();
-            if (!is_disambig()) {
-                //read_categories();   // Interpret text
-                read_links();
+            get_text(page);         // get the article text
+            if (!is_disambig()) {   // if not a disambugation tagged article
+                //read_categories();  // gather article categories
+                //read_citations();   // gather article citations
+                //read_links();       
                 //read_image_count();
+                clean_text();       // remove all formatting from text
             }
         }
     }
@@ -47,6 +48,7 @@ void wikipage::get_title(string &page) {
         }
     }
 }
+
 void wikipage::get_ID(string &page) {string ID_str; parse(page, "    <id>", "</id>\n    ", ID_str);ID=stoi(ID_str);}
 void wikipage::get_namespace(string &page) {parse(page, "    <ns>", "</ns>\n    ", ns);}
 void wikipage::get_redirect(string &page) {parse(page, "    <redirect title=\"", "\" />\n    ", redirect);}
