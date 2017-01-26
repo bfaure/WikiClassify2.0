@@ -1,5 +1,81 @@
 #include "wikitext.h"
 
+
+void copy_between(const string &body, const string &target, const vector<string> &endtargets, vector<string> &copies)
+{
+    // used in the read_citations function, parses all instances from "target" to the closest "endtarget" element
+    // and pushes them into the "copies" parameter for the returning function to recieve
+    while(true){
+        size_t location = body.find(target);
+        if(location!=string::npos){
+
+            int closest_partner = 1000000000;
+            int close_cut_at = -1;
+
+            for (int i=0; i<endtargets.size(); i++){
+
+                string endtarget = endtargets[i];
+                size_t endlocation = body.find(endtarget, location+target.size());
+
+                if(endlocation!=string::npos){
+
+                    if (close_cut_at==-1){
+                        close_cut_at = endlocation+endtarget.size()-location;
+                        closest_partner = endlocation;
+                    }
+
+                    else{
+
+                        if (endlocation < closest_partner){
+                            close_cut_at = endlocation+endtarget.size()-location;
+                            closest_partner = endlocation;
+                        }
+                    }
+                }
+            }
+
+            if (close_cut_at==-1){
+                return;
+            }
+            copies.push_back(body.substr(location,close_cut_at));
+        }
+        else{
+            return;
+        }
+    }
+}
+
+void copy_between(const string &body, const string &target, const string &endtarget, vector<string> &copies)
+{
+    cout<<"\n"<<body<<"\n";
+    // same idea as the vector version
+    while(true)
+    {
+        size_t location = body.find(target);
+        if(location!=string::npos){
+
+            int closest_partner = 1000000000;
+            int close_cut_at = -1;
+
+            size_t endlocation = body.find(endtarget, location+target.size());
+
+            if(endlocation!=string::npos){
+                close_cut_at = endlocation+endtarget.size()-location;
+                closest_partner = endlocation;
+            }
+        
+            if (close_cut_at==-1){
+                return;
+            }
+
+            copies.push_back(body.substr(location,close_cut_at));
+        }
+        else{
+            return;
+        }
+    }
+}
+
 // finds any instances of target and clips until it finds the closest endtarget
 void remove_between(string &temp, string target, vector<string> endtargets){
     while(true){

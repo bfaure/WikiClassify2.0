@@ -45,6 +45,25 @@ using std::transform;
 /* Local Imports */
 #include "string_utils.h"
 
+class citation
+{
+public:
+
+    citation(const string &src);
+    string get_url();
+    string get_author();
+
+private:
+    string citation_type; // book, journal, website, etc. or None if type not recognized
+    string author; // FirstName LastName or None if none found
+    string url; // full url, or None if none found
+    string base_url; // base url or None if none found
+
+    void read_url(const string &src); // parses the url 
+    void read_author(const string &src); // parses the author 
+};
+
+
 class wikipage {
 
     private:
@@ -58,6 +77,13 @@ class wikipage {
         string comment;
         string text;
         unsigned ID;
+
+        // new attributes (added for json output)
+        vector<citation> citations;
+        string importance;
+        string instance;
+        string quality;
+        int daily_views;
 
         // Get page sections
         void get_title(string &page);
@@ -78,6 +104,13 @@ class wikipage {
         void read_categories();
         void read_links();
         void read_image_count();
+        void get_quality();
+        
+        void get_importance();
+        void get_instance();
+        void get_daily_views();
+        void get_instance_of();
+        void read_citations();
 
         // Text methods
         void clean_text();

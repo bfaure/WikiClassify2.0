@@ -5,22 +5,77 @@
 wikipage::wikipage(string page) {
     get_namespace(page);             // Extract page sections
     if (is_article()) {
-        get_title(page);
+        get_ID(page);
+        get_title(page); 
         get_redirect(page);
         if (!is_redirect()) {
-            //get_timestamp(page);
+            get_timestamp(page); 
             //get_contributor(page);
             //get_comment(page);
-            get_text(page);         // get the article text
+            get_text(page);         
             if (!is_disambig()) {   // if not a disambugation tagged article
-                //read_categories();  // gather article categories
-                //read_citations();   // gather article citations
+
+                read_categories();  // get list of category strings
+                read_citations();  // get list of citation structs
+                
+                get_daily_views();
+                get_quality();
+                get_importance();
+                get_instance(); 
+
                 //read_links();       
                 //read_image_count();
                 clean_text();       // remove all formatting from text
             }
         }
     }
+}
+
+void wikipage::get_instance()
+{
+    instance = "human"; // default
+}
+
+void wikipage::get_quality()
+{
+    quality = "stub"; // default
+}
+
+void wikipage::get_importance()
+{
+    importance = "top"; //default
+}
+
+void wikipage::get_daily_views()
+{
+    daily_views = 5000; // default
+}
+
+void wikipage::read_citations()
+{
+    /* reads through article body (pre-clean_text()) and gathers together all of the embedded citations used */
+    // because this happens before the article body is decoded, we need to use the &lt and &gt codes
+    vector<string> parsed_citation_strings;
+    //vector<citation> citations;
+
+    string target = "{{cite";
+    string endtarget = "}}";
+    copy_between(text,target,endtarget,parsed_citation_strings);
+    cout<<"Found "+to_string(parsed_citation_strings.size())+" citations in "+title+"\n";
+
+    target = "{{Citation";
+    copy_between(text,target,endtarget,parsed_citation_strings);
+
+    for (int i=0; i<parsed_citation_strings.size(); i++)
+    {
+        // iterate over all parsed references and construct citation structs
+        if (parsed_citation_strings[i] != "")
+        {
+            citation cur(parsed_citation_strings[i]); // populate citation struct
+            citations.push_back(cur);  
+        }
+    }
+    //return citations;
 }
 
 void wikipage::get_title(string &page) {
@@ -158,10 +213,46 @@ void wikipage::save_json(ofstream &file)
     // outputs in json format on a single line of the file
     if(!text.empty())
     {
-        string output = "{title:\"";
-        output += title+"\",namespace:\"";
-        output += ns+"\",text:\"";
-        output += text+"\"}\n";
+        string output = "{"+to_string(ID)+"{";                // {id:{
+        output += "title:\""+title+"\",";              // title:"Article title",
+        output += "ns:"+ns+",";                         // ns:Article namespace,
+        output += "timestamp:"+timestamp+",";           // timestamp:Article timestamp,    
+        output += "instance_of:\""+instance+"\",";   // instance_of:"Article instance_of",
+        output += "quality:\""+quality+"\",";
+        output += "importance:\""+importance+"\",";
+        output += "daily_views:"+to_string(daily_views)+",";
+        output += "text:\""+text+"\",";
+        output += "categories:[";
+        for (int i=0; i<categories.size(); i++)
+        {
+            output += "\""+categories[i]+"\"";
+            if (i!=categories.size()-1)
+            {
+                output += ",";
+            }
+        }
+        output += "],";
+        output += "cited_domains:[";
+        for (int i=0; i<citations.size(); i++)
+        {
+            output += "\""+citations[i].get_url()+"\"";
+            if (i!=citations.size()-1)
+            {
+                output += ",";
+            }
+        }
+        output += "],";
+        output += "cited_authors:[";
+        for (int i=0; i<citations.size(); i++)
+        {
+            output += "\""+citations[i].get_author()+"\"";
+            if (i!=citations.size()-1)
+            {
+                output += ",";
+            }
+        }
+        output += "]";
+        output += "}}\n";
         file<<output;
     }
 }
@@ -385,4 +476,137 @@ void wikipage::clean_text(){
     text = trim(text);
 
     return;
+}
+
+
+string get_base_url(string url)
+{
+    // takes in a full url and returns just the base, i.e. it removes the stuff
+    // before the domain name and the stuff after the .com, .org, etc.
+
+    string http_junk = "://";
+    size_t http_junk_location = url.find(http_junk);
+
+    if (http_junk_location!=string::npos)
+    {
+        url = url.substr(http_junk_location+http_junk.size());
+    }
+    vector<string> exts = {".com",".edu",".org",".gov",".mil",".net",".info",".ca",".int",".biz",".name",".br",".cn",".fr"};
+    for (int i=0; i<exts.size(); i++)
+    {
+        size_t ext_location = url.find(exts[i]);
+        if (ext_location!=string::npos)
+        {
+            url = url.substr(0,ext_location+exts[i].size());
+            return url;
+        }
+    }
+    return url;
+}
+
+string citation::get_url()
+{
+    return base_url;
+}
+
+string citation::get_author()
+{
+    return author;
+}
+
+
+void citation::read_url(const string &src)
+{
+    url = "None";
+    size_t tag_location = src.find("url");
+    if (tag_location!=string::npos)
+    {
+        // find location of first equal sign after the "url" tag
+        size_t equal_location = src.find("=",tag_location);
+
+        size_t end_location = src.find("|",equal_location+1);
+        size_t end_location2 = src.find("}}",equal_location+1);
+
+        if(end_location2<end_location)
+        {
+            end_location = end_location2;
+        }
+
+        url = src.substr(equal_location+1,end_location-equal_location+1);
+        url = trim(author);
+
+        base_url = get_base_url(url);
+        return;
+    }
+}
+
+void citation::read_author(const string &src)
+{
+    author = "None";
+    size_t tag_location = src.find("author");
+    if (tag_location != string::npos)
+    {
+        // find location of first equals sign after the "author" tag
+        size_t equal_location = src.find("=",tag_location);
+
+        size_t end_location = src.find("|",equal_location+1);
+        size_t end_location2 = src.find("}}",equal_location+1);
+
+        if(end_location2<end_location)
+        {
+            end_location = end_location2;
+        }
+
+        author = src.substr(equal_location+1,end_location-equal_location+1);
+        author = trim(author);
+        return;
+    }
+
+    // if we get here then the citation is not using the "author=" tag, rather, 
+    // they may be using "first=" and "last=" or they may not be including an author
+    size_t first_name_location = src.find("last");
+    size_t last_name_location = src.find("first");
+    if(first_name_location!=string::npos and last_name_location!=string::npos)
+    {
+        // need to parse out the first and last names
+        // for the first name
+        size_t equal_location = src.find("=",first_name_location);
+
+        size_t end_location = src.find("|",equal_location+1);
+        size_t end_location2 = src.find("}}",equal_location+1);
+
+        if(end_location2<end_location)
+        {
+            end_location = end_location2;
+        }
+
+        string first_name = src.substr(equal_location+1,end_location-equal_location+1);
+        first_name = trim(first_name);
+
+        // need to parse out the first and last names
+        // for the first name
+        equal_location = src.find("=",last_name_location);
+
+        end_location = src.find("|",equal_location+1);
+        end_location2 = src.find("}}",equal_location+1);
+
+        if(end_location2<end_location)
+        {
+            end_location = end_location2;
+        }
+
+        string last_name = src.substr(equal_location+1,end_location-equal_location+1);
+        last_name = trim(first_name);
+
+        author = first_name+" "+last_name;
+        return;
+    }
+    //cout<<"Could not find author for "+title+"\n";
+}
+
+citation::citation(const string &src)
+{
+    // citation default constructor
+    read_url(src);
+    read_author(src);
 }
