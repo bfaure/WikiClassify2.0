@@ -8,3 +8,8 @@ When first cloning the repo, run the init.py file to create the directory struct
 
 ## Dependencies
 
+## Related Repositories
+
+[Chrome Extension](https://github.com/lukewielgus/WikiExtension) <br>
+[Project Website](https://github.com/waynesun95/WikiClassifySite) <br>
+[Former Repo](https://github.com/nathankjer/WikiClassify)
