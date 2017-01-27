@@ -61,7 +61,7 @@ private:
     string url; // full url, or None if none found
     string base_url; // base url or None if none found
 
-    void read_url(const string &src); // parses the url 
+    void read_url(const string &src,int start_from); // parses the url 
     void read_author(const string &src); // parses the author 
 };
 

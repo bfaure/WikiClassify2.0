@@ -181,11 +181,34 @@ void wikipage::get_text(string &page) {parse(page, "      <text xml:space=\"pres
 
 void wikipage::read_categories() {
     parse_all(text, "[[Category:", "]]", categories);
+    vector<string> temp;
     for (string &category:categories) {
+        // if the current category contains an endline we will cut the portion after the endline
+        // and add it on to the temp list to deal with later. The portion before the endline
+        // will be treated like a regular category.
+        if (category.find("\n")!=string::npos) 
+        {
+            temp.push_back(category.substr(category.find("\n")+1));
+            category = category.substr(0,category.find("\n"));
+        }
         string::size_type pos = category.find('|');
         if (pos != string::npos) {
             category = category.substr(0, pos);
         }
+        remove_target(category,"\n");
+    }
+    string tag = "Category:";
+    for(int i=0; i<temp.size(); i++)
+    {
+        if (temp[i].find(tag)!=string::npos)
+        {
+            categories.push_back(temp[i].substr(temp[i].find(tag)+tag.size()));
+            //cout<<"Found new category: "<<temp[i].substr(temp[i].find(tag)+tag.size())<<"\n";
+        }
+    }
+    for(string &category:categories) // decode all categories
+    {
+        decode_text(category);
     }
 }
 void wikipage::read_links() {
@@ -503,6 +526,19 @@ void wikipage::remove_html_elements() {
     target = "<small";
     endtargets = {"/small>","/>"};
     remove_between(text,target,endtargets);
+
+    target = "<code";
+    endtargets = {"/code>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<big";
+    endtargets = {"/big>","/>"};
+    remove_between(text,target,endtargets);
+
+    target = "<source";
+    endtargets = {"/source>","/>"};
+    remove_between(text,target,endtargets);
+
 }
 
 // removes various wikitext and xml
@@ -583,6 +619,12 @@ void wikipage::clean_text(){
 
     text = trim(text);
 
+    // Remove all escape chars
+    remove_target(text,"\\");
+
+    // Remove all \t
+    remove_target(text,"\t");
+
     return;
 }
 
@@ -599,15 +641,30 @@ string get_base_url(string url)
     {
         url = url.substr(http_junk_location+http_junk.size());
     }
-    vector<string> exts = {".com",".edu",".org",".gov",".mil",".net",".info",".ca",".int",".biz",".name",".br",".cn",".fr",".co.uk",".am",".ar"};
+    vector<string> exts = { ".com",".edu",".org",".gov",".mil",
+                            ".net",".info",".ca",".int",".biz",
+                            ".name",".br",".cn",".fr",".co.uk",
+                            ".am",".ar",".ac.uk",".az",".va",
+                            ".de"};
+    int closest_ext = 100000;
+
     for (int i=0; i<exts.size(); i++)
     {
         size_t ext_location = url.find(exts[i]);
         if (ext_location!=string::npos)
         {
-            url = url.substr(0,ext_location+exts[i].size());
-            return url;
+            if (ext_location+exts[i].size() < closest_ext)
+            {
+                closest_ext = ext_location+exts[i].size();
+            }
+            //url = url.substr(0,ext_location+exts[i].size());
+            //return url;
         }
+    }
+
+    if (closest_ext!=10000)
+    {
+        url = url.substr(0,closest_ext);
     }
     return url;
 }
@@ -634,10 +691,11 @@ void citation::remove_author()
 }
 
 
-void citation::read_url(const string &src)
+void citation::read_url(const string &src,int start_from=0)
 {
     url = "None";
-    size_t tag_location = src.find("url");
+    base_url = "None";
+    size_t tag_location = src.find("url",start_from);
     if (tag_location!=string::npos)
     {
         // find location of first equal sign after the "url" tag
@@ -655,6 +713,12 @@ void citation::read_url(const string &src)
         url = trim(url);
 
         base_url = get_base_url(url);
+
+        if (base_url.find(".")==string::npos) // if the url is not of a regular form
+        {
+            //cout<<"Found this strange url: "<<base_url<<"\n";
+            read_url(src,tag_location+3);
+        }
         return;
     }
 }
@@ -702,7 +766,11 @@ void citation::read_author(const string &src)
             }
             //cout<<", fixed to "<<author<<"\n";
         }
-        return;
+        if (author.find("=")==string::npos)
+        {
+            // if the author is probably correct, return
+            return;
+        }
     }
 
     // if we get here then the citation is not using the "author=" tag, rather, 
@@ -770,6 +838,11 @@ citation::citation(const string &src)
 
     remove_target(author,"\"");
     remove_target(base_url,"\"");
+
+    string target = "&lt;";
+    string endtarget = "&gt;";
+    remove_between(author,target,endtarget);
+    remove_between(base_url,target,endtarget);
 
     //check_escape_chars(author);
     //check_escape_chars(base_url);

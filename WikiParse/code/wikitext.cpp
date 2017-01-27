@@ -273,3 +273,12 @@ void remove_references(string &temp){
         temp.erase(ref);
     }
 }
+
+void decode_text(string &text) {
+    replace_target(text, "&lt;", "<");
+    replace_target(text, "&gt;", ">");
+    replace_target(text, "&nbsp;", " ");
+    replace_target(text, "&amp;", "&");
+    replace_target(text, "&quot;", "\"");
+    replace_target(text, "&apos;", "'");
+}

@@ -34,7 +34,7 @@ void wikidump::read() {
     time_t start_time = time(0);
     int display_refresh_rate = 5; // every 5 seconds, clear the output line
 
-    dump_output<<"{";
+    dump_output<<"{\n";
     while (dump_input.read(buffer, sizeof(buffer))) {
 
         offset = parse_all(buffer, "\n  <page>\n", "\n  </page>\n", read_page, articles_read);
@@ -50,5 +50,5 @@ void wikidump::read() {
         cout.flush();
     }
     cout<<"\n"; // to preserve the display line
-    dump_output<<"}";
+    dump_output<<"\n}";
 }

@@ -15,7 +15,7 @@ using namespace std;
 #include <iostream>
 #include <ctype.h>
 
-
+void decode_text(string &text);
 void remove_target(string &temp, string target);
 void remove_target(string &temp, string target);
 void remove_references(string &temp);
