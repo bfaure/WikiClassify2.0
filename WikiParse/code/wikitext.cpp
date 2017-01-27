@@ -50,35 +50,28 @@ void copy_between(const string &body, const string &target, const vector<string>
 
 void copy_between(const string &body, const string &target, const string &endtarget, vector<string> &copies)
 {
-    // same idea as the vector version
+    // Iterate over the body input to find the target, every time the target is found, locate the closest
+    // location of the endtarget and push that substring onto the copies vector. If at any time we cannot
+    // location the target or the endtarget, return from the function.
     size_t last_location = 0;
     while(true)
     {
-        size_t location = body.find(target,last_location);
+        size_t location = body.find(target,last_location);\
 
         if(location!=string::npos)
         {
-
-            int closest_partner = 1000000000;
-            int close_cut_at = -1;
-
             size_t endlocation = body.find(endtarget, location+target.size());
 
-            if(endlocation!=string::npos){
-                close_cut_at = endlocation+endtarget.size()-location;
-                closest_partner = endlocation;
-            }
-        
-            if (close_cut_at==-1){
-                return;
+            if(endlocation!=string::npos)
+            {
+                copies.push_back(body.substr(location,endlocation-location-target.size()));
+                last_location = endlocation+endtarget.size();
             }
 
-            last_location = closest_partner+1;
-            copies.push_back(body.substr(location,closest_partner-target.size()));
+            else {return;}
         }
-        else{
-            return;
-        }
+
+        else {return;}
     }
 }
 

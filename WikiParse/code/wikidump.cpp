@@ -28,14 +28,15 @@ void wikidump::read() {
     articles_read = 0;
 
     streampos offset; 
-    const streampos buffer_size = 1000000;
+    const streampos buffer_size = 2000000;
     char     buffer[(unsigned)buffer_size];
     
     time_t start_time = time(0);
     int display_refresh_rate = 5; // every 5 seconds, clear the output line
-    dump_output<<"{";
 
+    dump_output<<"{";
     while (dump_input.read(buffer, sizeof(buffer))) {
+
         offset = parse_all(buffer, "\n  <page>\n", "\n  </page>\n", read_page, articles_read);
         dump_input.seekg(dump_input.tellg()-buffer_size+offset);
         if (time(0)-start_time % display_refresh_rate == 0)

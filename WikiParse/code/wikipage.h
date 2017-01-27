@@ -50,8 +50,10 @@ class citation
 public:
 
     citation(const string &src);
-    string get_url();
-    string get_author();
+    string get_url(); // return base_url
+    string get_author(); // return author
+    void remove_url(); // set url and base_url to "None"
+    void remove_author(); // set author to "None"
 
 private:
     string citation_type; // book, journal, website, etc. or None if type not recognized
@@ -83,7 +85,7 @@ class wikipage {
         string importance;
         string instance;
         string quality;
-        int daily_views;
+        string daily_views;
 
         // Get page sections
         void get_title(string &page);
@@ -111,6 +113,7 @@ class wikipage {
         void get_daily_views();
         void get_instance_of();
         void read_citations();
+        void flatten_citations();
 
         // Text methods
         void clean_text();
