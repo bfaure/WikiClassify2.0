@@ -211,7 +211,6 @@ void wikipage::read_categories() {
         if (pos != string::npos) {
             category = category.substr(0, pos);
         }
-        remove_target(category,"\n");
     }
     string tag = "Category:";
     for(int i=0; i<temp.size(); i++)
@@ -225,6 +224,10 @@ void wikipage::read_categories() {
     for(string &category:categories) // decode all categories
     {
         decode_text(category);
+        remove_target(category,"\"");
+        remove_target(category,"\n");
+        remove_target(category,"\t");
+
     }
 }
 void wikipage::read_links() {
@@ -649,6 +652,35 @@ void wikipage::clean_text(){
     return;
 }
 
+
+string get_base_url(string url)
+{
+    // new version of function
+    
+    string http_junk = "://";
+    size_t http_junk_location = url.find(http_junk);
+
+    if (http_junk_location!=string::npos)
+    {
+        url = url.substr(http_junk_location+http_junk.size());
+    }
+
+    size_t first_slash_location = url.find("/");
+    if (first_slash_location!=string::npos)
+    {
+        url = url.substr(0,first_slash_location);
+    }
+
+    if(count_text(url,".")>3)
+    {
+        url = url.substr(url.find(".")+1);
+    }   
+
+    return url;
+}
+
+/*
+// change this function so that it parses until it hits a slash
 unsigned depth = 0;
 unsigned max_depth = 10;
 string get_base_url(string url,size_t start_location=0)
@@ -662,7 +694,7 @@ string get_base_url(string url,size_t start_location=0)
     {
         override_recursion = true;
         start_location = 0;
-        cout<<"Hit max recursion depth basing: "<<url<<"\n";
+        //cout<<"Hit max recursion depth basing: "<<url<<"\n";
     }
 
     string http_junk = "://";
@@ -714,6 +746,7 @@ string get_base_url(string url,size_t start_location=0)
     depth = 0;
     return url;
 }
+*/
 
 string citation::get_url()
 {
@@ -876,6 +909,8 @@ citation::citation(const string &src)
     read_url(src);
     read_author(src);
 
+    decode_text(author);
+
     remove_target(author,"\n");
     remove_target(base_url,"\n");
 
@@ -889,8 +924,6 @@ citation::citation(const string &src)
     string endtarget = "&gt;";
     remove_between(author,target,endtarget);
     remove_between(base_url,target,endtarget);
-
-    decode_text(author);
 
     //check_escape_chars(author);
     //check_escape_chars(base_url);
