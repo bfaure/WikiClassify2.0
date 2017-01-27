@@ -19,7 +19,7 @@ wikidump::wikidump(string path) {
         dump_size   = ifstream(path, ifstream::ate | ifstream::binary).tellg();
     }
     else {
-        cout<<"Could not open dump!"<<endl;
+        cout<<"Could not open dump! ("<<path<<")"<<endl;
     }
 }
 

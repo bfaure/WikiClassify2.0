@@ -47,11 +47,11 @@ void copy_between(const string &body, const string &target, const vector<string>
 
 void copy_between(const string &body, const string &target, const string &endtarget, vector<string> &copies)
 {
-    cout<<"\n"<<body<<"\n";
     // same idea as the vector version
+    size_t current_index = 0;
     while(true)
     {
-        size_t location = body.find(target);
+        size_t location = body.find(target,current_index);
         if(location!=string::npos){
 
             int closest_partner = 1000000000;
@@ -67,8 +67,8 @@ void copy_between(const string &body, const string &target, const string &endtar
             if (close_cut_at==-1){
                 return;
             }
-
             copies.push_back(body.substr(location,close_cut_at));
+            current_index += close_cut_at;
         }
         else{
             return;

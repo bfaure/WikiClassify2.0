@@ -61,7 +61,7 @@ void wikipage::read_citations()
     string target = "{{cite";
     string endtarget = "}}";
     copy_between(text,target,endtarget,parsed_citation_strings);
-    cout<<"Found "+to_string(parsed_citation_strings.size())+" citations in "+title+"\n";
+    //cout<<"Found "+to_string(parsed_citation_strings.size())+" citations in "+title+"\n";
 
     target = "{{Citation";
     copy_between(text,target,endtarget,parsed_citation_strings);
