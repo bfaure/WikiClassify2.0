@@ -38,7 +38,22 @@ void wikipage::get_instance()
 
 void wikipage::get_quality()
 {
-    quality = "stub"; // default
+    if (text.find("{{featured article}}"))
+    {
+        quality = "featured";
+        return;
+    }
+    if (text.find("{{good article}}"))
+    {
+        quality = "good";
+        return;
+    }
+    if (text.find("{{stub}}"))
+    {
+        quality = "stub";
+        return;
+    }
+    quality = "None";
 }
 
 void wikipage::get_importance()
@@ -61,19 +76,26 @@ void wikipage::read_citations()
     string target = "{{cite";
     string endtarget = "}}";
     copy_between(text,target,endtarget,parsed_citation_strings);
-    cout<<"Found "+to_string(parsed_citation_strings.size())+" citations in "+title+"\n";
+    //cout<<"Found "+to_string(parsed_citation_strings.size())+" citations in "+title+"\n";
 
     target = "{{Citation";
     copy_between(text,target,endtarget,parsed_citation_strings);
 
+    string last = "";
     for (int i=0; i<parsed_citation_strings.size(); i++)
     {
+        if (parsed_citation_strings[i] == last)
+        {
+            cout<<"copy: "<<parsed_citation_strings[i]<<"\n";
+            continue;
+        }
         // iterate over all parsed references and construct citation structs
         if (parsed_citation_strings[i] != "")
         {
             citation cur(parsed_citation_strings[i]); // populate citation struct
             citations.push_back(cur);  
         }
+        last = parsed_citation_strings[i];
     }
     //return citations;
 }
@@ -213,16 +235,21 @@ void wikipage::save_json(ofstream &file)
     // outputs in json format on a single line of the file
     if(!text.empty())
     {
-        string output = "{"+to_string(ID)+"{";                // {id:{
-        output += "title:\""+title+"\",";              // title:"Article title",
-        output += "ns:"+ns+",";                         // ns:Article namespace,
-        output += "timestamp:"+timestamp+",";           // timestamp:Article timestamp,    
-        output += "instance_of:\""+instance+"\",";   // instance_of:"Article instance_of",
-        output += "quality:\""+quality+"\",";
-        output += "importance:\""+importance+"\",";
-        output += "daily_views:"+to_string(daily_views)+",";
-        output += "text:\""+text+"\",";
-        output += "categories:[";
+        if(is_disambig())
+        {
+            return;
+        }
+
+        string output = "\""+to_string(ID)+"\":{";                // {id:{
+        output += "\"title\":\""+title+"\",";              // title:"Article title",
+        output += "\"ns\":\""+ns+"\",";                         // ns:Article namespace,
+        output += "\"timestamp\":\""+timestamp+"\",";           // timestamp:Article timestamp,    
+        output += "\"instance_of\":\""+instance+"\",";   // instance_of:"Article instance_of",
+        output += "\"quality\":\""+quality+"\",";
+        output += "\"importance\":\""+importance+"\",";
+        output += "\"daily_views\":\""+to_string(daily_views)+"\",";
+        output += "\"text\":\""+text+"\",";
+        output += "\"categories\":[";
         for (int i=0; i<categories.size(); i++)
         {
             output += "\""+categories[i]+"\"";
@@ -232,27 +259,53 @@ void wikipage::save_json(ofstream &file)
             }
         }
         output += "],";
-        output += "cited_domains:[";
+        output += "\"cited_domains\":[";
         for (int i=0; i<citations.size(); i++)
         {
-            output += "\""+citations[i].get_url()+"\"";
+            string cur = citations[i].get_url();
+            if (cur==" " or cur=="" or cur=="None")
+            {
+                if (i==citations.size()-1)
+                {
+                    if (output.at(output.size()-1)==',')
+                    {
+                        output.erase(output.size()-1);
+                    }
+                }
+                continue;
+            }
+
+            output += "\""+cur+"\"";
             if (i!=citations.size()-1)
             {
                 output += ",";
             }
         }
         output += "],";
-        output += "cited_authors:[";
+        output += "\"cited_authors\":[";
         for (int i=0; i<citations.size(); i++)
         {
-            output += "\""+citations[i].get_author()+"\"";
+            string cur = citations[i].get_author();
+            if (cur==" " or cur=="" or cur=="None")
+            {
+                if (i==citations.size()-1)
+                {
+                    if (output.at(output.size()-1)==',')
+                    {
+                        output.erase(output.size()-1);
+                    }
+                }
+                continue;
+            }
+
+            output += "\""+cur+"\"";
             if (i!=citations.size()-1)
             {
                 output += ",";
             }
         }
         output += "]";
-        output += "}}\n";
+        output += "},\n";
         file<<output;
     }
 }
@@ -491,7 +544,7 @@ string get_base_url(string url)
     {
         url = url.substr(http_junk_location+http_junk.size());
     }
-    vector<string> exts = {".com",".edu",".org",".gov",".mil",".net",".info",".ca",".int",".biz",".name",".br",".cn",".fr"};
+    vector<string> exts = {".com",".edu",".org",".gov",".mil",".net",".info",".ca",".int",".biz",".name",".br",".cn",".fr",".co.uk",".am",".ar"};
     for (int i=0; i<exts.size(); i++)
     {
         size_t ext_location = url.find(exts[i]);
@@ -532,8 +585,8 @@ void citation::read_url(const string &src)
             end_location = end_location2;
         }
 
-        url = src.substr(equal_location+1,end_location-equal_location+1);
-        url = trim(author);
+        url = src.substr(equal_location+1,end_location-equal_location-1);
+        url = trim(url);
 
         base_url = get_base_url(url);
         return;
@@ -557,15 +610,15 @@ void citation::read_author(const string &src)
             end_location = end_location2;
         }
 
-        author = src.substr(equal_location+1,end_location-equal_location+1);
+        author = src.substr(equal_location+1,end_location-equal_location-1);
         author = trim(author);
         return;
     }
 
     // if we get here then the citation is not using the "author=" tag, rather, 
     // they may be using "first=" and "last=" or they may not be including an author
-    size_t first_name_location = src.find("last");
-    size_t last_name_location = src.find("first");
+    size_t first_name_location = src.find("first");
+    size_t last_name_location = src.find("last");
     if(first_name_location!=string::npos and last_name_location!=string::npos)
     {
         // need to parse out the first and last names
@@ -580,7 +633,7 @@ void citation::read_author(const string &src)
             end_location = end_location2;
         }
 
-        string first_name = src.substr(equal_location+1,end_location-equal_location+1);
+        string first_name = src.substr(equal_location+1,end_location-equal_location-1);
         first_name = trim(first_name);
 
         // need to parse out the first and last names
@@ -595,8 +648,8 @@ void citation::read_author(const string &src)
             end_location = end_location2;
         }
 
-        string last_name = src.substr(equal_location+1,end_location-equal_location+1);
-        last_name = trim(first_name);
+        string last_name = src.substr(equal_location+1,end_location-equal_location-1);
+        last_name = trim(last_name);
 
         author = first_name+" "+last_name;
         return;
@@ -609,4 +662,13 @@ citation::citation(const string &src)
     // citation default constructor
     read_url(src);
     read_author(src);
+
+    remove_target(author,"\n");
+    remove_target(base_url,"\n");
+
+    remove_target(author,"\t");
+    remove_target(base_url,"\t");
+
+    remove_target(author,"\"");
+    remove_target(base_url,"\"");
 }

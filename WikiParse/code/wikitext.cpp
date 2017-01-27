@@ -5,8 +5,9 @@ void copy_between(const string &body, const string &target, const vector<string>
 {
     // used in the read_citations function, parses all instances from "target" to the closest "endtarget" element
     // and pushes them into the "copies" parameter for the returning function to recieve
+    size_t last_location = 0;
     while(true){
-        size_t location = body.find(target);
+        size_t location = body.find(target,last_location);
         if(location!=string::npos){
 
             int closest_partner = 1000000000;
@@ -37,7 +38,9 @@ void copy_between(const string &body, const string &target, const vector<string>
             if (close_cut_at==-1){
                 return;
             }
-            copies.push_back(body.substr(location,close_cut_at));
+
+            last_location = closest_partner+1;
+            copies.push_back(body.substr(location,closest_partner-location-target.size()));
         }
         else{
             return;
@@ -47,11 +50,11 @@ void copy_between(const string &body, const string &target, const vector<string>
 
 void copy_between(const string &body, const string &target, const string &endtarget, vector<string> &copies)
 {
-    cout<<"\n"<<body<<"\n";
     // same idea as the vector version
+    size_t last_location = 0;
     while(true)
     {
-        size_t location = body.find(target);
+        size_t location = body.find(target,last_location);
         if(location!=string::npos){
 
             int closest_partner = 1000000000;
@@ -68,7 +71,8 @@ void copy_between(const string &body, const string &target, const string &endtar
                 return;
             }
 
-            copies.push_back(body.substr(location,close_cut_at));
+            last_location = closest_partner+1;
+            copies.push_back(body.substr(location,closest_partner-target.size()));
         }
         else{
             return;
