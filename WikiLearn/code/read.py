@@ -40,6 +40,7 @@ class bag_corpus(object):
         print("Initializing sources...")
         self.documents  = documents
         self.dictionary = corpora.Dictionary([open(dictionary).read().replace('\n',' ').split()])
+        self.instances  = sum(1 for line in open(documents))
 
     def __iter__(self):
         i = -1
@@ -59,6 +60,7 @@ class doc_corpus(object):
     def __init__(self, documents):
         print("Initializing sources...")
         self.documents  = documents
+        self.instances  = sum(1 for line in open(documents))
 
     def __iter__(self):
         i = -1

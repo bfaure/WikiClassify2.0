@@ -12,6 +12,7 @@ random.seed(0)
 #-----------------------------------------------------------------------------#
 import numpy as np                          # numpy dependency
 np.random.seed(0)
+np.set_printoptions(suppress=True)
 
 from gensim.models import Doc2Vec           # doc2vec model
 from gensim.models.ldamodel import LdaModel # LDA model
@@ -42,7 +43,6 @@ class LDA(object):
             retrain = raw_input("\t'%s' exists. Retrain? y/N: " % self.name)
             if retrain.lower() == 'n' or retrain == '':
                 self.load()
-                print(self.get_topics())
                 return
         self.build()
         self.train()
@@ -50,15 +50,25 @@ class LDA(object):
         #for bag in bags:
         #    print(encoder.encode_bag(bag))
 
+    def __iter__(self):
+        print("\tRunning model on documents...")
+        num = self.docs.instances
+        for i, doc in enumerate(self.docs):
+            if not i % (num//100):
+                print('\t\t%0.1f%% done' % round(i*100.0/num,1))
+            if i > num:
+                break
+            yield self.encode_doc(doc)
+
     # User Interfaces: None yet!
 
     # Model I/O
 
-    def build(self, features=30):
+    def build(self, features=300):
         print("\tBuilding LDA model...")
         self.features = features
 
-    def train(self, epochs=1):
+    def train(self, epochs=5):
         '''For Wikipedia, use at least 5k-10k topics
         Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
         print("\tTraining LDA model...")
@@ -67,8 +77,8 @@ class LDA(object):
 
     def save(self):
         print("\tSaving LDA model...")
-        if not os.path.exists(self.save_dir+'/'+self.name):
-            os.makedirs(self.save_dir+'/'+self.name)
+        if not os.path.exists(self.save_dir+'/'+self.name+'/LDA'):
+            os.makedirs(self.save_dir+'/'+self.name+'/LDA')
         self.model.save('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
 
     def load(self):
@@ -76,9 +86,11 @@ class LDA(object):
         self.model = LdaModel.load('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
         self.features = self.model.num_topics
 
-    def get_topics(self):
+    def get_topics(self, words=20):
         '''Returns all topics'''
-        return [x[1] for x in self.model.show_topics(num_topics=-1,num_words=10,formatted=False)]
+        topics = self.model.show_topics(num_topics=-1,num_words=words,formatted=False)
+        terms  = [y[0] for x in topics for y in x[1]]
+        return [terms[i:i + words] for i in xrange(0, len(terms), words)]
 
     # Model methods
 
@@ -186,8 +198,8 @@ class doc2vec(object):
         
     def save(self):
         print("\tSaving doc2vec model...")
-        if not os.path.exists(self.save_dir+'/'+self.name):
-            os.makedirs(self.save_dir+'/'+self.name)
+        if not os.path.exists(self.save_dir+'/'+self.name+'/word2vec'):
+            os.makedirs(self.save_dir+'/'+self.name+'/word2vec')
         self.model.save('{0}/{1}/word2vec/{1}.d2v'.format(self.save_dir,self.name))
     
     def load(self):
