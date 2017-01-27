@@ -55,7 +55,9 @@ void copy_between(const string &body, const string &target, const string &endtar
     while(true)
     {
         size_t location = body.find(target,last_location);
-        if(location!=string::npos){
+
+        if(location!=string::npos)
+        {
 
             int closest_partner = 1000000000;
             int close_cut_at = -1;
