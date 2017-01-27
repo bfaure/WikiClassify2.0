@@ -6,14 +6,16 @@ wikipage::wikipage(string page) {
     get_namespace(page);             // Extract page sections
     if (is_article()) {
         get_ID(page);
-        get_title(page); 
+        get_title(page);
         get_redirect(page);
-        if (!is_redirect()) {
+        if (!is_redirect()) 
+        {
             get_timestamp(page); 
             //get_contributor(page);
             //get_comment(page);
             get_text(page);         
-            if (!is_disambig()) {   // if not a disambugation tagged article
+            if (!is_disambig()) 
+            {   // if not a disambugation tagged article
 
                 read_categories();  // get list of category strings
                 read_citations();  // get list of citation structs
@@ -30,6 +32,20 @@ wikipage::wikipage(string page) {
             }
         }
     }
+    /*
+    else
+    {
+        if (is_talk_page())
+        {
+            get_title(page);
+            //get_ID(page);
+            //get_timestamp(page);
+            //get_text(page);
+            cout<<title<<"\n";
+
+        }
+    }
+    */
 }
 
 void wikipage::flatten_citations()
@@ -256,6 +272,11 @@ bool wikipage::is_disambig() {
 }
 bool wikipage::is_article() {
     return (ns=="0");
+}
+
+bool wikipage::is_talk_page()
+{
+    return (ns=="1");
 }
 
 bool wikipage::has_categories() {
@@ -628,11 +649,21 @@ void wikipage::clean_text(){
     return;
 }
 
-
-string get_base_url(string url)
+unsigned depth = 0;
+unsigned max_depth = 10;
+string get_base_url(string url,size_t start_location=0)
 {
     // takes in a full url and returns just the base, i.e. it removes the stuff
     // before the domain name and the stuff after the .com, .org, etc.
+
+    bool override_recursion = false;
+
+    if(depth>=max_depth)
+    {
+        override_recursion = true;
+        start_location = 0;
+        cout<<"Hit max recursion depth basing: "<<url<<"\n";
+    }
 
     string http_junk = "://";
     size_t http_junk_location = url.find(http_junk);
@@ -641,16 +672,19 @@ string get_base_url(string url)
     {
         url = url.substr(http_junk_location+http_junk.size());
     }
+
+    string url_copy = url;
+
     vector<string> exts = { ".com",".edu",".org",".gov",".mil",
                             ".net",".info",".ca",".int",".biz",
-                            ".name",".br",".cn",".fr",".co.uk",
-                            ".am",".ar",".ac.uk",".az",".va",
-                            ".de"};
+                            ".name",".br",".cn",".fr",".uk",
+                            ".ar",".az",".va",".de",".cu",".ie",
+                            ".dk",".fi",".be",".hr"};
     int closest_ext = 100000;
 
     for (int i=0; i<exts.size(); i++)
     {
-        size_t ext_location = url.find(exts[i]);
+        size_t ext_location = url.find(exts[i],start_location);
         if (ext_location!=string::npos)
         {
             if (ext_location+exts[i].size() < closest_ext)
@@ -666,6 +700,18 @@ string get_base_url(string url)
     {
         url = url.substr(0,closest_ext);
     }
+
+    if (url.find("www.")!=string::npos and count_text(url,".")<=1 and override_recursion==false)
+    {
+        // If we have a url like www.cn or something where it looks like
+        // the url could have been www.cnn.com and because we have .cn as
+        // an extension we cut off too early.
+        //cout<<url<<"\n";
+        depth++;
+        return get_base_url(url_copy,url_copy.find("www.")+4);
+    }
+
+    depth = 0;
     return url;
 }
 
@@ -843,6 +889,8 @@ citation::citation(const string &src)
     string endtarget = "&gt;";
     remove_between(author,target,endtarget);
     remove_between(base_url,target,endtarget);
+
+    decode_text(author);
 
     //check_escape_chars(author);
     //check_escape_chars(base_url);

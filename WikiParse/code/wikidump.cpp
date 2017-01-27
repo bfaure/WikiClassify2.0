@@ -7,6 +7,9 @@
 ofstream dump_output("documents.json");
 
 
+vector<wikipage> save_buffer;
+int save_buffer_length_target = 10000;
+
 void read_page(string page) {
     //cout<<"Reading page!"<<endl;
     wikipage wp(page);

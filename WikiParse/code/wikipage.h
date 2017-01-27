@@ -134,6 +134,7 @@ class wikipage {
         bool is_redirect();
         bool is_disambig();
         bool is_article();
+        bool is_talk_page();
 
         bool has_categories();
         bool has_links();
