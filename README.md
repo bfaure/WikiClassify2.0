@@ -11,7 +11,7 @@ When first cloning the repo, run the init.py file to create the directory struct
 
 ## Instructions
 ### Parser
-`cd` into the WikiClassify2.0/wikiparse directory. Using gcc, from command line enter... <br> `g++ --std=c++11 main.cpp code/wikidump.cpp code/wikitext.cpp code/wikipage.cpp code/string_utils.cpp -o main` <br>... to compile the parser files. To run the program, either enter `./main <path to data dump file>` or modify the main.cpp file such that it includes the path to you're data dump, recompile using the above instruction, and enter simply `./main` to run the program.
+`cd` into the WikiClassify2.0/wikiparse directory. Using gcc, from command line enter... <br> `g++ --std=c++11 main.cpp code/wikidump.cpp code/wikitext.cpp code/wikipage.cpp code/string_utils.cpp -o main` <br>... to compile the parser files. To run the program, either enter `./main <path to data dump file>` or modify the main.cpp file such that it includes the path to you're data dump, recompile using the above instruction, and enter simply `./main` to run the program.<br>A completion email will be sent to the `email_to` address set in main.cpp, change this to your email to be notified upon the completion of the program.
 
 ### Model
 
