@@ -9,7 +9,7 @@ int main(int argc, const char * argv[]) {
 	else
 	{
 		string filename = "data/input/simplewiki-latest-pages-articles.xml";
-		filename = "data/input/enwiki-latest-pages-articles.xml";
+		//filename = "data/input/enwiki-latest-pages-articles.xml";
 		wikidump dump(filename);
 		dump.read();
 		return 0;

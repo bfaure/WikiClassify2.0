@@ -128,7 +128,7 @@ class wikipage {
     	// Constructor
         wikipage(string page);
         void save(ofstream &file);
-        void save_json(ofstream &file);
+        bool save_json(ofstream &file);
 
         // Boolean checks
         bool is_redirect();

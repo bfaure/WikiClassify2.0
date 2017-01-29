@@ -5,16 +5,19 @@
 
 //ofstream dump_output("documents.txt");
 ofstream dump_output("documents.json");
+unsigned long articles_saved;
 
-
-vector<wikipage> save_buffer;
-int save_buffer_length_target = 10000;
+//vector<wikipage> save_buffer;
+//int save_buffer_length_target = 10000;
 
 void read_page(string page) {
     //cout<<"Reading page!"<<endl;
     wikipage wp(page);
     //wp.save(dump_output);
-    wp.save_json(dump_output);
+    if(wp.save_json(dump_output))
+    {
+        articles_saved++;
+    }
 }
 
 wikidump::wikidump(string path) {
@@ -29,6 +32,7 @@ wikidump::wikidump(string path) {
 
 void wikidump::read() {
     articles_read = 0;
+    articles_saved = 0;
 
     streampos offset; 
     const streampos buffer_size = 2000000;
@@ -49,7 +53,7 @@ void wikidump::read() {
             cout.flush();
         }
         cout.flush();
-        cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles read";
+        cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles read, "<<articles_saved<<" articles saved";
         cout.flush();
     }
     cout<<"\n"; // to preserve the display line

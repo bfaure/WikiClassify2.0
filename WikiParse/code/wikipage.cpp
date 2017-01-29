@@ -2,6 +2,8 @@
 #include "string_utils.h"
 #include "wikitext.h"
 
+ofstream debug_log("debug_log.txt");
+
 wikipage::wikipage(string page) {
     get_namespace(page);             // Extract page sections
     if (is_article()) {
@@ -185,6 +187,8 @@ void wikipage::get_title(string &page) {
             condition=false;
         }
     }
+    // remove any &amp
+    decode_text(title);
 }
 
 void wikipage::get_ID(string &page) {string ID_str; parse(page, "    <id>", "</id>\n    ", ID_str);ID=stoi(ID_str);}
@@ -226,7 +230,7 @@ void wikipage::read_categories() {
         decode_text(category);
         remove_target(category,"\"");
         remove_target(category,"\n");
-        remove_target(category,"\t");
+        replace_target(category,"\t"," ");
 
     }
 }
@@ -324,14 +328,14 @@ void wikipage::save(ofstream &file){
 
 bool first_save = true; // dont write out the pre-comma for the first article
 
-void wikipage::save_json(ofstream &file)
+bool wikipage::save_json(ofstream &file)
 {
     // outputs in json format on a single line of the file
     if(!text.empty())
     {
         if(is_disambig())
         {
-            return;
+            return false;
         }
 
         string divider = "";
@@ -406,6 +410,7 @@ void wikipage::save_json(ofstream &file)
         output += "}";
         file<<output;
     }
+    return true;
 }
 
 void wikipage::percent_decoding() {
@@ -671,6 +676,18 @@ string get_base_url(string url)
         url = url.substr(0,first_slash_location);
     }
 
+    size_t equal_location = url.find("=");
+    if (equal_location!=string::npos)
+    {
+        url = url.substr(0,equal_location);
+    }
+
+    size_t question_location = url.find("?");
+    if (question_location!=string::npos)
+    {
+        url = url.substr(0,question_location);
+    }
+
     if(count_text(url,".")>3)
     {
         url = url.substr(url.find(".")+1);
@@ -680,10 +697,10 @@ string get_base_url(string url)
 }
 
 /*
-// change this function so that it parses until it hits a slash
+// function that is used if the 
 unsigned depth = 0;
 unsigned max_depth = 10;
-string get_base_url(string url,size_t start_location=0)
+string get_base_url_without_slash(string url,size_t start_location=0)
 {
     // takes in a full url and returns just the base, i.e. it removes the stuff
     // before the domain name and the stuff after the .com, .org, etc.
@@ -748,6 +765,7 @@ string get_base_url(string url,size_t start_location=0)
 }
 */
 
+
 string citation::get_url()
 {
     return base_url;
@@ -805,7 +823,12 @@ void citation::read_url(const string &src,int start_from=0)
 void citation::read_author(const string &src)
 {
     author = "None";
-    size_t tag_location = src.find("author");
+    size_t tag_location = src.find("author=");
+    if (tag_location==string::npos)
+    {
+        tag_location = src.find("author =");
+    }
+
     if (tag_location != string::npos)
     {
         // find location of first equals sign after the "author" tag
@@ -821,6 +844,30 @@ void citation::read_author(const string &src)
 
         author = src.substr(equal_location+1,end_location-equal_location-1);
         author = trim(author);
+
+        // if someone tried to put multiple authors in, keep only the first
+        if ((author.find("&amp;")!=string::npos))
+        {
+            author = author.substr(0,author.find("&amp;"));
+        }
+
+        // if someone tried to put multiple authors in, keep only the first
+        if ((author.find(";")!=string::npos))
+        {
+            author = author.substr(0,author.find(";"));
+        }
+
+        // if someone tried to put multiple authors in, keep only the first
+        if ((author.find("and")!=string::npos))
+        {
+            author = author.substr(0,author.find("and"));
+        }
+
+        // if someone put "By" in front of the name
+        if ((author.find("By ")!=string::npos))
+        {
+            author = author.substr(author.find("By ")+3);
+        }
 
         if (author.find(",")!=string::npos)
         {
@@ -845,6 +892,7 @@ void citation::read_author(const string &src)
             }
             //cout<<", fixed to "<<author<<"\n";
         }
+
         if (author.find("=")==string::npos)
         {
             // if the author is probably correct, return
@@ -854,8 +902,19 @@ void citation::read_author(const string &src)
 
     // if we get here then the citation is not using the "author=" tag, rather, 
     // they may be using "first=" and "last=" or they may not be including an author
-    size_t first_name_location = src.find("first");
-    size_t last_name_location = src.find("last");
+    size_t first_name_location = src.find("first=");
+    size_t last_name_location = src.find("last=");
+
+    if (first_name_location==string::npos)
+    {
+        first_name_location = src.find("first =");
+    }
+
+    if (last_name_location==string::npos)
+    {
+        last_name_location = src.find("last =");
+    }
+
     if(first_name_location!=string::npos and last_name_location!=string::npos)
     {
         // need to parse out the first and last names
@@ -906,6 +965,9 @@ void check_escape_chars(string &src)
 citation::citation(const string &src)
 {
     // citation default constructor
+
+
+
     read_url(src);
     read_author(src);
 
@@ -914,8 +976,8 @@ citation::citation(const string &src)
     remove_target(author,"\n");
     remove_target(base_url,"\n");
 
-    remove_target(author,"\t");
-    remove_target(base_url,"\t");
+    replace_target(author,"\t"," ");
+    replace_target(base_url,"\t"," ");
 
     remove_target(author,"\"");
     remove_target(base_url,"\"");
@@ -924,6 +986,23 @@ citation::citation(const string &src)
     string endtarget = "&gt;";
     remove_between(author,target,endtarget);
     remove_between(base_url,target,endtarget);
+
+    remove_target(author,"'");
+    remove_target(author,"et. al.");
+    remove_target(author,"et. al");
+    remove_target(author,"et al.");
+    remove_target(author,"et al");
+
+    trim(author);
+    trim(base_url);
+
+
+    if (author.find("&nbsp;")!=string::npos)
+    {
+        debug_log<<author<<"\n";
+        debug_log<<src<<"\n\n";
+    }
+
 
     //check_escape_chars(author);
     //check_escape_chars(base_url);
