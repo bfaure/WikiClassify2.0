@@ -139,6 +139,7 @@ class wikipage {
         bool has_categories();
         bool has_links();
 
+        
         // Stream I/O
         friend ostream& operator<<(ostream& os, wikipage& wp);
 };

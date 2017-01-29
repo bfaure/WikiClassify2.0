@@ -13,7 +13,7 @@ wikipage::wikipage(string page) {
         if (!is_redirect()) 
         {
             get_timestamp(page); 
-            //get_contributor(page);
+            get_contributor(page);
             //get_comment(page);
             get_text(page);         
             if (!is_disambig()) 
@@ -189,13 +189,44 @@ void wikipage::get_title(string &page) {
     }
     // remove any &amp
     decode_text(title);
+    remove_target(title,"\"");
 }
 
 void wikipage::get_ID(string &page) {string ID_str; parse(page, "    <id>", "</id>\n    ", ID_str);ID=stoi(ID_str);}
 void wikipage::get_namespace(string &page) {parse(page, "    <ns>", "</ns>\n    ", ns);}
 void wikipage::get_redirect(string &page) {parse(page, "    <redirect title=\"", "\" />\n    ", redirect);}
 void wikipage::get_timestamp(string &page) {parse(page, "      <timestamp>", "</timestamp>\n      ", timestamp);}
-void wikipage::get_contributor(string &page) {parse(page, "        <username>", "</username>\n        ", contributor);}
+
+
+//void wikipage::get_contributor(string &page) {parse(page, "        <username>", "</username>\n        ", contributor);}
+
+void wikipage::get_contributor(string &page)
+{
+    parse(page,"      <contributor>\n","      </contributor>\n",contributor);
+    if (contributor.find("<ip>")!=string::npos)
+    {
+        parse(contributor,"        <ip>","</ip>\n",contributor);
+    }
+    else
+    {
+        if (contributor.find("<username>")!=string::npos)
+        {
+            parse(contributor,"        <username>","</username>\n",contributor);
+        }
+        else
+        {
+            contributor = "";
+        }
+    }
+    remove_target(contributor,"\n");
+    replace_target(contributor,"\t"," ");
+    remove_target(contributor,"\"");
+    remove_target(contributor,"\\");
+    decode_text(contributor);
+    remove_target(contributor,"\"");
+    trim(contributor);
+}
+
 void wikipage::get_comment(string &page) {parse(page, "      <comment>", "</comment>\n      ", comment);}
 void wikipage::get_text(string &page) {parse(page, "      <text xml:space=\"preserve\">", "</text>\n      ", text);}
 
@@ -346,7 +377,11 @@ bool wikipage::save_json(ofstream &file)
         output += "\""+to_string(ID)+"\":{";                // {id:{
         output += "\"title\":\""+title+"\",";              // title:"Article title",
         output += "\"ns\":\""+ns+"\",";                         // ns:Article namespace,
-        output += "\"timestamp\":\""+timestamp+"\",";           // timestamp:Article timestamp,    
+        output += "\"timestamp\":\""+timestamp+"\",";           // timestamp:Article timestamp,
+
+        output += "\"contributor\":\""+contributor+"\","; // 
+
+        output += "\"size\":\""+to_string(text.size())+"\","; // size of the article text    
         output += "\"instance_of\":\""+instance+"\",";   // instance_of:"Article instance_of",
         output += "\"quality\":\""+quality+"\",";
         output += "\"importance\":\""+importance+"\",";
