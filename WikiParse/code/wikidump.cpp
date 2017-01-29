@@ -52,7 +52,7 @@ void wikidump::read(string email_address) {
     
     time_t start_time = time(0);
     int display_refresh_rate = 5; // every 5 seconds, clear the output line
-    /*
+    
     dump_output<<"{\n";
     while (dump_input.read(buffer, sizeof(buffer))) {
 
@@ -70,7 +70,7 @@ void wikidump::read(string email_address) {
     }
     cout<<"\n"; // to preserve the display line
     dump_output<<"\n}";
-    */
+    
 
     if (email_address!="None")
     {
