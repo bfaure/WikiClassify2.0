@@ -48,6 +48,10 @@ using std::transform;
 class citation
 {
 public:
+    string citation_type; // book, journal, website, etc. or None if type not recognized
+    string author; // FirstName LastName or None if none found
+    string url; // full url, or None if none found
+    string base_url; // base url or None if none found
 
     citation(const string &src);
     string get_url(); // return base_url
@@ -56,37 +60,14 @@ public:
     void remove_author(); // set author to "None"
 
 private:
-    string citation_type; // book, journal, website, etc. or None if type not recognized
-    string author; // FirstName LastName or None if none found
-    string url; // full url, or None if none found
-    string base_url; // base url or None if none found
-
     void read_url(const string &src,int start_from); // parses the url 
     void read_author(const string &src); // parses the author 
 };
 
 
-class wikipage {
-
+class wikipage 
+{
     private:
-
-    	// Page sections
-        string title;
-        string ns;
-        string redirect;
-        string timestamp;
-        string contributor;
-        string comment;
-        string text;
-        unsigned ID;
-
-        // new attributes (added for json output)
-        vector<citation> citations;
-        string importance;
-        string instance;
-        string quality;
-        string daily_views;
-
         // Get page sections
         void get_title(string &page);
         void get_namespace(string &page);
@@ -96,11 +77,6 @@ class wikipage {
         void get_comment(string &page);
         void get_text(string &page);
         void get_ID(string &page);
-
-        // Text sections
-        vector<string> categories; 
-        vector<string> links;
-        unsigned short image_count; 
 
         // Get text sections
         void read_categories();
@@ -123,7 +99,31 @@ class wikipage {
         void remove_file_references();
         void remove_image_references();
 
+        // ensure that all fields fit json formatting
+        void make_fields_kosher();
+
     public:
+        // Page sections
+        string title;
+        string ns;
+        string redirect;
+        string timestamp;
+        string contributor;
+        string comment;
+        string text;
+        unsigned ID;
+
+        // new attributes (added for json output)
+        vector<citation> citations;
+        string importance;
+        string instance;
+        string quality;
+        string daily_views;
+
+        // Text sections
+        vector<string> categories; 
+        vector<string> links;
+        unsigned short image_count; 
 
     	// Constructor
         wikipage(string page);
@@ -139,7 +139,7 @@ class wikipage {
         bool has_categories();
         bool has_links();
 
-        
+
         // Stream I/O
         friend ostream& operator<<(ostream& os, wikipage& wp);
 };

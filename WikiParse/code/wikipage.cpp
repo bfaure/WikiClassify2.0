@@ -14,11 +14,9 @@ wikipage::wikipage(string page) {
         {
             get_timestamp(page); 
             get_contributor(page);
-            //get_comment(page);
             get_text(page);         
             if (!is_disambig()) 
             {   // if not a disambugation tagged article
-
                 read_categories();  // get list of category strings
                 read_citations();  // get list of citation structs
                 flatten_citations(); // flatten citations if they have the same url and author
@@ -33,21 +31,67 @@ wikipage::wikipage(string page) {
                 clean_text();       // remove all formatting from text
             }
         }
+        make_fields_kosher();
     }
-    /*
-    else
-    {
-        if (is_talk_page())
-        {
-            get_title(page);
-            //get_ID(page);
-            //get_timestamp(page);
-            //get_text(page);
-            cout<<title<<"\n";
+}
 
-        }
+void kosher(string &field,bool is_author)
+{
+    decode_text(field);
+    remove_target(field,"\n");
+    replace_target(field,"\t"," ");
+    remove_target(field,"\"");
+    string target = "&lt;";
+    string endtarget = "&gt;";
+    remove_between(field,target,endtarget);
+    remove_target(field,"'");
+    if (is_author)
+    {
+        remove_target(field,"et. al.");
+        remove_target(field,"et. al");
+        remove_target(field,"et al.");
+        remove_target(field,"et al");
     }
-    */
+    trim(field);
+    remove_target(field,"\\");
+    decode_text(field);
+}
+
+void kosher(string &field)
+{
+    kosher(field,false);
+}
+
+void kosher(vector<string> &fields)
+{
+    for (int i=0; i<fields.size(); i++)
+    {
+        kosher(fields[i]);
+    }
+}
+
+void kosher(vector<citation> &citations)
+{
+    for (int i=0; i<citations.size(); i++)
+    {
+        kosher(citations[i].base_url);
+        kosher(citations[i].author,true);
+    }
+}
+
+void wikipage::make_fields_kosher()
+{
+    // go through all the fields that are used in json format and ensure they don't contain invalid chars
+    kosher(title);
+    //kosher(timestamp);
+    kosher(contributor);
+    //kosher(instance);
+    //kosher(quality);
+    //kosher(importance);
+    //kosher(daily_views);
+    kosher(text);
+    kosher(categories);
+    kosher(citations); 
 }
 
 void wikipage::flatten_citations()
@@ -160,7 +204,6 @@ void wikipage::read_citations()
         }
         last = parsed_citation_strings[i];
     }
-    //return citations;
 }
 
 void wikipage::get_title(string &page) {
@@ -187,9 +230,6 @@ void wikipage::get_title(string &page) {
             condition=false;
         }
     }
-    // remove any &amp
-    decode_text(title);
-    remove_target(title,"\"");
 }
 
 void wikipage::get_ID(string &page) {string ID_str; parse(page, "    <id>", "</id>\n    ", ID_str);ID=stoi(ID_str);}
@@ -218,13 +258,6 @@ void wikipage::get_contributor(string &page)
             contributor = "";
         }
     }
-    remove_target(contributor,"\n");
-    replace_target(contributor,"\t"," ");
-    remove_target(contributor,"\"");
-    remove_target(contributor,"\\");
-    decode_text(contributor);
-    remove_target(contributor,"\"");
-    trim(contributor);
 }
 
 void wikipage::get_comment(string &page) {parse(page, "      <comment>", "</comment>\n      ", comment);}
@@ -255,14 +288,6 @@ void wikipage::read_categories() {
             categories.push_back(temp[i].substr(temp[i].find(tag)+tag.size()));
             //cout<<"Found new category: "<<temp[i].substr(temp[i].find(tag)+tag.size())<<"\n";
         }
-    }
-    for(string &category:categories) // decode all categories
-    {
-        decode_text(category);
-        remove_target(category,"\"");
-        remove_target(category,"\n");
-        replace_target(category,"\t"," ");
-
     }
 }
 void wikipage::read_links() {
@@ -731,76 +756,6 @@ string get_base_url(string url)
     return url;
 }
 
-/*
-// function that is used if the 
-unsigned depth = 0;
-unsigned max_depth = 10;
-string get_base_url_without_slash(string url,size_t start_location=0)
-{
-    // takes in a full url and returns just the base, i.e. it removes the stuff
-    // before the domain name and the stuff after the .com, .org, etc.
-
-    bool override_recursion = false;
-
-    if(depth>=max_depth)
-    {
-        override_recursion = true;
-        start_location = 0;
-        //cout<<"Hit max recursion depth basing: "<<url<<"\n";
-    }
-
-    string http_junk = "://";
-    size_t http_junk_location = url.find(http_junk);
-
-    if (http_junk_location!=string::npos)
-    {
-        url = url.substr(http_junk_location+http_junk.size());
-    }
-
-    string url_copy = url;
-
-    vector<string> exts = { ".com",".edu",".org",".gov",".mil",
-                            ".net",".info",".ca",".int",".biz",
-                            ".name",".br",".cn",".fr",".uk",
-                            ".ar",".az",".va",".de",".cu",".ie",
-                            ".dk",".fi",".be",".hr"};
-    int closest_ext = 100000;
-
-    for (int i=0; i<exts.size(); i++)
-    {
-        size_t ext_location = url.find(exts[i],start_location);
-        if (ext_location!=string::npos)
-        {
-            if (ext_location+exts[i].size() < closest_ext)
-            {
-                closest_ext = ext_location+exts[i].size();
-            }
-            //url = url.substr(0,ext_location+exts[i].size());
-            //return url;
-        }
-    }
-
-    if (closest_ext!=10000)
-    {
-        url = url.substr(0,closest_ext);
-    }
-
-    if (url.find("www.")!=string::npos and count_text(url,".")<=1 and override_recursion==false)
-    {
-        // If we have a url like www.cn or something where it looks like
-        // the url could have been www.cnn.com and because we have .cn as
-        // an extension we cut off too early.
-        //cout<<url<<"\n";
-        depth++;
-        return get_base_url(url_copy,url_copy.find("www.")+4);
-    }
-
-    depth = 0;
-    return url;
-}
-*/
-
-
 string citation::get_url()
 {
     return base_url;
@@ -988,62 +943,9 @@ void citation::read_author(const string &src)
     //cout<<"Could not find author for "+title+"\n";
 }
 
-void check_escape_chars(string &src)
-{
-    if (src.find("\\"))
-    {
-        cout<<"Found escape character in this string: "<<src<<"\n";
-    }
-
-}
-
 citation::citation(const string &src)
 {
     // citation default constructor
-
-
-
     read_url(src);
     read_author(src);
-
-    decode_text(author);
-
-    remove_target(author,"\n");
-    remove_target(base_url,"\n");
-
-    replace_target(author,"\t"," ");
-    replace_target(base_url,"\t"," ");
-
-    remove_target(author,"\"");
-    remove_target(base_url,"\"");
-
-    string target = "&lt;";
-    string endtarget = "&gt;";
-    remove_between(author,target,endtarget);
-    remove_between(base_url,target,endtarget);
-
-    remove_target(author,"'");
-    remove_target(author,"et. al.");
-    remove_target(author,"et. al");
-    remove_target(author,"et al.");
-    remove_target(author,"et al");
-
-    trim(author);
-    trim(base_url);
-
-
-    if (author.find("&nbsp;")!=string::npos)
-    {
-        debug_log<<author<<"\n";
-        debug_log<<src<<"\n\n";
-    }
-
-
-    //check_escape_chars(author);
-    //check_escape_chars(base_url);
-
-    //string temp = src;
-    //remove_target(temp,"\n");
-
-    //cout<<"CITATION SUMMARY, TOOK IN: "<<temp<<" AND GOT THIS AUTHOR: "<<author<<" AND THIS URL: "<<base_url<<"\n\n";
 }
