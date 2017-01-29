@@ -18,6 +18,7 @@ using std::size_t;
 using std::getline;
 using std::stoi;
 using std::remove;
+using std::to_string;
 
 #include <string.h>
 
@@ -55,6 +56,7 @@ private:
 public:
     wikidump(string path);
     void read();
+    void read(string email_address);
 };
 
 #define WIKIDUMP

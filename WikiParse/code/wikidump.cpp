@@ -2,6 +2,7 @@
 #include "wikipage.h"
 #include "string_utils.h"
 #include <time.h>
+#include <stdlib.h>
 
 //ofstream dump_output("documents.txt");
 ofstream dump_output("documents.json");
@@ -30,7 +31,18 @@ wikidump::wikidump(string path) {
     }
 }
 
-void wikidump::read() {
+void send_email(string email_address, string body)
+{
+    string command_call = "python email_agent.py "+email_address+" "+body;
+    system(command_call.c_str());
+}
+
+void wikidump::read()
+{
+    read("None");
+}
+
+void wikidump::read(string email_address) {
     articles_read = 0;
     articles_saved = 0;
 
@@ -40,7 +52,7 @@ void wikidump::read() {
     
     time_t start_time = time(0);
     int display_refresh_rate = 5; // every 5 seconds, clear the output line
-
+    /*
     dump_output<<"{\n";
     while (dump_input.read(buffer, sizeof(buffer))) {
 
@@ -58,4 +70,11 @@ void wikidump::read() {
     }
     cout<<"\n"; // to preserve the display line
     dump_output<<"\n}";
+    */
+
+    if (email_address!="None")
+    {
+        string email_body = "articles_read-"+to_string(articles_read)+"+articles_saved-"+to_string(articles_saved)+"+seconds-"+to_string(time(0)-start_time);
+        send_email(email_address,email_body);
+    }
 }
