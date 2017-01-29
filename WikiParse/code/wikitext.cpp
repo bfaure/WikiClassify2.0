@@ -161,7 +161,7 @@ void remove_nested(string begintarg, string endtarg, string &text, size_t &curre
     ct++;
     if(ct >= 300){
     	cout<<"\r                                                                                      ";
-        cout<<"\rError in remove_nested(), trying to snip between "<<begintarg<<" and "<<endtarg<<".\n";
+        cout<<"\rHit recursion limit in remove_nested(), snipping between "<<begintarg<<" and "<<endtarg<<".\n";
         cout.flush();
         text = "";
         return;

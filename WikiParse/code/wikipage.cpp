@@ -25,6 +25,7 @@ wikipage::wikipage(string page) {
                 get_quality();
                 get_importance();
                 get_instance(); 
+                //get_maintenance_categories(); 
 
                 //read_links();       
                 //read_image_count();
@@ -33,7 +34,29 @@ wikipage::wikipage(string page) {
         }
         make_fields_kosher();
     }
+    /*
+    else
+    {
+        if (is_talk_page())
+        {
+            get_ID(page);
+            get_title(page);
+            cout<<"Found this talk page: "<<title<<"\n";
+            get_text(page);
+            debug_log<<title<<"\n";
+            debug_log<<text<<"\n\n";
+        }
+    }
+    */
 }
+
+void wikipage::get_maintenance_categories()
+{
+    // parse out all instances of maintenance categories
+    return;
+
+}
+
 
 void kosher(string &field,bool is_author)
 {
@@ -236,9 +259,6 @@ void wikipage::get_ID(string &page) {string ID_str; parse(page, "    <id>", "</i
 void wikipage::get_namespace(string &page) {parse(page, "    <ns>", "</ns>\n    ", ns);}
 void wikipage::get_redirect(string &page) {parse(page, "    <redirect title=\"", "\" />\n    ", redirect);}
 void wikipage::get_timestamp(string &page) {parse(page, "      <timestamp>", "</timestamp>\n      ", timestamp);}
-
-
-//void wikipage::get_contributor(string &page) {parse(page, "        <username>", "</username>\n        ", contributor);}
 
 void wikipage::get_contributor(string &page)
 {

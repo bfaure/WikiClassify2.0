@@ -88,6 +88,8 @@ class wikipage
         void get_instance();
         void get_daily_views();
         void get_instance_of();
+        void get_maintenance_categories();
+
         void read_citations();
         void flatten_citations();
 
@@ -124,6 +126,8 @@ class wikipage
         vector<string> categories; 
         vector<string> links;
         unsigned short image_count; 
+
+        vector<string> maintenance_categories;
 
     	// Constructor
         wikipage(string page);
