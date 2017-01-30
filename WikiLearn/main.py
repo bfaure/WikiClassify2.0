@@ -9,6 +9,7 @@ import os
 #                            Local imports
 #-----------------------------------------------------------------------------#
 
+from code.read import corpus
 from code.vectorize import doc2vec
 from code.vectorize import LDA
 
@@ -18,12 +19,18 @@ from code.vectorize import LDA
 def main():
 
     data_dir = '../WikiParse/data/output/'
+    documents = corpus(data_dir+'documents.txt')
+    #for doc in documents:
+    #    print(doc)
 
     if False:
-        encoder = LDA('wiki', 'models', data_dir+'documents.txt', data_dir+'dictionary.txt')
-
-    if False:
-        encoder  = doc2vec('wiki', 'models', data_dir+'documents.txt')
+        encoder = LDA(documents, 'models')
+        print(encoder.get_topics())
+        #for doc in encoder:
+        #    print(doc)
+    
+    if True:
+        encoder  = doc2vec(documents, 'models')
         #encoder.nearest()
         #encoder.outlier()
         #encoder.analogy()
