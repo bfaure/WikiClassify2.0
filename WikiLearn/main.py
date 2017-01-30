@@ -42,7 +42,10 @@ def main():
             print("WARNING: Could not locate the init.py script.")
 
     data_dir = '../WikiParse/data/output/'
-    documents = corpus(data_dir+'documents.txt')
+    
+    # change this to the desired source file
+    data_file = "documents.txt"
+    documents = corpus(data_dir+data_file)
     
     #documents = corpus(data_dir+'documents.txt')
     #for doc in documents:
@@ -58,7 +61,6 @@ def main():
     
     if True:
         encoder  = doc2vec(documents, 'models')
-        #encoder.nearest()
         #encoder.outlier()
         #encoder.analogy()
         use_case = "doc2vec"

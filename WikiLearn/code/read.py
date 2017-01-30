@@ -14,6 +14,7 @@ sys.setdefaultencoding("utf-8")
 #-----------------------------------------------------------------------------#
 import os, random, re
 random.seed(0)
+import json, codecs
 
 #                             Third-party imports
 #-----------------------------------------------------------------------------#
