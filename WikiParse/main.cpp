@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <string>
 
-string email_to = "bfaure23@gmail.com"; // change this to your email
+string email_to = "wikiclassify@gmail.com"; // change this to your email
 string file_format = "txt"; // allowed to be either "txt" or "json"
 
 int main(int argc, const char * argv[]) 

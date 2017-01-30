@@ -175,7 +175,8 @@ class doc2vec(object):
         context_window=8
 
         self.features = features
-        self.model = Doc2Vec(min_count=3, size=features, window=context_window, sample=1e-5, negative=5, workers=7)
+        #self.model = Doc2Vec(min_count=3, size=features, window=context_window, sample=1e-5, negative=5, workers=7)
+        self.model = Doc2Vec(min_count=3, size=features, window=context_window, sample=1e-5, negative=5, workers=32)
 
     def train(self, epochs=20):
         print("\tTraining doc2vec model...")
