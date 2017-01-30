@@ -58,9 +58,20 @@ class corpus(object):
         self.train_dictionary()
 
     def __iter__(self):
+            with open(self.doc_path,"r") as f:
+                print('Loading json...')
+                dump = json.load(f,"ISO-8859-1")
+                print('Done')
+                for doc in dump.keys():
+                    yield self.trigram[self.bigram[get_words(dump[doc]['text'])]]
+
+
+    '''
+    def __iter__(self):
         with open(self.doc_path, 'rb') as fin:
             for doc in fin:
                 yield self.trigram[self.bigram[get_words(doc)]]
+    '''
 
     def docs(self):
         return doc_corpus(self)
@@ -69,9 +80,18 @@ class corpus(object):
         return bag_corpus(self)
 
     def raw(self):
+        with open(self.doc_path,"r") as f:
+            print('Loading json...')
+            dump = json.load(f,"ISO-8859-1")
+            print('Done')
+            for doc in dump.keys():
+                yield get_words(dump[doc]['text'])
+    '''
+    def raw(self):
         with open(self.doc_path, 'rb') as fin:
             for doc in fin:
                 yield get_words(doc)
+    '''
 
     def train_dictionary(self):
         print("\tTraining dictionary...")

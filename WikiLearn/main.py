@@ -42,9 +42,9 @@ def main():
             print("WARNING: Could not locate the init.py script.")
 
     data_dir = '../WikiParse/data/output/'
-    
+
     # change this to the desired source file
-    data_file = "documents.txt"
+    data_file = "documents.json"
     documents = corpus(data_dir+data_file)
     
     #documents = corpus(data_dir+'documents.txt')
