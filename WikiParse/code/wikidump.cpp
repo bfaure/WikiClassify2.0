@@ -4,20 +4,26 @@
 #include <time.h>
 #include <stdlib.h>
 
-//ofstream dump_output("documents.txt");
-ofstream dump_output("documents.json");
+ofstream dump_output;
 unsigned long articles_saved;
-
-//vector<wikipage> save_buffer;
-//int save_buffer_length_target = 10000;
+string file_type;
 
 void read_page(string page) {
-    //cout<<"Reading page!"<<endl;
-    wikipage wp(page);
-    //wp.save(dump_output);
-    if(wp.save_json(dump_output))
+    wikipage wp(page,file_type);
+    if (file_type=="txt")
     {
-        articles_saved++;
+        if(wp.save_txt(dump_output))
+        {
+            articles_saved++;
+            return;
+        }
+    }
+    else
+    {
+        if(wp.save_json(dump_output))
+        {
+            articles_saved++;
+        }
     }
 }
 
@@ -41,10 +47,21 @@ void send_email(string email_address, string body)
 
 void wikidump::read()
 {
-    read("None");
+    read("None","json");
 }
 
-void wikidump::read(string email_address) {
+void wikidump::read(string email_address, string type) {
+
+    if (type=="json")
+    {
+        file_type = "json";
+        dump_output.open("documents.json");
+    }
+    else
+    {
+        file_type = "txt";
+        dump_output.open("documents.txt");
+    }
 
     cout<<"Sending email to "<<email_address<<" upon completion\n";
 
@@ -58,9 +75,10 @@ void wikidump::read(string email_address) {
     time_t start_time = time(0);
     int display_refresh_rate = 5; // every 5 seconds, clear the output line
     
-    dump_output<<"{\n";
-    while (dump_input.read(buffer, sizeof(buffer))) {
-
+    if (file_type=="json"){dump_output<<"{\n";}
+    
+    while (dump_input.read(buffer, sizeof(buffer)))
+    {
         offset = parse_all(buffer, "\n  <page>\n", "\n  </page>\n", read_page, articles_read);
         dump_input.seekg(dump_input.tellg()-buffer_size+offset);
         if (time(0)-start_time % display_refresh_rate == 0)
@@ -73,9 +91,9 @@ void wikidump::read(string email_address) {
         cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles read, "<<articles_saved<<" articles saved";
         cout.flush();
     }
+
     cout<<"\n"; // to preserve the display line
-    dump_output<<"\n}";
-    
+    if (file_type=="json"){dump_output<<"\n}";}
 
     // if sending an email upon completion
     if (email_address!="None")
