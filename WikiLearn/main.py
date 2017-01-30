@@ -19,7 +19,7 @@ from code.vectorize import LDA
 def main():
 
     data_dir = '../WikiParse/data/output/'
-    documents = corpus(data_dir+'documents.json')
+    documents = corpus(data_dir+'documents.txt')
     #documents = corpus(data_dir+'documents.txt')
     #for doc in documents:
     #    print(doc)

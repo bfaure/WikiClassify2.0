@@ -5,8 +5,9 @@
 string email_to = "bfaure23@gmail.com"; // change this to your email
 string file_format = "txt"; // allowed to be either "txt" or "json"
 
-int main(int argc, const char * argv[]) {
-
+int main(int argc, const char * argv[]) 
+{
+	
 	if (argc == 2) 
 	{
         wikidump dump(argv[1]); // Specify where the dump is, given first argument
