@@ -1,5 +1,80 @@
 #include "wikitext.h"
 
+
+void copy_between(const string &body, const string &target, const vector<string> &endtargets, vector<string> &copies)
+{
+    // used in the read_citations function, parses all instances from "target" to the closest "endtarget" element
+    // and pushes them into the "copies" parameter for the returning function to recieve
+    size_t last_location = 0;
+    while(true){
+        size_t location = body.find(target,last_location);
+        if(location!=string::npos){
+
+            int closest_partner = 1000000000;
+            int close_cut_at = -1;
+
+            for (int i=0; i<endtargets.size(); i++){
+
+                string endtarget = endtargets[i];
+                size_t endlocation = body.find(endtarget, location+target.size());
+
+                if(endlocation!=string::npos){
+
+                    if (close_cut_at==-1){
+                        close_cut_at = endlocation+endtarget.size()-location;
+                        closest_partner = endlocation;
+                    }
+
+                    else{
+
+                        if (endlocation < closest_partner){
+                            close_cut_at = endlocation+endtarget.size()-location;
+                            closest_partner = endlocation;
+                        }
+                    }
+                }
+            }
+
+            if (close_cut_at==-1){
+                return;
+            }
+
+            last_location = closest_partner+1;
+            copies.push_back(body.substr(location,closest_partner-location-target.size()));
+        }
+        else{
+            return;
+        }
+    }
+}
+
+void copy_between(const string &body, const string &target, const string &endtarget, vector<string> &copies)
+{
+    // Iterate over the body input to find the target, every time the target is found, locate the closest
+    // location of the endtarget and push that substring onto the copies vector. If at any time we cannot
+    // location the target or the endtarget, return from the function.
+    size_t last_location = 0;
+    while(true)
+    {
+        size_t location = body.find(target,last_location);\
+
+        if(location!=string::npos)
+        {
+            size_t endlocation = body.find(endtarget, location+target.size());
+
+            if(endlocation!=string::npos)
+            {
+                copies.push_back(body.substr(location,endlocation-location-target.size()));
+                last_location = endlocation+endtarget.size();
+            }
+
+            else {return;}
+        }
+
+        else {return;}
+    }
+}
+
 // finds any instances of target and clips until it finds the closest endtarget
 void remove_between(string &temp, string target, vector<string> endtargets){
     while(true){
@@ -86,7 +161,7 @@ void remove_nested(string begintarg, string endtarg, string &text, size_t &curre
     ct++;
     if(ct >= 300){
     	cout<<"\r                                                                                      ";
-        cout<<"\rError in remove_nested(), trying to snip between "<<begintarg<<" and "<<endtarg<<".\n";
+        cout<<"\rHit recursion limit in remove_nested(), snipping between "<<begintarg<<" and "<<endtarg<<".\n";
         cout.flush();
         text = "";
         return;
@@ -197,4 +272,13 @@ void remove_references(string &temp){
     if(ref!=string::npos){
         temp.erase(ref);
     }
+}
+
+void decode_text(string &text) {
+    replace_target(text, "&lt;", "<");
+    replace_target(text, "&gt;", ">");
+    replace_target(text, "&nbsp;", " ");
+    replace_target(text, "&amp;", "&");
+    replace_target(text, "&quot;", "\"");
+    replace_target(text, "&apos;", "'");
 }

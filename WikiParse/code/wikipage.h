@@ -45,20 +45,29 @@ using std::transform;
 /* Local Imports */
 #include "string_utils.h"
 
-class wikipage {
+class citation
+{
+public:
+    string citation_type; // book, journal, website, etc. or None if type not recognized
+    string author; // FirstName LastName or None if none found
+    string url; // full url, or None if none found
+    string base_url; // base url or None if none found
 
+    citation(const string &src);
+    string get_url(); // return base_url
+    string get_author(); // return author
+    void remove_url(); // set url and base_url to "None"
+    void remove_author(); // set author to "None"
+
+private:
+    void read_url(const string &src,int start_from); // parses the url 
+    void read_author(const string &src); // parses the author 
+};
+
+
+class wikipage 
+{
     private:
-
-    	// Page sections
-        string title;
-        string ns;
-        string redirect;
-        string timestamp;
-        string contributor;
-        string comment;
-        string text;
-        unsigned ID;
-
         // Get page sections
         void get_title(string &page);
         void get_namespace(string &page);
@@ -69,15 +78,20 @@ class wikipage {
         void get_text(string &page);
         void get_ID(string &page);
 
-        // Text sections
-        vector<string> categories; 
-        vector<string> links;
-        unsigned short image_count; 
-
         // Get text sections
         void read_categories();
         void read_links();
         void read_image_count();
+        void get_quality();
+        
+        void get_importance();
+        void get_instance();
+        void get_daily_views();
+        void get_instance_of();
+        void get_maintenance_categories();
+
+        void read_citations();
+        void flatten_citations();
 
         // Text methods
         void clean_text();
@@ -87,20 +101,48 @@ class wikipage {
         void remove_file_references();
         void remove_image_references();
 
+        // ensure that all fields fit json formatting
+        void make_fields_kosher();
+
     public:
+        // Page sections
+        string title;
+        string ns;
+        string redirect;
+        string timestamp;
+        string contributor;
+        string comment;
+        string text;
+        unsigned ID;
+
+        // new attributes (added for json output)
+        vector<citation> citations;
+        string importance;
+        string instance;
+        string quality;
+        string daily_views;
+
+        // Text sections
+        vector<string> categories; 
+        vector<string> links;
+        unsigned short image_count; 
+
+        vector<string> maintenance_categories;
 
     	// Constructor
         wikipage(string page);
         void save(ofstream &file);
-        void save_json(ofstream &file);
+        bool save_json(ofstream &file);
 
         // Boolean checks
         bool is_redirect();
         bool is_disambig();
         bool is_article();
+        bool is_talk_page();
 
         bool has_categories();
         bool has_links();
+
 
         // Stream I/O
         friend ostream& operator<<(ostream& os, wikipage& wp);

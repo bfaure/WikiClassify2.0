@@ -36,6 +36,7 @@ unsigned parse_all(const string &str, const string &tag1, const string &tag2, vo
         if (p2!=string::npos) {
             f(str.substr(p1, p2-p1));
             p1 = str.find(tag1, p2+tag2.length());
+            
         }
         else {
             return p1;
