@@ -19,11 +19,6 @@ from gensim.models.ldamodel import LdaModel # LDA model
 from gensim import corpora
 from gensim import utils
 
-#                            Local imports
-#-----------------------------------------------------------------------------#
-from read import doc_corpus
-from read import bag_corpus
-
 #                           LDA encoder
 #-----------------------------------------------------------------------------#
 
@@ -31,29 +26,32 @@ class LDA(object):
     '''
     LDA method
     '''
+    # Add automatic name!
+    def __init__(self, corpus, save_dir):
 
-    def __init__(self, model_name, save_dir, path_to_docs, path_to_dictionary):
+        self.corpus   = corpus
+        self.word_map = self.corpus.get_word_map()
 
-        self.docs = bag_corpus(path_to_docs, path_to_dictionary)
-        self.word_map = self.docs.get_word_map()
-
-        self.name = model_name
+        self.name = self.corpus.name
         self.save_dir = save_dir
         if os.path.exists('{0}/{1}/LDA'.format(self.save_dir, self.name)):
-            retrain = raw_input("\t'%s' exists. Retrain? y/N: " % self.name)
+            retrain = raw_input("\t'%s' LDA model exists. Retrain? y/N: " % self.name)
             if retrain.lower() == 'n' or retrain == '':
                 self.load()
                 return
-        self.build()
-        self.train()
-        self.save()
+        for features in xrange(50, 1000, 50):
+            start = time.time()
+            self.build(features)
+            self.train()
+            print("%d, %0.2f" % (features, time.time()-start))
+        #self.save()
         #for bag in bags:
         #    print(encoder.encode_bag(bag))
 
     def __iter__(self):
         print("\tRunning model on documents...")
-        num = self.docs.instances
-        for i, doc in enumerate(self.docs):
+        num = self.corpus.instances
+        for i, doc in enumerate(self.corpus):
             if not i % (num//100):
                 print('\t\t%0.1f%% done' % round(i*100.0/num,1))
             if i > num:
@@ -64,16 +62,16 @@ class LDA(object):
 
     # Model I/O
 
-    def build(self, features=300):
+    def build(self, features=5000):
         print("\tBuilding LDA model...")
         self.features = features
 
-    def train(self, epochs=5):
+    def train(self, epochs=1):
         '''For Wikipedia, use at least 5k-10k topics
         Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
         print("\tTraining LDA model...")
 
-        self.model = LdaModel(corpus=self.docs, num_topics=self.features, id2word=self.word_map, passes=epochs)
+        self.model = LdaModel(corpus=self.corpus.bags(), num_topics=self.features, id2word=self.word_map, passes=epochs)
 
     def save(self):
         print("\tSaving LDA model...")
@@ -107,21 +105,22 @@ class doc2vec(object):
     doc2vec method
     '''
 
-    def __init__(self, model_name, save_dir, path_to_docs):
+    # Add automatic name!
+    def __init__(self, corpus, save_dir):
         print('Initializing text encoder...')
 
-        self.docs = doc_corpus(path_to_docs)
-
-        self.name = model_name
+        self.corpus = corpus
+        self.name = self.corpus.name
         self.save_dir = save_dir
         if os.path.exists('{0}/{1}/word2vec'.format(self.save_dir, self.name)):
-            retrain = raw_input("\t'%s' exists. Retrain? y/N: " % self.name)
+            retrain = raw_input("\t'%s' word2vec model exists. Retrain? y/N: " % self.name)
             if retrain.lower() == 'n' or retrain == '':
                 self.load()
-        else:
-            self.build()
-            self.train()
-            self.save()
+                self.analogy()
+                return
+        self.build()
+        self.train()
+        self.save()
         #for bag in bags:
         #    print(encoder.encode_bag(bag))
 
@@ -171,25 +170,25 @@ class doc2vec(object):
 
     # Model I/O
 
-    def build(self, features=600):
+    def build(self, features=400):
         print("\tBuilding doc2vec model...")
         context_window=8
 
         self.features = features
-        self.model = Doc2Vec(min_count=10, size=features, window=context_window, sample=1e-5, negative=5, workers=3)
+        self.model = Doc2Vec(min_count=3, size=features, window=context_window, sample=1e-5, negative=5, workers=7)
 
-    def train(self, epochs=30):
+    def train(self, epochs=20):
         print("\tTraining doc2vec model...")
 
         # Main Training Method
-        self.model.build_vocab(self.docs)
+        self.model.build_vocab(self.corpus.docs())
 
         times = []
         for i in xrange(epochs):
             start = time.time()
             
             print("\t\tEpoch %s" % (i+1))
-            self.model.train(self.docs)
+            self.model.train(self.corpus.docs())
             
             times.append(time.time()-start)
             remaining = sum(times)*(epochs-i-1)/len(times)/60
@@ -220,7 +219,7 @@ class doc2vec(object):
     	return self.model.doesnt_match(sentence.split())        
 
     def get_analogy(self, x, y, z):
-        return [x[0] for x in self.model.most_similar([self.encode_word(x),self.encode_word(y)],[self.encode_word(z)])]
+        return [x[0] for x in self.model.most_similar(positive=[self.encode_word(z),self.encode_word(y)],negative=[self.encode_word(x)])]
     
     # Encode/decode at word, words, and doc level
 
