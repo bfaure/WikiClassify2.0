@@ -34,7 +34,6 @@ def main():
     train_LDA      = False
     train_word2vec = False
 
-
     ############       Parse dump       ###################
     if parse_dump:
         # Use some method defined in parse.py
