@@ -40,6 +40,7 @@ def get_words(s):
 class corpus(object):
 
     def __init__(self, doc_path):
+        print("Initializing text feed...")
 
         self.name = os.path.basename(doc_path)[:os.path.basename(doc_path).index('.')]
         self.save_dir = 'models'
@@ -58,13 +59,13 @@ class corpus(object):
         self.train_dictionary()
 
     def __iter__(self):
-            with open(self.doc_path,"r") as f:
-                print('Loading json...')
-                dump = json.load(f,"ISO-8859-1")
-                print('Done')
-                for doc in dump.keys():
-                    yield self.trigram[self.bigram[get_words(dump[doc]['text'])]]
-
+        print("Iterating tokenized text...")
+        with open(self.doc_path,"r") as f:
+            print('Loading json...')
+            dump = json.load(f,"ISO-8859-1")
+            print('Done')
+            for doc in dump.keys():
+                yield self.trigram[self.bigram[get_words(dump[doc]['text'])]]
 
     '''
     def __iter__(self):
@@ -80,6 +81,7 @@ class corpus(object):
         return bag_corpus(self)
 
     def raw(self):
+        print("Iterating raw text...")
         with open(self.doc_path,"r") as f:
             print('Loading json...')
             dump = json.load(f,"ISO-8859-1")
@@ -126,6 +128,7 @@ class corpus(object):
         self.trigram = Dictionary.load('{0}/{1}/dictionary/{1}_trigrams.pkl'.format(self.save_dir, self.name))
 
     def get_word_map(self):
+        print("Getting word map...")
         return dict((v,k) for k,v in self.dictionary.token2id.iteritems())
 
     def get_doc_vocab(self):
@@ -144,6 +147,7 @@ class bag_corpus(object):
         self.corpus  = corpus
 
     def __iter__(self):
+        print("Iterating bag of words...")
         for doc in self.corpus:
             yield self.corpus.dictionary.doc2bow(doc)
 
@@ -155,5 +159,6 @@ class doc_corpus(object):
         self.corpus = corpus
 
     def __iter__(self):
+        print("Iterating tagged docs...")
         for i, doc in enumerate(self.corpus):
             yield TaggedDocument(doc, [i])

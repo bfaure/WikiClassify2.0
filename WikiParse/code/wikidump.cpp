@@ -41,7 +41,7 @@ void send_email(string email_address, string body)
 {
     // sends an email to email_address with body in the body of the message, this
     // method makes use of the email_agent.py script
-    string command_call = "python code/email_agent.py "+email_address+" "+body;
+    string command_call = "python ../email_agent.py "+email_address+" "+body;
     system(command_call.c_str()); // call python
 }
 
