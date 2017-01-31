@@ -9,7 +9,7 @@ import sys, time
 #                            Local imports
 #-----------------------------------------------------------------------------#
 
-#from WikiParse.code.parse     import ?
+from WikiParse.code.parse     import parse_wikidump
 
 from WikiLearn.code.read      import corpus
 from WikiLearn.code.vectorize import LDA
@@ -30,14 +30,13 @@ def main():
     database_path    = 'WikiParse/data/output/documents.json'
     models_directory = 'WikiLearn/models'
 
-    parse_dump     = False
+    parse_dump     = True
     train_LDA      = False
     train_word2vec = False
 
     ############       Parse dump       ###################
     if parse_dump:
-        # Use some method defined in parse.py
-        pass
+        parse_wikidump(dump_path, database_path)
     
     ############ Learn from parsed dump ###################
     if train_LDA or train_word2vec:
