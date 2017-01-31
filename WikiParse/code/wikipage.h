@@ -130,8 +130,8 @@ class wikipage
         vector<string> maintenance_categories;
 
     	// Constructor
-        wikipage(string page);
-        void save(ofstream &file);
+        wikipage(string page,string format);
+        bool save_txt(ofstream &file);
         bool save_json(ofstream &file);
 
         // Boolean checks

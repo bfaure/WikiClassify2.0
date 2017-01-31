@@ -4,50 +4,60 @@
 
 ofstream debug_log("debug_log.txt");
 
-wikipage::wikipage(string page) {
-    get_namespace(page);             // Extract page sections
-    if (is_article()) {
-        get_ID(page);
-        get_title(page);
-        get_redirect(page);
-        if (!is_redirect()) 
-        {
-            get_timestamp(page); 
-            get_contributor(page);
-            get_text(page);         
-            if (!is_disambig()) 
-            {   // if not a disambugation tagged article
-                read_categories();  // get list of category strings
-                read_citations();  // get list of citation structs
-                flatten_citations(); // flatten citations if they have the same url and author
-                
-                get_daily_views();
-                get_quality();
-                get_importance();
-                get_instance(); 
-                //get_maintenance_categories(); 
-
-                //read_links();       
-                //read_image_count();
-                clean_text();       // remove all formatting from text
-            }
-        }
-        make_fields_kosher();
-    }
-    /*
-    else
+wikipage::wikipage(string page,string format) 
+{
+    if (format=="json")
     {
-        if (is_talk_page())
-        {
+        get_namespace(page);             // Extract page sections
+        if (is_article()) {
             get_ID(page);
             get_title(page);
-            cout<<"Found this talk page: "<<title<<"\n";
-            get_text(page);
-            debug_log<<title<<"\n";
-            debug_log<<text<<"\n\n";
+            get_redirect(page);
+            if (!is_redirect()) 
+            {
+                get_timestamp(page); 
+                get_contributor(page);
+                get_text(page);         
+                if (!is_disambig()) 
+                {   // if not a disambugation tagged article
+                    read_categories();  // get list of category strings
+                    read_citations();  // get list of citation structs
+                    flatten_citations(); // flatten citations if they have the same url and author
+                    
+                    get_daily_views();
+                    get_quality();
+                    get_importance();
+                    get_instance(); 
+                    //get_maintenance_categories(); 
+
+                    //read_links();       
+                    //read_image_count();
+                    clean_text();       // remove all formatting from text
+                }
+            }
+            make_fields_kosher();
         }
     }
-    */
+
+    else
+    {
+        if (format == "txt")
+        {
+            get_namespace(page);
+            if(is_article())
+            {
+                get_redirect(page);
+                if(!is_redirect())
+                {
+                    get_text(page);
+                    if(!is_disambig())
+                    {
+                        clean_text();
+                    }
+                }
+            }
+        }
+    }
 }
 
 void wikipage::get_maintenance_categories()
@@ -391,7 +401,7 @@ ostream& operator<<(ostream& os, wikipage& wp) {
 }
 
 //Save function (save to file)
-void wikipage::save(ofstream &file){
+bool wikipage::save_txt(ofstream &file){
 
     //file<<"Categories:\t";
     //for(int i=0; i<categories.size(); i++){
@@ -399,6 +409,11 @@ void wikipage::save(ofstream &file){
     //}
     if (!text.empty()) {
         file<<text<<endl;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
