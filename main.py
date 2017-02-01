@@ -41,7 +41,8 @@ def main():
     if len(sys.argv) == 2:
         _, email_password = sys.argv
 
-    dump_path        = 'WikiParse/data/input/simplewiki-20170101-pages-articles-multistream.xml'
+    #dump_path        = 'WikiParse/data/input/simplewiki-20170101-pages-articles-multistream.xml'
+    dump_path        = "WikiParse/data/input/simplewiki-latest-pages-articles.xml"
     database_path    = 'WikiParse/data/output/documents.json'
     models_directory = 'WikiLearn/models'
 
