@@ -50,17 +50,25 @@ void wikidump::read()
     read("None","json");
 }
 
-void wikidump::read(string email_address, string type) {
-
-    if (type=="json")
+void wikidump::read(string email_address, string destination) 
+{
+    if (destination.find(".json")!=string::npos)
     {
-        file_type = "json";
-        dump_output.open("documents.json");
+            file_type = "json";
+            dump_output.open(destination);
     }
     else
     {
-        file_type = "txt";
-        dump_output.open("documents.txt");
+        if (destination.find(".txt")!=string::npos)
+        {
+            file_type = ".txt";
+            dump_output.open(destination);
+        }
+        else
+        {
+            cout<<"File type for destination not recognized!\n";
+            return;
+        }
     }
 
     if (email_address!="None")
