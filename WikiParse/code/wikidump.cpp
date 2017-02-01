@@ -63,7 +63,10 @@ void wikidump::read(string email_address, string type) {
         dump_output.open("documents.txt");
     }
 
-    cout<<"Sending email to "<<email_address<<" upon completion\n";
+    if (email_address!="None")
+    {
+        cout<<"Sending email to "<<email_address<<" upon completion\n";
+    }
 
     articles_read = 0; // total number of articles parsed
     articles_saved = 0; // total number saved
