@@ -56,7 +56,7 @@ private:
 public:
     wikidump(string path);
     void read();
-    void read(string email_address,string type);
+    void read(string type);
 };
 
 #define WIKIDUMP
