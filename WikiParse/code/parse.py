@@ -11,12 +11,12 @@ from subprocess import call
 
 def compile_parser():
     print("Compiling parser...")
-    call(["g++", "--std=c++11", "WikiParse/code/string_utils.cpp", "WikiParse/code/wikidump.cpp", "WikiParse/code/wikipage.cpp", "WikiParse/code/wikitext.cpp", "-o", "main"])
+    call(["g++", "--std=c++11","WikiParse/code/main.cpp","WikiParse/code/string_utils.cpp", "WikiParse/code/wikidump.cpp", "WikiParse/code/wikipage.cpp", "WikiParse/code/wikitext.cpp", "-o", "main"])
 
 def run_parser(dump_path, destination_path):
     print("Running parser...")
-    call(["./main", dump_path, destination_path])
+    call(["./main", dump_path, destination_path,"no_email"])
 
 def parse_wikidump(dump_path, destination_path):
     compile_parser()
-    #run_parser(dump_path, destination_path)
+    run_parser(dump_path, destination_path)
