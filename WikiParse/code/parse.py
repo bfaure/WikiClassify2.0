@@ -15,7 +15,7 @@ def compile_parser():
 
 def run_parser(dump_path, destination_path):
     print("Running parser...")
-    call(["./main", dump_path, destination_path,"no_email"])
+    call(["./main", dump_path, destination_path])
 
 def parse_wikidump(dump_path, destination_path):
     compile_parser()
