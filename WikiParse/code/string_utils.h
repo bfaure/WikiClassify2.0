@@ -22,10 +22,12 @@ using std::ptr_fun;
 #include <locale>
 using std::isspace;
 
+#include "database.h"
+
 string trim(string &s);
 
 unsigned  parse_all(const string &str, const string &tag1, const string &tag2, vector<string> &result);
-unsigned  parse_all(const string &str, const string &tag1, const string &tag2, void (*f)(string), unsigned long long &articles_read);
+unsigned   save_all(const string &str, const string &tag1, const string &tag2, void (*f)(string, database&, long long unsigned int&), database &db, long long unsigned int &articles_read, long long unsigned int &articles_saved);
 void          parse(const string &str, const string &tag1, const string &tag2, string &result);
 unsigned count_text(const string &str, const string &tag);
 
