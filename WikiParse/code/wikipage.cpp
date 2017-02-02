@@ -2,76 +2,38 @@
 #include "string_utils.h"
 #include "wikitext.h"
 
-ofstream debug_log("debug_log.txt");
-
-wikipage::wikipage(string page,string format) 
+wikipage::wikipage(string page) 
 {
-    if (format=="json")
-    {
-        get_namespace(page);             // Extract page sections
-        if (is_article()) {
-            get_ID(page);
-            get_title(page);
-            get_redirect(page);
-            if (!is_redirect()) 
-            {
-                get_timestamp(page); 
-                get_contributor(page);
-                get_text(page);         
-                if (!is_disambig()) 
-                {   // if not a disambugation tagged article
-                    read_categories();  // get list of category strings
-                    read_citations();  // get list of citation structs
-                    flatten_citations(); // flatten citations if they have the same url and author
-                    
-                    get_daily_views();
-                    get_quality();
-                    get_importance();
-                    get_instance(); 
-                    //get_maintenance_categories(); 
-
-                    //read_links();       
-                    //read_image_count();
-                    clean_text();       // remove all formatting from text
-                }
-            }
-            make_fields_kosher();
-        }
-    }
-
-    else
-    {
-        if (format == "txt")
+    get_namespace(page);             // Extract page sections
+    if (is_article()) {
+        get_ID(page);
+        get_title(page);
+        get_redirect(page);
+        if (!is_redirect()) 
         {
-            get_namespace(page);
-            if(is_article())
-            {
-                get_redirect(page);
-                if(!is_redirect())
-                {
-                    get_text(page);
-                    if(!is_disambig())
-                    {
-                        clean_text();
-                    }
-                }
+            get_timestamp(page); 
+            get_contributor(page);
+            get_text(page);         
+            if (!is_disambig()) 
+            {   // if not a disambugation tagged article
+                read_categories();  // get list of category strings
+                read_citations();  // get list of citation structs
+                flatten_citations(); // flatten citations if they have the same url and author
+
+                //read_links();       
+                //read_image_count();
+                clean_text();       // remove all formatting from text
             }
         }
+        make_fields_kosher();
     }
 }
 
-void wikipage::get_maintenance_categories()
-{
-    // parse out all instances of maintenance categories
-    return;
 
-}
-
-
-void kosher(string &field,bool is_author)
+void kosher(string &field, bool is_author)
 {
     decode_text(field);
-    remove_target(field,"\n");
+    replace_target(field,"\n"," ");
     replace_target(field,"\t"," ");
     remove_target(field,"\"");
     string target = "&lt;";
@@ -92,7 +54,7 @@ void kosher(string &field,bool is_author)
 
 void kosher(string &field)
 {
-    kosher(field,false);
+    kosher(field, false);
 }
 
 void kosher(vector<string> &fields)
@@ -171,11 +133,6 @@ void wikipage::flatten_citations()
     }
 }
 
-void wikipage::get_instance()
-{
-    instance = ""; // default
-}
-
 void wikipage::get_quality()
 {
     if (text.find("{{featured article}}")!=string::npos)
@@ -194,16 +151,6 @@ void wikipage::get_quality()
         return;
     }
     quality = "";
-}
-
-void wikipage::get_importance()
-{
-    importance = ""; //default
-}
-
-void wikipage::get_daily_views()
-{
-    daily_views = ""; // default
 }
 
 void wikipage::read_citations()
@@ -398,114 +345,6 @@ ostream& operator<<(ostream& os, wikipage& wp) {
     //}
 
     return os;
-}
-
-//Save function (save to file)
-bool wikipage::save_txt(ofstream &file){
-
-    //file<<"Categories:\t";
-    //for(int i=0; i<categories.size(); i++){
-    //    file<<categories[i]<<' ';
-    //}
-    if (!text.empty()) {
-        file<<text<<endl;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-bool first_save = true; // dont write out the pre-comma for the first article
-
-bool wikipage::save_json(ofstream &file)
-{
-    // outputs in json format on a single line of the file
-    if(!text.empty())
-    {
-        if(is_disambig())
-        {
-            return false;
-        }
-
-        string divider = "";
-        if (first_save==false) { divider = ",\n"; }
-        if (first_save==true) { first_save = false; }
-        string output = divider;
-
-        output += "\""+to_string(ID)+"\":{";                // {id:{
-        output += "\"title\":\""+title+"\",";              // title:"Article title",
-        output += "\"ns\":\""+ns+"\",";                         // ns:Article namespace,
-        output += "\"timestamp\":\""+timestamp+"\",";           // timestamp:Article timestamp,
-
-        output += "\"contributor\":\""+contributor+"\","; // 
-
-        output += "\"size\":\""+to_string(text.size())+"\","; // size of the article text    
-        output += "\"instance_of\":\""+instance+"\",";   // instance_of:"Article instance_of",
-        output += "\"quality\":\""+quality+"\",";
-        output += "\"importance\":\""+importance+"\",";
-        output += "\"daily_views\":\""+daily_views+"\",";
-        output += "\"text\":\""+text+"\",";
-        output += "\"categories\":[";
-        for (int i=0; i<categories.size(); i++)
-        {
-            output += "\""+categories[i]+"\"";
-            if (i!=categories.size()-1)
-            {
-                output += ",";
-            }
-        }
-        output += "],";
-        output += "\"cited_domains\":[";
-        for (int i=0; i<citations.size(); i++)
-        {
-            string cur = citations[i].get_url();
-            if (cur==" " or cur=="" or cur=="None") // if the current url is empty
-            {
-                if (i==citations.size()-1) // if this is the last iteration
-                {
-                    if (output.at(output.size()-1)==',')
-                    {
-                        output.erase(output.size()-1); // erase the extra comma
-                    }
-                }
-                continue;
-            }
-
-            output += "\""+cur+"\"";
-            if (i!=citations.size()-1)
-            {
-                output += ",";
-            }
-        }
-        output += "],";
-        output += "\"cited_authors\":[";
-        for (int i=0; i<citations.size(); i++)
-        {
-            string cur = citations[i].get_author();
-            if (cur==" " or cur=="" or cur=="None") // if the current author is empty
-            {
-                if (i==citations.size()-1) // if this is the last iteration
-                {
-                    if (output.at(output.size()-1)==',') // if there is an extra comma 
-                    {
-                        output.erase(output.size()-1); // erase the extra comma
-                    }
-                }
-                continue;
-            }
-            output += "\""+cur+"\""; // add the current author to the output string
-            if (i!=citations.size()-1) // if this is not the last iteration
-            {
-                output += ","; // add comma between author names
-            }
-        }
-        output += "]";
-        output += "}";
-        file<<output;
-    }
-    return true;
 }
 
 void wikipage::percent_decoding() {

@@ -1,6 +1,10 @@
 #ifndef WIKIDUMP
 
 /* Standard Imports */
+
+#include <time.h>
+#include <stdlib.h>
+
 #include <iostream>
 using std::cout;
 using std::endl;
@@ -45,17 +49,19 @@ using std::transform;
 
 /* Local Imports */
 #include "string_utils.h"
+#include "database.h"
 
 class wikidump {
 
 private:
-	unsigned long long articles_read;
     ifstream           dump_input;
+    database           dump_output;
     ifstream::pos_type dump_size;
+	unsigned long long articles_read;
+	unsigned long long articles_saved;
 
 public:
     wikidump(string path);
-    void read();
     void read(string type);
 };
 

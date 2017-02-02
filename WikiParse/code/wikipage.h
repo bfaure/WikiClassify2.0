@@ -84,11 +84,7 @@ class wikipage
         void read_image_count();
         void get_quality();
         
-        void get_importance();
-        void get_instance();
-        void get_daily_views();
         void get_instance_of();
-        void get_maintenance_categories();
 
         void read_citations();
         void flatten_citations();
@@ -130,9 +126,7 @@ class wikipage
         vector<string> maintenance_categories;
 
     	// Constructor
-        wikipage(string page,string format);
-        bool save_txt(ofstream &file);
-        bool save_json(ofstream &file);
+        wikipage(string page);
 
         // Boolean checks
         bool is_redirect();
