@@ -33,10 +33,15 @@ class corpus(object):
     def __init__(self, dataset_name, document_directory='data/documents', save_dir='data/models'):
         print("Initializing document corpus...")
 
-        self.name = dataset_name
-        self.save_dir = save_dir
+        self.name          = dataset_name
+        self.save_dir      = save_dir
         self.document_path = document_directory+'/'+dataset_name+'/documents.tsv'
-        self.instances = sum(1 for doc in open(self.document_path))
+        self.instances     = sum(1 for doc in open(self.document_path))
+        self.classes       = []
+        with open(document_directory+'/'+dataset_name+'/category_names.tsv') as fin:
+            for line in fin:
+                c_code, name = line.split('\t')
+                self.classes.append((c_code, name.strip()))
 
     def __iter__(self):
         with open(self.document_path, 'rb') as fin:
@@ -151,7 +156,7 @@ def get_words(s):
     s = s.replace("'", " ' ")
     return utils.to_unicode(s).split()
 
-def download_dataset(url, dataset_directory='data/datasets'):
+def download_tarball(url, dataset_directory='data/datasets'):
 
     if not os.path.isdir(dataset_directory):
         print("\tCreating dataset directory..." % dataset_name)
