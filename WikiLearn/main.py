@@ -3,12 +3,13 @@ import os
 from code.read import download_dataset, parse_dataset, corpus
 from code.vectorize import LDA, doc2vec
 from code.classify  import vector_classifier
+from code.evaluate  import plot_confusion_matrix
 
 def main():
 
     model_save_directory = 'data/models'
-    run_LDA      = True
-    run_word2vec = False
+    run_LDA      = False
+    run_word2vec = True
 
     # Dataset urls
     reuters = "https://archive.ics.uci.edu/ml/machine-learning-databases/reuters21578-mld/reuters21578.tar.gz"
@@ -40,6 +41,13 @@ def main():
                     encoder.save()
                 else:
                     encoder.load()
+
+                classifier = vector_classifier(documents, model_save_directory, 'LDA')
+                if not os.path.exists(model_save_directory+'/'+dataset_name+'/classifier/LDA'):
+                    classifier.train(encoder.get_vectors(), documents.get_classes())
+                    classifier.save()
+                else:
+                    classifier.load()
     
             if run_word2vec:
                 encoder = doc2vec(documents, model_save_directory)
@@ -50,12 +58,15 @@ def main():
                 else:
                     encoder.load()
 
-            classifier = vector_classifier(documents, model_save_directory)
-            if not os.path.exists(model_save_directory+'/'+dataset_name+'/classifier'):
-                classifier.train(encoder.encode_docs(), documents.get_classes())
-                classifier.save()
-            else:
-                classifier.load()
+                classifier = vector_classifier(documents, model_save_directory, 'word2vec')
+                if not os.path.exists(model_save_directory+'/'+dataset_name+'/classifier/word2vec'):
+                    classifier.train(encoder.get_vectors(), documents.get_classes())
+                    classifier.save()
+                else:
+                    classifier.load()
+
+                plot_confusion_matrix(documents.get_classes(), classifier.get_classes(encoder.get_vectors()), classes=['Positive','Negative'])
+
 
 if __name__ == "__main__":
     main()
