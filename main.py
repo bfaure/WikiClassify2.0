@@ -12,8 +12,7 @@ import sys, time
 from WikiParse.code.parse     import parse_wikidump 
 
 from WikiLearn.code.read      import corpus
-from WikiLearn.code.vectorize import LDA
-from WikiLearn.code.vectorize import doc2vec
+from WikiLearn.code.vectorize import LDA, doc2vec
 
 from WikiExtras.code.emailer  import send_email
 

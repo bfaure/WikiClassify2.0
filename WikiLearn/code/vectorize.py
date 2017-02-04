@@ -28,34 +28,16 @@ class LDA(object):
     '''
     # Add automatic name!
     def __init__(self, corpus, save_dir):
-
-        self.corpus   = corpus
-        self.word_map = self.corpus.get_word_map()
-
-        self.name = self.corpus.name
+        print("Initializing LDA model...")
+        self.docs     = corpus
+        self.word_map = self.docs.get_word_map()
+        self.name     = self.docs.name
         self.save_dir = save_dir
-        if os.path.exists('{0}/{1}/LDA'.format(self.save_dir, self.name)):
-            retrain = raw_input("\t'%s' LDA model exists. Retrain? y/N: " % self.name)
-            if retrain.lower() == 'n' or retrain == '':
-                self.load()
-                return
-        for features in xrange(50, 1000, 50):
-            start = time.time()
-            self.build(features)
-            self.train()
-            print("%d, %0.2f" % (features, time.time()-start))
-        #self.save()
-        #for bag in bags:
-        #    print(encoder.encode_bag(bag))
 
     def __iter__(self):
         print("\tRunning model on documents...")
-        num = self.corpus.instances
-        for i, doc in enumerate(self.corpus):
-            if not i % (num//100):
-                print('\t\t%0.1f%% done' % round(i*100.0/num,1))
-            if i > num:
-                break
+        num = self.docs.instances
+        for i, doc in enumerate(self.docs):
             yield self.encode_doc(doc)
 
     # User Interfaces: None yet!
@@ -70,8 +52,7 @@ class LDA(object):
         '''For Wikipedia, use at least 5k-10k topics
         Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
         print("\tTraining LDA model...")
-
-        self.model = LdaModel(corpus=self.corpus.bags(), num_topics=self.features, id2word=self.word_map, passes=epochs)
+        self.model = LdaModel(corpus=self.docs.bags(), num_topics=self.features, id2word=self.word_map, passes=epochs)
 
     def save(self):
         print("\tSaving LDA model...")
@@ -88,7 +69,7 @@ class LDA(object):
         '''Returns all topics'''
         topics = self.model.show_topics(num_topics=-1,num_words=words,formatted=False)
         terms  = [y[0] for x in topics for y in x[1]]
-        return [terms[i:i + words] for i in xrange(0, len(terms), words)]
+        return [terms[i:i+words] for i in xrange(0,len(terms),words)]
 
     # Model methods
 
@@ -96,6 +77,20 @@ class LDA(object):
 
     def encode_doc(self, doc):
         return np.array([x[1] for x in self.model.get_document_topics(doc, minimum_probability=0.0)])
+
+    def encode_docs(self):
+        print("\tEncoding documents...")
+        vecs = []
+        times = []
+        for i, doc in enumerate(self.docs.bags()):
+            start = time.time()
+            vecs.append(self.encode_doc(doc))
+            times.append(time.time()-start)
+            if not i % (self.docs.instances//100):
+                remaining = sum(times)*(self.docs.instances-i-1)/len(times)/3600
+                print('\t\t%0.2f hours remaining...\n' % remaining)
+                times = times[-10000:]
+        return np.array(vecs)
 
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
@@ -107,22 +102,10 @@ class doc2vec(object):
 
     # Add automatic name!
     def __init__(self, corpus, save_dir):
-        print('Initializing text encoder...')
-
-        self.corpus = corpus
-        self.name = self.corpus.name
+        print('Initializing doc2vec encoder...')
+        self.docs = corpus
+        self.name = self.docs.name
         self.save_dir = save_dir
-        if os.path.exists('{0}/{1}/word2vec'.format(self.save_dir, self.name)):
-            retrain = raw_input("\t'%s' word2vec model exists. Retrain? y/N: " % self.name)
-            if retrain.lower() == 'n' or retrain == '':
-                self.load()
-                self.analogy()
-                return
-        self.build()
-        self.train()
-        self.save()
-        #for bag in bags:
-        #    print(encoder.encode_bag(bag))
 
     # User Interfaces
 
@@ -182,18 +165,18 @@ class doc2vec(object):
         print("\tTraining doc2vec model...")
 
         # Main Training Method
-        self.model.build_vocab(self.corpus.docs())
+        self.model.build_vocab(self.docs.docs())
 
         times = []
         for i in xrange(epochs):
             start = time.time()
             
             print("\t\tEpoch %s" % (i+1))
-            self.model.train(self.corpus.docs())
+            self.model.train(self.docs.docs())
             
             times.append(time.time()-start)
-            remaining = sum(times)*(epochs-i-1)/len(times)/60
-            print('\t\t%0.1f minutes remaining...\n' % remaining)
+            remaining = sum(times)*(epochs-i-1)/len(times)/3600
+            print('\t\t%0.2f hours remaining...\n' % remaining)
         #self.model.init_sims(replace=True)
         
     def save(self):

@@ -135,7 +135,7 @@ void wikidump::read(string destination)
             cout.flush();
         }
         cout.flush();
-        cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles read, "<<articles_read-articles_saved<<" articles could not be saved";
+        cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles read, "<<articles_read-articles_saved<<" articles were not saved";
         cout.flush();
     }
 
