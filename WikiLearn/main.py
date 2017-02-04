@@ -23,7 +23,7 @@ def main():
         if run_LDA or run_word2vec:
 
             documents = corpus(dataset_name)
-            if not os.path.exists(model_save_directory+'/'+dataset_name+'/dictionary'):
+            if not os.path.exists(model_save_directory+'/'+dataset_name+'/tokenizer'):
                 documents.train_phrases()
                 documents.save_phrases()
                 documents.train_dictionary()

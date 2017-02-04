@@ -31,7 +31,7 @@ from gensim.corpora.dictionary import Dictionary
 class corpus(object):
 
     def __init__(self, dataset_name, document_directory='data/documents', save_dir='data/models'):
-        print("Initializing text feed...")
+        print("Initializing document corpus...")
 
         self.name = dataset_name
         self.save_dir = save_dir
@@ -81,13 +81,13 @@ class corpus(object):
 
     def save_phrases(self):
         print("\tSaving gram detector...")
-        self.bigram.save('%s/bigrams.pkl' % self.save_dir)
-        self.trigram.save('%s/trigrams.pkl' % self.save_dir)
+        self.bigram.save(self.save_dir+'/'+self.name+'/tokenizer/bigrams.pkl')
+        self.trigram.save(self.save_dir+'/'+self.name+'/tokenizer/trigrams.pkl')
 
     def load_phrases(self):
         print("\tLoading gram detector...")
-        self.bigram = Dictionary.load('%s/bigrams.pkl' % self.save_dir)
-        self.trigram = Dictionary.load('%s/trigrams.pkl' % self.save_dir)
+        self.bigram = Dictionary.load(self.save_dir+'/'+self.name+'/tokenizer/bigrams.pkl')
+        self.trigram = Dictionary.load(self.save_dir+'/'+self.name+'/tokenizer/trigrams.pkl')
 
     def get_classes(self):
         print("\tLoading classes...")
