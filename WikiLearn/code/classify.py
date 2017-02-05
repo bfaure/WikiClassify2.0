@@ -22,8 +22,6 @@ class vector_classifier(object):
         self.name       = name
         self.save_dir   = save_dir
         self.model_type = model_type
-        if not os.path.exists(self.save_dir+'/'+self.name+'/classifier/'+self.model_type):
-            os.makedirs(self.save_dir+'/'+self.name+'/classifier/'+self.model_type)
         
     def train(self, input, target, test_ratio=0.15):
 
@@ -40,6 +38,8 @@ class vector_classifier(object):
 
     def save(self):
         print("\tSaving classifier model...")
+        if not os.path.exists(self.save_dir+'/'+self.name+'/classifier/'+self.model_type):
+            os.makedirs(self.save_dir+'/'+self.name+'/classifier/'+self.model_type)
         joblib.dump(self.model,'{0}/{1}/classifier/{2}/{1}.pkl'.format(self.save_dir,self.name,self.model_type)) 
 
     def load(self):

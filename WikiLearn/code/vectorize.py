@@ -15,7 +15,7 @@ np.random.seed(0)
 np.set_printoptions(suppress=True)
 
 from gensim.models import Doc2Vec                   # doc2vec model
-from gensim.models.ldamulticore import LdaMulticore # LDA model
+from gensim.models.ldamodel import LdaModel # LDA model
 from gensim import corpora
 from gensim import utils
 
@@ -33,9 +33,6 @@ class LDA(object):
         self.word_map = self.docs.get_word_map()
         self.name     = self.docs.name
         self.save_dir = save_dir
-
-        if not os.path.exists(self.save_dir+'/'+self.name+'/LDA'):
-            os.makedirs(self.save_dir+'/'+self.name+'/LDA')
 
     def __iter__(self):
         print("\tRunning model on documents...")
@@ -55,15 +52,17 @@ class LDA(object):
         '''For Wikipedia, use at least 5k-10k topics
         Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
         print("\tTraining LDA model...")
-        self.model = LdaMulticore(corpus=self.docs.bags(), num_topics=self.features, id2word=self.word_map, workers=3, passes=epochs)
+        self.model = LdaModel(corpus=self.docs.bags(), num_topics=self.features, id2word=self.word_map, passes=epochs)
 
     def save(self):
         print("\tSaving LDA model...")
+        if not os.path.exists(self.save_dir+'/'+self.name+'/LDA'):
+            os.makedirs(self.save_dir+'/'+self.name+'/LDA')
         self.model.save('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
 
     def load(self):
         print("\tLoading LDA model...")
-        self.model = LdaMulticore.load('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
+        self.model = LdaModel.load('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
         self.features = self.model.num_topics
 
     def get_topics(self, words=20):
@@ -107,8 +106,6 @@ class doc2vec(object):
         self.docs = corpus
         self.name = self.docs.name
         self.save_dir = save_dir
-        if not os.path.exists(self.save_dir+'/'+self.name+'/word2vec'):
-            os.makedirs(self.save_dir+'/'+self.name+'/word2vec')
 
     # User Interfaces
 
@@ -184,6 +181,8 @@ class doc2vec(object):
         
     def save(self):
         print("\tSaving doc2vec model...")
+        if not os.path.exists(self.save_dir+'/'+self.name+'/word2vec'):
+            os.makedirs(self.save_dir+'/'+self.name+'/word2vec')
         self.model.save('{0}/{1}/word2vec/{1}.d2v'.format(self.save_dir,self.name))
     
     def load(self):

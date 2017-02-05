@@ -39,8 +39,6 @@ class corpus(object):
         self.save_dir      = save_dir
         self.document_path = document_directory+'/'+dataset_name+'/documents.tsv'
         self.instances     = sum(1 for doc in open(self.document_path))
-        if not os.path.exists(self.save_dir+'/'+self.name+'/tokenizer'):
-            os.makedirs(self.save_dir+'/'+self.name+'/tokenizer')
 
         self.classes       = {}
         with open(document_directory+'/'+dataset_name+'/category_names.tsv') as fin:
@@ -80,6 +78,8 @@ class corpus(object):
 
     def save_dictionary(self):
         print("\tSaving word list...")
+        if not os.path.exists(self.save_dir+'/'+self.name+'/tokenizer'):
+            os.makedirs(self.save_dir+'/'+self.name+'/tokenizer')
         self.dictionary.save_as_text(self.save_dir+'/'+self.name+'/tokenizer/word_list.tsv')
 
     def load_dictionary(self):
@@ -96,6 +96,8 @@ class corpus(object):
 
     def save_phrases(self):
         print("\tSaving gram detector...")
+        if not os.path.exists(self.save_dir+'/'+self.name+'/tokenizer'):
+            os.makedirs(self.save_dir+'/'+self.name+'/tokenizer')
         self.bigram.save(self.save_dir+'/'+self.name+'/tokenizer/bigrams.pkl')
         self.trigram.save(self.save_dir+'/'+self.name+'/tokenizer/trigrams.pkl')
 
