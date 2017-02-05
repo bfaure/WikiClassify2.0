@@ -2,6 +2,13 @@ import numpy as np
 import itertools
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import hamming_loss
+
+def evaluate(y_test, y_pred, classes):
+    for i,c in enumerate(classes):
+        score = 1.0-hamming_loss(y_test[:,i], y_pred[:,i], classes)
+        print("Accuracy for predicting '%s': %0.1f%%" % (c, 100.0*score))
+    return 
 
 def plot_confusion_matrix(y_test, y_pred, classes, normalize=False):
     """
@@ -14,7 +21,6 @@ def plot_confusion_matrix(y_test, y_pred, classes, normalize=False):
 
     # Compute confusion matrix
     cm = confusion_matrix(y_test, y_pred)
-    np.set_printoptions(precision=2)
     
     # Plot normalized confusion matrix
     plt.figure()
@@ -28,17 +34,10 @@ def plot_confusion_matrix(y_test, y_pred, classes, normalize=False):
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
-
-    print(cm)
 
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, cm[i, j],
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
+        plt.text(j,i,cm[i, j],horizontalalignment="center",color="white" if cm[i, j] > thresh else "black")
 
     plt.tight_layout()
     plt.ylabel('True label')

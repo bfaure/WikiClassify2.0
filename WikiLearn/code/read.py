@@ -28,6 +28,8 @@ from gensim.models.doc2vec     import TaggedDocument
 from gensim.models.phrases     import Phrases
 from gensim.corpora.dictionary import Dictionary
 
+from sklearn.preprocessing import MultiLabelBinarizer
+
 class corpus(object):
 
     def __init__(self, dataset_name, document_directory='data/documents', save_dir='data/models'):
@@ -37,11 +39,21 @@ class corpus(object):
         self.save_dir      = save_dir
         self.document_path = document_directory+'/'+dataset_name+'/documents.tsv'
         self.instances     = sum(1 for doc in open(self.document_path))
-        self.classes       = []
+        if not os.path.exists(self.save_dir+'/'+self.name+'/tokenizer'):
+            os.makedirs(self.save_dir+'/'+self.name+'/tokenizer')
+
+        self.classes       = {}
         with open(document_directory+'/'+dataset_name+'/category_names.tsv') as fin:
             for line in fin:
                 c_code, name = line.split('\t')
-                self.classes.append((c_code, name.strip()))
+                self.classes[int(c_code)] = name.strip()
+
+        self.parents       = {}
+        with open(document_directory+'/'+dataset_name+'/category_tree.tsv') as fin:
+            for line in fin:
+                child, parent = line.split('\t')
+                parent = [int(x.strip()) for x in parent.split(',')]
+                self.parents[int(child)] = parent
 
     def __iter__(self):
         with open(self.document_path, 'rb') as fin:
@@ -68,8 +80,6 @@ class corpus(object):
 
     def save_dictionary(self):
         print("\tSaving word list...")
-        if not os.path.exists(self.save_dir+'/'+self.name+'/tokenizer'):
-            os.makedirs(self.save_dir+'/'+self.name+'/tokenizer')
         self.dictionary.save_as_text(self.save_dir+'/'+self.name+'/tokenizer/word_list.tsv')
 
     def load_dictionary(self):
@@ -94,18 +104,34 @@ class corpus(object):
         self.bigram = Dictionary.load(self.save_dir+'/'+self.name+'/tokenizer/bigrams.pkl')
         self.trigram = Dictionary.load(self.save_dir+'/'+self.name+'/tokenizer/trigrams.pkl')
 
+    def get_class_names(self):
+        return [self.classes[key] for key in sorted(self.classes.keys())]
+
     def get_classes(self):
         print("\tLoading classes...")
 
         classes = []
         with open(self.document_path, 'rb') as fin:
-            for i, doc in enumerate(fin):
+            for doc in fin:
                 categories, doc = doc.split('\t')
-                classes.append([int(x) for x in categories.split(',')])
+                categories = [int(x) for x in categories.split(',')]
+
+                repeat = True
+                while repeat:
+                    repeat = False
+                    for category in categories:
+                        if category in self.parents.keys():
+                            for parent in self.parents[category]:
+                                if parent not in categories:
+                                    categories.append(parent)
+                                    repeat = True
+                classes.append(categories)
             #for doc in fin:
             #    categories, doc = doc.split('\t')
             #    classes.append([int(x) for x in categories.split(',')])
-        return np.array(classes)
+
+        mlb = MultiLabelBinarizer(classes=self.classes.keys())
+        return mlb.fit_transform(np.array(classes))
 
     def get_word_map(self):
         print("\tGetting word map...")
