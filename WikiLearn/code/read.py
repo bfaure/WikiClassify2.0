@@ -19,7 +19,7 @@ import numpy as np
 
 from gensim import utils
 from gensim.models.doc2vec     import TaggedDocument
-from gensim.models.phrases     import Phrases
+from gensim.models.phrases     import Phraser, Phrases
 from gensim.corpora.dictionary import Dictionary
 from gensim.corpora.mmcorpus   import MmCorpus
 
@@ -156,9 +156,9 @@ class corpus(object):
     def train_phrases(self):
         print("\tTraining phrases...")
         print("\t\tTraining bigram detector...")
-        self.bigram = Phrases(self.docs.docs(), min_count=5, threshold=10, max_vocab_size=100000)
+        self.bigram = Phraser(Phrases(self.docs.docs(), min_count=5, threshold=10, max_vocab_size=100000))
         print("\t\tTraining trigram detector...")
-        self.trigram = Phrases(self.bigram[self.docs.docs()], min_count=5, threshold=10, max_vocab_size=100000)
+        self.trigram = Phraser(Phrases(self.bigram[self.docs.docs()], min_count=5, threshold=10, max_vocab_size=100000))
 
     def save_phrases(self):
         print("\tSaving gram detector...")
