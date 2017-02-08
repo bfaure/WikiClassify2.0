@@ -10,37 +10,54 @@ random.seed(0)
 
 #                         Third-party imports
 #-----------------------------------------------------------------------------#
-import numpy as np # numpy dependency
-np.random.seed(0)
-np.set_printoptions(suppress=True)
 
-from gensim.models import Doc2Vec                   # doc2vec model
-from gensim.models.ldamodel import LdaModel # LDA model
+import numpy as np
+np.random.seed(0)
+
+from gensim.models.ldamodel import LdaModel
+from gensim.models import Doc2Vec
 from gensim import corpora
 from gensim import utils
 
-#                           LDA encoder
+#                            Local imports
+#-----------------------------------------------------------------------------#
+
+from classify import vector_classifier
+from evaluate import evaluate
+
+#-----------------------------------------------------------------------------#
+def check_directory(directory):
+    if not os.path.isdir(directory):
+        print("\t\tCreating directory...")
+        os.makedirs(directory)
+        return False
+    return True
+
+#                             LDA encoder
 #-----------------------------------------------------------------------------#
 
 class LDA(object):
-    '''
-    LDA method
-    '''
-    # Add automatic name!
-    def __init__(self, corpus, save_dir):
+
+    def __init__(self, corpus, directory):
         print("Initializing LDA model...")
-        self.docs     = corpus
-        self.word_map = self.docs.get_word_map()
-        self.name     = self.docs.name
-        self.save_dir = save_dir
 
-    def __iter__(self):
-        print("\tRunning model on documents...")
-        num = self.docs.instances
-        for i, doc in enumerate(self.docs):
-            yield self.encode_doc(doc)
+        self.corpus    = corpus
+        self.directory = directory
 
-    # User Interfaces: None yet!
+        if not os.path.exists(self.directory):
+
+            # Create main model
+            self.build(features=5000)
+            self.train(epochs=1)
+            self.save()
+
+            # Create classifier
+            self.train_classifier()
+            self.save_classifier()
+
+        else:
+            self.load()
+            self.load_classifier()
 
     # Model I/O
 
@@ -52,17 +69,17 @@ class LDA(object):
         '''For Wikipedia, use at least 5k-10k topics
         Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
         print("\tTraining LDA model...")
-        self.model = LdaModel(corpus=self.docs.bags(), num_topics=self.features, id2word=self.word_map, passes=epochs)
+        self.model = LdaModel(corpus=self.corpus.bags, num_topics=self.features, id2word=self.corpus.get_word_map(), passes=epochs)
 
     def save(self):
         print("\tSaving LDA model...")
-        if not os.path.exists(self.save_dir+'/'+self.name+'/LDA'):
-            os.makedirs(self.save_dir+'/'+self.name+'/LDA')
-        self.model.save('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        self.model.save(self.directory+'/LDA.model')
 
     def load(self):
         print("\tLoading LDA model...")
-        self.model = LdaModel.load('{0}/{1}/LDA/{1}.model'.format(self.save_dir, self.name))
+        self.model = LdaModel.load(self.directory+'/LDA.model')
         self.features = self.model.num_topics
 
     def get_topics(self, words=20):
@@ -71,108 +88,89 @@ class LDA(object):
         terms  = [y[0] for x in topics for y in x[1]]
         return [terms[i:i+words] for i in xrange(0,len(terms),words)]
 
-    # Model methods
+    def train_classifier(self):
+        X = self.encode_docs(100000)
+        y = self.corpus.get_doc_categories(100000)
+        self.classifier = vector_classifier(self.directory)
+        self.classifier.train(X, y)
+        y_pred = self.classifier.get_classes(X)
+        evaluate(y, y_pred, self.corpus.get_category_names())
 
-    # Encode/decode at word, words, and doc level
+    def save_classifier(self):
+        self.classifier.save()
+
+    def load_classifier(self):
+        self.classifier = vector_classifier(self.directory).load()
+
+    # Model methods
 
     def encode_doc(self, doc):
         return np.array([x[1] for x in self.model.get_document_topics(doc, minimum_probability=0.0)])
 
-    def encode_docs(self):
+    def encode_docs(self, limit=-1):
         print("\tEncoding documents...")
         vecs = []
         times = []
-        for i, doc in enumerate(self.docs.bags()):
+        for i, doc in enumerate(self.corpus.bags):
             start = time.time()
             vecs.append(self.encode_doc(doc))
+            if i == limit:
+                break
+
+            # Progress
             times.append(time.time()-start)
-            if not i % (self.docs.instances//100):
-                remaining = sum(times)*(self.docs.instances-i-1)/len(times)/3600
+            if not i % (self.corpus.docs.instances()//100):
+                remaining = sum(times)*(self.corpus.docs.instances()-i-1)/len(times)/3600
                 print('\t\t%0.2f hours remaining...\n' % remaining)
                 times = times[-10000:]
+
         return np.array(vecs)
 
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
 class doc2vec(object):
-    '''
-    doc2vec method
-    '''
 
-    # Add automatic name!
-    def __init__(self, corpus, save_dir):
+    def __init__(self, corpus, directory):
         print('Initializing doc2vec encoder...')
-        self.docs = corpus
-        self.name = self.docs.name
-        self.save_dir = save_dir
+        self.corpus    = corpus
+        self.directory = directory
 
-    # User Interfaces
+        if not os.path.exists(self.directory):
 
-    def nearest(self):
-    
-        print('\nInterface for finding nearest words')
-        while True:
-            sentence = raw_input("\nEnter a list of words:\n")
-            if not sentence:
-                return
-            try:
-                print(' '.join(self.get_nearest(sentence)))
-            except ValueError:
-                print('None of the words occur!')
-            
-    def outlier(self):
-    
-        print('\nInterface for finding outlier word')
-        while True:
-            sentence = raw_input("\nEnter a list of words:\n")
-            if not sentence:
-                return
-            try:
-                print(self.get_outlier(sentence))
-            except ValueError:
-                print('None of the words occur!')
-    
-    def analogy(self):
-    
-        print('\nInterface for solving analogies')
-        while True:
-            w = raw_input("\nEnter first word of analogy:\n")
-            if not w:
-                return
-            print("is to")
-            x = raw_input()
-            print("as")
-            y = raw_input()
-            print("is to")
-            try:
-                analogy = self.get_analogy(w,x,y)
-                print(' '.join(analogy))
-            except:
-                print('Not all of the words occur!')
+            # Create main model
+            self.build(features=400, context_window=8, min_count=3, sample=1e-5, negative=5)
+            self.train(epochs=10)
+            self.save()
+
+            # Create classifier
+            self.train_classifier()
+            self.save_classifier()
+
+        else:
+            self.load()
+            self.load_classifier()
 
     # Model I/O
 
-    def build(self, features=400):
+    def build(self, features=400, context_window=8, min_count=3, sample=1e-5, negative=5):
         print("\tBuilding doc2vec model...")
-        context_window=8
 
         self.features = features
-        #self.model = Doc2Vec(min_count=3, size=features, window=context_window, sample=1e-5, negative=5, workers=7)
-        self.model = Doc2Vec(min_count=3, size=features, window=context_window, sample=1e-5, negative=5, workers=8)
+        self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=8)
 
     def train(self, epochs=10):
         print("\tTraining doc2vec model...")
 
         # Main Training Method
-        self.model.build_vocab(self.docs.docs())
+        self.model.build_vocab(self.corpus.docs)
 
         times = []
         for i in xrange(epochs):
             start = time.time()
             
             print("\t\tEpoch %s" % (i+1))
-            self.model.train(self.docs.docs())
+            self.model.train(self.corpus.docs)
             
             times.append(time.time()-start)
             remaining = sum(times)*(epochs-i-1)/len(times)/3600
@@ -181,29 +179,28 @@ class doc2vec(object):
         
     def save(self):
         print("\tSaving doc2vec model...")
-        if not os.path.exists(self.save_dir+'/'+self.name+'/word2vec'):
-            os.makedirs(self.save_dir+'/'+self.name+'/word2vec')
-        self.model.save('{0}/{1}/word2vec/{1}.d2v'.format(self.save_dir,self.name))
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        self.model.save(self.directory+'/word2vec.d2v')
     
     def load(self):
         print("\tLoading doc2vec model...")
-        self.model = Doc2Vec.load('{0}/{1}/word2vec/{1}.d2v'.format(self.save_dir,self.name))
+        self.model = Doc2Vec.load(self.directory+'/word2vec.d2v')
         self.features = self.model.docvecs[0].shape[0]
     
-    def get_vectors(self):
-        return np.vstack(self.model.docvecs)
-    
-    # Model methods
-    
-    def get_nearest(self, sentence):
-        tokens = sentence.split()
-        return [x[0] for x in self.model.most_similar(self.encode_words(sentence),topn=len(tokens)+10) if x[0] not in tokens]
-        
-    def get_outlier(self, sentence):
-    	return self.model.doesnt_match(sentence.split())        
+    def train_classifier(self):
+        X = self.encode_docs(100000)
+        y = self.corpus.get_doc_categories(100000)
+        self.classifier = vector_classifier(self.directory)
+        self.classifier.train(X, y)
+        y_pred = self.classifier.get_classes(X)
+        evaluate(y, y_pred, self.corpus.get_category_names())
 
-    def get_analogy(self, x, y, z):
-        return [x[0] for x in self.model.most_similar(positive=[self.encode_word(z),self.encode_word(y)],negative=[self.encode_word(x)])]
+    def save_classifier(self):
+        self.classifier.save()
+
+    def load_classifier(self):
+        self.classifier = vector_classifier(self.directory).load()
     
     # Encode/decode at word, words, and doc level
 
@@ -213,20 +210,6 @@ class doc2vec(object):
 
     def decode_word(self, vec):
         return self.model.most_similar([vec],topn=1)[0][0]
-        
-    def get_vocab(self, data):
-        words  = []
-        result = []
-        for word in data.get_vocab():
-            encoding = self.encode_word(word)
-            if encoding is not None:
-                words.append(word)
-                result.append(encoding)
-        return words, np.vstack(result)
-
-    def get_docs(self, data):
-        result = [self.encode_doc(' '.join(doc.words)) for doc in data]
-        return np.vstack(result)
 
     def encode_words(self, sentence):
         result = []
@@ -241,3 +224,9 @@ class doc2vec(object):
 
     def encode_doc(self, sentence):
         return np.expand_dims(self.model.infer_vector(sentence.split()), axis=0)
+
+    def encode_docs(self, limit=-1):
+        if limit > 0:
+            return np.vstack(self.model.docvecs)[:limit]
+        else:
+            return np.vstack(self.model.docvecs)

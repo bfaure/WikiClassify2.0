@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import hamming_loss
 
-def evaluate(y_test, y_pred, classes):
-    for i,c in enumerate(classes):
-        score = 1.0-hamming_loss(y_test[:,i], y_pred[:,i], classes)
+def evaluate(y_test, y_pred, category_names):
+    for i,c in enumerate(category_names):
+        score = 1.0-hamming_loss(y_test[:,i], y_pred[:,i], category_names)
         print("Accuracy for predicting '%s': %0.1f%%" % (c, 100.0*score))
     return 
 
