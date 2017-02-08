@@ -17,11 +17,11 @@ from sklearn.externals import joblib
 
 class vector_classifier(object):
 
-    def __init__(self, name, save_dir, model_type):
+    def __init__(self, directory):
         print("Initializing vector classifier...")
-        self.name       = name
-        self.save_dir   = save_dir
-        self.model_type = model_type
+
+        self.directory = directory
+        self.path      = directory+'/classifier.pkl'
         
     def train(self, input, target, test_ratio=0.15):
 
@@ -38,13 +38,13 @@ class vector_classifier(object):
 
     def save(self):
         print("\tSaving classifier model...")
-        if not os.path.exists(self.save_dir+'/'+self.name+'/classifier/'+self.model_type):
-            os.makedirs(self.save_dir+'/'+self.name+'/classifier/'+self.model_type)
-        joblib.dump(self.model,'{0}/{1}/classifier/{2}/{1}.pkl'.format(self.save_dir,self.name,self.model_type)) 
+        if not os.path.exists(self.directory):
+            os.makedirs(directory)
+        joblib.dump(self.model,self.path) 
 
     def load(self):
         print("\tLoading classifier model...")
-        self.model = joblib.load('{0}/{1}/classifier/{2}/{1}.pkl'.format(self.save_dir,self.name,self.model_type)) 
+        self.model = joblib.load(self.path) 
 
     def get_class(self, vector):
         return self.model.predict(vector)[0]

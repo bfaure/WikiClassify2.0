@@ -1,8 +1,3 @@
-#
-# Adapted from word2vec-sentements
-# https://github.com/linanqiu/word2vec-sentiments
-#
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import print_function
@@ -23,228 +18,219 @@ from urlparse import urlparse
 import numpy as np
 
 from gensim import utils
-from gensim import corpora
 from gensim.models.doc2vec     import TaggedDocument
 from gensim.models.phrases     import Phrases
 from gensim.corpora.dictionary import Dictionary
+from gensim.corpora.mmcorpus   import MmCorpus
 
 from sklearn.preprocessing import MultiLabelBinarizer
 
+def tokenize(text):
+    text = text.lower()
+    rules = [('.',' . '),(',',' , '),(':',' : '),\
+             (';',' ; '),('(',' ( '),(')',' )'),\
+             ('-',' - '),('"',' " '),("'"," ' ")]
+    for r1,r2 in rules:
+        text = text.replace(r1,r2)
+    return utils.to_unicode(text).split()
+
+def check_directory(directory):
+    if not os.path.isdir(directory):
+        print("\t\tCreating '%s' directory..." % directory)
+        os.makedirs(directory)
+        return False
+    return True
+
+def download_tarball(url, directory):
+    if not check_directory(directory):
+        file_name = os.path.basename(urlparse(url)[2])
+        file_path = directory+'/'+file_name
+        try:
+            print("\t\tDownloading %s..." % file_name)
+            urlretrieve(url, file_path)
+            try:
+                print("\t\tExpanding %s..." % file_name)
+                tarfile.open(file_path, 'r').extractall(directory)
+                os.remove(file_path)
+            except:
+                print("\t\tCould not expand %s." % file_name)
+        except:
+            print("\t\tCould not download tarball.")
+    else:
+        print("\t\tCorpus already exists.")
+
 class corpus(object):
 
-    def __init__(self, dataset_name, document_directory='data/documents', save_dir='data/models'):
-        print("Initializing document corpus...")
+    def __init__(self, corpus_name, corpus_directory):
+        print('Initializing %s corpus...' % corpus_name)
 
-        self.name          = dataset_name
-        self.save_dir      = save_dir
-        self.document_path = document_directory+'/'+dataset_name+'/documents.tsv'
-        self.instances     = sum(1 for doc in open(self.document_path))
+        # Standard directories
+        self.meta_directory = corpus_directory+'/meta'
+        self.data_directory = corpus_directory+'/data'
+        self.raw_directory  = corpus_directory+'/data/raw'
 
-        self.classes       = {}
-        with open(document_directory+'/'+dataset_name+'/category_names.tsv') as fin:
+        # Standard files
+        self.document_path      = self.data_directory+'/documents.tsv'
+        self.category_map_path  = self.data_directory+'/category_names.tsv'
+        self.category_tree_path = self.data_directory+'/category_tree.tsv'
+
+        # Load and parse raw corpus
+        if corpus_name == 'imdb':
+            imdb_corpus(self)
+
+        # Interpret categories
+        self.load_category_map()
+        self.load_category_tree()
+
+        # Create iterators from specialized classes
+        self.docs = doc_corpus(self)
+        self.bags = bag_corpus(self)
+
+        # Obtain preprocessor
+        if not os.path.exists(self.meta_directory):
+            self.train_phrases()
+            self.train_dictionary()
+            self.save_phrases()
+            self.save_dictionary()
+        else:
+            self.load_phrases()
+            self.load_dictionary()
+
+    # Category methods
+
+    def load_category_map(self):
+        self.category_map = {}
+        with open(self.category_map_path) as fin:
             for line in fin:
                 c_code, name = line.split('\t')
-                self.classes[int(c_code)] = name.strip()
+                self.category_map[int(c_code)] = name.strip()
 
-        self.parents       = {}
-        with open(document_directory+'/'+dataset_name+'/category_tree.tsv') as fin:
+    def load_category_tree(self):
+        self.category_tree = {}
+        with open(self.category_tree_path) as fin:
             for line in fin:
                 child, parent = line.split('\t')
                 parent = [int(x.strip()) for x in parent.split(',')]
-                self.parents[int(child)] = parent
+                self.category_tree[int(child)] = parent
 
-    def __iter__(self):
-        with open(self.document_path, 'rb') as fin:
-            for i, doc in enumerate(fin):
-                categories, doc = doc.split('\t')
-                yield self.trigram[self.bigram[get_words(doc)]]
+    def get_category_names(self):
+        return [self.category_map[i] for i in sorted(self.category_map.keys())]
 
-    def docs(self):
-        return doc_corpus(self)
-
-    def bags(self):
-        return bag_corpus(self)
-
-    def raw(self):
-        with open(self.document_path, 'rb') as fin:
-            for doc in fin:
-                yield get_words(doc)
-
-    def train_dictionary(self):
-        print("\tTraining word list...")
-        self.dictionary = Dictionary(self, prune_at=2000000)
-        self.dictionary.filter_extremes(no_below=3, no_above=0.5, keep_n=100000)
-        self.save_dictionary()
-
-    def save_dictionary(self):
-        print("\tSaving word list...")
-        if not os.path.exists(self.save_dir+'/'+self.name+'/tokenizer'):
-            os.makedirs(self.save_dir+'/'+self.name+'/tokenizer')
-        self.dictionary.save_as_text(self.save_dir+'/'+self.name+'/tokenizer/word_list.tsv')
-
-    def load_dictionary(self):
-        print("\tLoading word list...")
-        self.dictionary = Dictionary.load_from_text(self.save_dir+'/'+self.name+'/tokenizer/word_list.tsv')
-
-    def train_phrases(self):
-
-        print("\tTraining bigram detector...")
-        self.bigram = Phrases(self.raw(), min_count=5, threshold=10, max_vocab_size=100000)
-
-        print("\tTraining trigram detector...")
-        self.trigram = Phrases(self.bigram[self.raw()], min_count=5, threshold=10, max_vocab_size=100000)
-
-    def save_phrases(self):
-        print("\tSaving gram detector...")
-        if not os.path.exists(self.save_dir+'/'+self.name+'/tokenizer'):
-            os.makedirs(self.save_dir+'/'+self.name+'/tokenizer')
-        self.bigram.save(self.save_dir+'/'+self.name+'/tokenizer/bigrams.pkl')
-        self.trigram.save(self.save_dir+'/'+self.name+'/tokenizer/trigrams.pkl')
-
-    def load_phrases(self):
-        print("\tLoading gram detector...")
-        self.bigram = Dictionary.load(self.save_dir+'/'+self.name+'/tokenizer/bigrams.pkl')
-        self.trigram = Dictionary.load(self.save_dir+'/'+self.name+'/tokenizer/trigrams.pkl')
-
-    def get_class_names(self):
-        return [self.classes[key] for key in sorted(self.classes.keys())]
-
-    def get_classes(self):
+    def get_doc_categories(self, limit=-1):
         print("\tLoading classes...")
+        categories = []
+        for i,category in enumerate(self.docs.categories()):
+            categories.append(category)
+            if i == limit:
+                break
+        mlb = MultiLabelBinarizer(classes=self.category_map.keys())
+        return mlb.fit_transform(np.array(categories))
 
-        classes = []
-        with open(self.document_path, 'rb') as fin:
-            for doc in fin:
-                categories, doc = doc.split('\t')
-                categories = [int(x) for x in categories.split(',')]
-
-                repeat = True
-                while repeat:
-                    repeat = False
-                    for category in categories:
-                        if category in self.parents.keys():
-                            for parent in self.parents[category]:
-                                if parent not in categories:
-                                    categories.append(parent)
-                                    repeat = True
-                classes.append(categories)
-            #for doc in fin:
-            #    categories, doc = doc.split('\t')
-            #    classes.append([int(x) for x in categories.split(',')])
-
-        mlb = MultiLabelBinarizer(classes=self.classes.keys())
-        return mlb.fit_transform(np.array(classes))
+    # Dictionary methods
 
     def get_word_map(self):
         print("\tGetting word map...")
         return dict((v,k) for k,v in self.dictionary.token2id.iteritems())
 
-    def get_doc_vocab(self):
+    def get_words(self):
         print("\tGetting vocab...")
-        vocab = set()
-        for doc in self:
-            for word in doc.words:
-                vocab.add(word)
-        return sorted(list(vocab))
+        return self.dictionary.values()
 
-#                         Streamed LDA input
-#-----------------------------------------------------------------------------#
+    def train_dictionary(self):
+        print("\tBuilding dictionary...")
+        self.dictionary = Dictionary(self.docs.untagged(), prune_at=2000000)
+        self.dictionary.filter_extremes(no_below=3, no_above=0.5, keep_n=100000)
+
+    def save_dictionary(self):
+        print("\tSaving dictionary...")
+        check_directory(self.meta_directory)
+        self.dictionary.save(self.meta_directory+'/dictionary.dict')
+        self.dictionary.save_as_text(self.meta_directory+'/word_list.tsv')
+
+    def load_dictionary(self):
+        print("\tLoading dictionary...")
+        self.dictionary = Dictionary.load(self.meta_directory+'/dictionary.dict')
+
+    # Phrase methods
+
+    def train_phrases(self):
+        print("\tTraining phrases...")
+        print("\t\tTraining bigram detector...")
+        self.bigram = Phrases(self.docs.docs(), min_count=5, threshold=10, max_vocab_size=100000)
+        print("\t\tTraining trigram detector...")
+        self.trigram = Phrases(self.bigram[self.docs.docs()], min_count=5, threshold=10, max_vocab_size=100000)
+
+    def save_phrases(self):
+        print("\tSaving gram detector...")
+        check_directory(self.meta_directory)
+        self.bigram.save(self.meta_directory+'/bigrams.pkl')
+        self.trigram.save(self.meta_directory+'/trigrams.pkl')
+
+    def load_phrases(self):
+        print("\tLoading gram detector...")
+        self.bigram = Dictionary.load(self.meta_directory+'/bigrams.pkl')
+        self.trigram = Dictionary.load(self.meta_directory+'/trigrams.pkl')
+
 class bag_corpus(object):
-
-    def __init__(self, corpus):
-        self.corpus  = corpus
-
-    def __iter__(self):
-        print("\t\tIterating bag of words...")
-        for doc in self.corpus:
-            yield self.corpus.dictionary.doc2bow(doc)
-
-#                       Streamed doc2vec input
-#-----------------------------------------------------------------------------#
-class doc_corpus(object):
-
     def __init__(self, corpus):
         self.corpus = corpus
-
     def __iter__(self):
-        print("\t\tIterating tagged docs...")
-        for i, doc in enumerate(self.corpus):
-            yield TaggedDocument(doc, [i])
+        for doc in self.corpus.docs.untagged():
+            yield self.corpus.dictionary.doc2bow(doc)
 
-def get_words(s):
-    s = s.lower()
-    s = s.replace('.', ' . ')
-    s = s.replace(',', ' , ')
-    s = s.replace(':', ' : ')
-    s = s.replace(';', ' ; ')
-    s = s.replace('(', ' ( ')
-    s = s.replace(')', ' )')
-    s = s.replace('-', ' - ')
-    s = s.replace('"', ' " ')
-    s = s.replace("'", " ' ")
-    return utils.to_unicode(s).split()
+class doc_corpus(object):
+    def __init__(self, corpus):
+        self.corpus = corpus
+    def __iter__(self):
+        for i,doc in enumerate(self.docs()):
+            yield TaggedDocument(self.corpus.trigram[self.corpus.bigram[doc]],[i])
+    def untagged(self):
+        for i,doc in enumerate(self.docs()):
+            yield self.corpus.trigram[self.corpus.bigram[doc]]
+    def docs(self):
+        with open(self.corpus.document_path, 'rb') as fin:
+            for doc in fin:
+                categories, doc = doc.split('\t')
+                yield doc.split()
+    def categories(self):
+        with open(self.corpus.document_path, 'rb') as fin:
+            for doc in fin:
+                categories, doc = doc.split('\t')
+                yield [int(x.strip()) for x in categories.split(',')]
+    def instances(self):
+        with open(self.corpus.document_path, 'rb') as fin:
+            return sum(1 for doc in fin)
 
-def download_tarball(url, dataset_directory='data/datasets'):
+class imdb_corpus(object):
+    def __init__(self, corpus):
+        self.corpus = corpus
+        self.download()
+        self.parse()
 
-    if not os.path.isdir(dataset_directory):
-        print("\tCreating dataset directory..." % dataset_name)
-        os.mkdir(dataset_directory)
-    file_name    = os.path.basename(urlparse(url)[2])
-    dataset_name = file_name[:file_name.index('.')]
-    directory    = dataset_directory+'/'+dataset_name
-    print("Downloading %s dataset..." % dataset_name)
-    if not os.path.isdir(directory):
-        try:
-            urlretrieve(url, dataset_directory+'/'+file_name)
-            try:
-                print("\tExtracting %s..." % file_name)
-                os.mkdir(directory)
-                tarfile.open(dataset_directory+'/'+file_name, 'r').extractall(directory)
-                os.remove(dataset_directory+'/'+file_name)
-            except:
-                print("\tCould not extract %s tarball." % file_name)
-        except:
-            print("\tCould not download %s dataset." % dataset_name)
-    else:
-        print("\t%s dataset already exists." % dataset_name)
-    return dataset_name
+    def download(self):
+        print("\tDownloading imdb corpus...")
+        url = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
+        download_tarball(url, self.corpus.raw_directory)
 
-def parse_dataset(dataset_name, dataset_directory='data/datasets', document_directory='data/documents'):
-    print("Parsing %s dataset..." % dataset_name)
-
-    directory = document_directory+'/'+dataset_name
-    if not os.path.isdir(directory):
-
-        os.mkdir(directory)
-
-        document_path = directory+'/'+'documents.tsv'
-        document_file = open(document_path,'a+')
-
-        # A file with one "category_id TAB category_name" per line
-        category_name_path = directory+'/'+'category_names.tsv'
-        category_name_file = open(category_name_path,'a+')
-
-        # A file with one "category_id TAB parent1,parent2,..." per line
-        category_tree_path = directory+'/'+'category_tree.tsv'
-        category_tree_file = open(category_tree_path,'a+')
-
-        # Method for parsing imdb dataset
-        if dataset_name == 'aclImdb_v1':
-            classes = ['pos','neg']
-            for c_code, classification in enumerate(classes):
-                category_name_file.write('%s\t%s\n' % (c_code,classification))
+    def parse(self):
+        print("\tParsing dataset...")
+        if not os.path.isfile(self.corpus.document_path):
+            document_file      = open(self.corpus.document_path,'a+')
+            category_name_file = open(self.corpus.category_map_path,'a+')
+            category_tree_file = open(self.corpus.category_tree_path,'a+')
+            for category, category_name in enumerate(['neg','pos']):
+                category_name_file.write('%s\t%s\n' % (category,category_name))
                 for subset in ['test','train']:
-                    current_directory = dataset_directory+'/'+dataset_name+'/aclImdb/'+subset+'/'+classification
+                    current_directory = self.corpus.raw_directory+'/aclImdb/'+subset+'/'+category_name
                     for file_name in os.listdir(current_directory):
                         if file_name.endswith('.txt'):
-                            with open(current_directory+'/'+file_name) as f:
+                            with codecs.open(current_directory+'/'+file_name,encoding='utf-8') as f:
                                 doc = f.read()
                                 for bad_str in ['<br />', '\n', '\t']:
                                     doc = doc.replace(bad_str, ' ')
-                                document_file.write('%s\t%s\n' % (c_code, doc))
-
-        category_name_file.close()
-        document_file.close()
-
-    else:
-        print("\t%s dataset already parsed." % dataset_name)
+                                document_file.write('%s\t%s\n' % (category, ' '.join(tokenize(doc))))
+            document_file.close()
+            category_name_file.close()
+            category_tree_file.close()
+        else:
+            print("\t\tDataset already parsed.")
