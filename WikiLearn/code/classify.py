@@ -6,11 +6,13 @@ from __future__ import print_function
 import os
 #                          Third-party imports
 #-----------------------------------------------------------------------------#
-import numpy as np                                  # numpy dependency
+import numpy as np
 np.random.seed(0)
-from sklearn.linear_model import LogisticRegression # classifier model
+
+from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.externals import joblib
+from sklearn.model_selection import cross_val_score
 
 #                            Linear classifier
 #-----------------------------------------------------------------------------#
@@ -23,18 +25,19 @@ class vector_classifier(object):
         self.directory = directory
         self.path      = directory+'/classifier.pkl'
         
-    def train(self, input, target, test_ratio=0.15):
+    def train(self, X, y, test_ratio=0.2):
 
         print("\tShuffling arrays...")
-        p = np.random.permutation(input.shape[0])
-        input = input[p]
-        target = target[p]
+        p = np.random.permutation(X.shape[0])
+        X,y = X[p], y[p]
 
         print("\tTraining classifier...")
-        train_instances = int((1-test_ratio)*input.shape[0])
-        self.model = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(input[:train_instances],target[:train_instances])
-        self.accuracy = self.model.score(input[train_instances:],target[train_instances:])
-        print("\tClassifier accuracy: %0.2f%%" % (self.accuracy*100))
+        train_instances = int((1-test_ratio)*X.shape[0])
+
+        self.model  = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y[:train_instances])
+        self.scores = cross_val_score(self.model,X[train_instances:],y[train_instances:],cv=5)
+        print("Accuracy: %0.1f%% (+/- %0.1f%%)" % (100*self.scores.mean(), 100*self.scores.std()*2))
+        return self.model.score(X[train_instances:],y[train_instances:])
 
     def save(self):
         print("\tSaving classifier model...")

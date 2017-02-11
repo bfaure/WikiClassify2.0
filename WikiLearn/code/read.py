@@ -9,7 +9,7 @@ sys.setdefaultencoding("utf-8")
 #-----------------------------------------------------------------------------#
 import os, random, re, tarfile
 random.seed(0)
-import json, codecs
+import codecs
 from urllib import urlretrieve
 from urlparse import urlparse
 
@@ -26,13 +26,7 @@ from gensim.corpora.mmcorpus   import MmCorpus
 from sklearn.preprocessing import MultiLabelBinarizer
 
 def tokenize(text):
-    text = text.lower()
-    rules = [('.',' . '),(',',' , '),(':',' : '),\
-             (';',' ; '),('(',' ( '),(')',' )'),\
-             ('-',' - '),('"',' " '),("'"," ' ")]
-    for r1,r2 in rules:
-        text = text.replace(r1,r2)
-    return utils.to_unicode(text).split()
+    return re.split('\W+', utils.to_unicode(text).lower())
 
 def check_directory(directory):
     if not os.path.isdir(directory):
@@ -96,6 +90,10 @@ class corpus(object):
             self.load_phrases()
             self.load_dictionary()
 
+    def process(self, text):
+        tokens = [x for x in tokenize(text) if x in self.get_words()]
+        return self.trigram[self.bigram[tokens]]
+
     # Category methods
 
     def load_category_map(self):
@@ -133,7 +131,6 @@ class corpus(object):
         return dict((v,k) for k,v in self.dictionary.token2id.iteritems())
 
     def get_words(self):
-        print("\tGetting vocab...")
         return self.dictionary.values()
 
     def train_dictionary(self):
@@ -181,11 +178,15 @@ class bag_corpus(object):
 class doc_corpus(object):
     def __init__(self, corpus):
         self.corpus = corpus
+        print('\tCounting instances...')
+        with open(self.corpus.document_path, 'rb') as fin:
+            self.instances = sum(1 for doc in fin)
+
     def __iter__(self):
         for i,doc in enumerate(self.docs()):
             yield TaggedDocument(self.corpus.trigram[self.corpus.bigram[doc]],[i])
     def untagged(self):
-        for i,doc in enumerate(self.docs()):
+        for doc in self.docs():
             yield self.corpus.trigram[self.corpus.bigram[doc]]
     def docs(self):
         with open(self.corpus.document_path, 'rb') as fin:
@@ -197,9 +198,6 @@ class doc_corpus(object):
             for doc in fin:
                 categories, doc = doc.split('\t')
                 yield [int(x.strip()) for x in categories.split(',')]
-    def instances(self):
-        with open(self.corpus.document_path, 'rb') as fin:
-            return sum(1 for doc in fin)
 
 class imdb_corpus(object):
     def __init__(self, corpus):

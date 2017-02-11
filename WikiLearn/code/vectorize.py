@@ -4,7 +4,7 @@ from __future__ import print_function
 
 #                          Standard imports
 #-----------------------------------------------------------------------------#
-import os, re, time, math
+import os, time, datetime
 import random
 random.seed(0)
 
@@ -16,14 +16,11 @@ np.random.seed(0)
 
 from gensim.models.ldamodel import LdaModel
 from gensim.models import Doc2Vec
-from gensim import corpora
-from gensim import utils
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
 
 from classify import vector_classifier
-from evaluate import evaluate
 
 #-----------------------------------------------------------------------------#
 def check_directory(directory):
@@ -32,6 +29,30 @@ def check_directory(directory):
         os.makedirs(directory)
         return False
     return True
+
+class epoch_timer(object):
+    def __init__(self, epochs):
+        self.epochs = epochs
+        self.epoch  = -1
+        self.times  = []
+
+    def start(self):
+        self.epoch += 1
+        self.before =  time.time()
+
+    def stop(self):
+        after = time.time()
+        self.times.append(after-self.before)
+        avg_time  = sum(self.times)/len(self.times)
+        remaining = avg_time*(self.epochs-self.epoch-1)
+        next_time = datetime.datetime.fromtimestamp(after+avg_time).strftime('%d %b %Y %H:%M')
+        eta_time  = datetime.datetime.fromtimestamp(after+remaining).strftime('%d %b %Y %H:%M')
+        if self.epoch < self.epochs:
+            print('\t\t\tNext epoch:\t%s' % next_time)
+            print('\t\t\tETA:\t\t%s' % eta_time)
+
+    def get_elapsed(self):
+        return sum(self.times)/3600.0
 
 #                             LDA encoder
 #-----------------------------------------------------------------------------#
@@ -139,7 +160,7 @@ class doc2vec(object):
         if not os.path.exists(self.directory):
 
             # Create main model
-            self.build(features=400, context_window=8, min_count=3, sample=1e-5, negative=5)
+            self.build(features=100, context_window=10, min_count=3, sample=1e-5, negative=10)
             self.train(epochs=10)
             self.save()
 
@@ -149,7 +170,67 @@ class doc2vec(object):
 
         else:
             self.load()
-            self.load_classifier()
+            self.train_classifier()
+            #self.load_classifier()
+            #self.analogy()
+
+    def evaluate(self):
+        url = 'http://download.tensorflow.org/data/questions-words.txt'
+        return
+
+    def nearest(self):
+    
+        print('\nInterface for finding nearest words')
+        while True:
+            sentence = raw_input("\nEnter a list of words:\n")
+            if not sentence:
+                return
+            try:
+                print(' '.join(self.get_nearest_word(sentence)))
+            except ValueError:
+                print('None of the words occur!')
+            
+    def outlier(self):
+    
+        print('\nInterface for finding outlier word')
+        while True:
+            sentence = raw_input("\nEnter a list of words:\n")
+            if not sentence:
+                return
+            try:
+                print(self.get_outlier_word(sentence))
+            except ValueError:
+                print('None of the words occur!')
+
+    def analogy(self):
+    
+        print('\nInterface for solving analogies')
+        while True:
+            w = raw_input("\nEnter first word of analogy:\n")
+            if not w:
+                return
+            print("is to")
+            x = raw_input()
+            print("as")
+            y = raw_input()
+            print("is to")
+            try:
+                analogy = self.get_word_analogy(w,x,y)
+                print(' '.join(analogy))
+            except:
+                print('Not all of the words occur!')
+
+    def get_nearest_doc(self, text):
+        return [x[0] for x in self.model.docvecs.most_similar(self.encode_doc(text),topn=10)]
+
+    def get_nearest_word(self, text):
+        return [x[0] for x in  self.model.most_similar(self.encode_words(text),topn=10)]
+        
+    def get_outlier_word(self, text):
+      return self.model.doesnt_match(self.corpus.process(text))        
+
+    def get_word_analogy(self, x, y, z):
+        return [x[0] for x in self.model.most_similar(positive=[self.encode_word(y),self.encode_word(z)],negative=[self.encode_word(x)])]
 
     # Model I/O
 
@@ -157,24 +238,27 @@ class doc2vec(object):
         print("\tBuilding doc2vec model...")
 
         self.features = features
-        self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=8)
+        self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=7)
 
     def train(self, epochs=10):
         print("\tTraining doc2vec model...")
 
         # Main Training Method
+        print("\t\tBuilding vocab...")
         self.model.build_vocab(self.corpus.docs)
 
-        times = []
+        t = epoch_timer(epochs)
         for i in xrange(epochs):
-            start = time.time()
             
-            print("\t\tEpoch %s" % (i+1))
+            t.start()
+            print("\t\tEpoch %s..." % (i+1))
             self.model.train(self.corpus.docs)
-            
-            times.append(time.time()-start)
-            remaining = sum(times)*(epochs-i-1)/len(times)/3600
-            print('\t\t%0.2f hours remaining...\n' % remaining)
+            t.stop()
+            print('\t\tClassifier accuracy: %0.4f' % (self.train_classifier()))
+
+        accuracy = self.train_classifier()
+        elapsed  = t.get_elapsed()
+        print('\tClassifier accuracy: %0.4f\n\tTime elapsed: %0.2f hours' % (accuracy,elapsed))
         #self.model.init_sims(replace=True)
         
     def save(self):
@@ -192,9 +276,7 @@ class doc2vec(object):
         X = self.encode_docs(100000)
         y = self.corpus.get_doc_categories(100000)
         self.classifier = vector_classifier(self.directory)
-        self.classifier.train(X, y)
-        y_pred = self.classifier.get_classes(X)
-        evaluate(y, y_pred, self.corpus.get_category_names())
+        return self.classifier.train(X, y)
 
     def save_classifier(self):
         self.classifier.save()
@@ -211,9 +293,9 @@ class doc2vec(object):
     def decode_word(self, vec):
         return self.model.most_similar([vec],topn=1)[0][0]
 
-    def encode_words(self, sentence):
+    def encode_words(self, text):
         result = []
-        for word in sentence.split():
+        for word in self.corpus.process(text):
             encoding = self.encode_word(word)
             if encoding is not None:
                 result.append(encoding)
@@ -222,8 +304,8 @@ class doc2vec(object):
     def decode_words(self, vecs):
         return ' '.join([self.decode_word(x) for x in vecs])
 
-    def encode_doc(self, sentence):
-        return np.expand_dims(self.model.infer_vector(sentence.split()), axis=0)
+    def encode_doc(self, text):
+        return np.expand_dims(self.model.infer_vector(self.corpus.process(text)), axis=0)
 
     def encode_docs(self, limit=-1):
         if limit > 0:
