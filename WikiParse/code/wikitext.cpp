@@ -1,6 +1,5 @@
 #include "wikitext.h"
 
-
 void copy_between(const string &body, const string &target, const vector<string> &endtargets, vector<string> &copies)
 {
     // used in the read_citations function, parses all instances from "target" to the closest "endtarget" element
