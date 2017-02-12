@@ -314,9 +314,14 @@ bool wikipage::is_article() {
     return (ns=="0");
 }
 
-bool wikipage::is_talk_page()
+bool wikipage::is_talk()
 {
     return (ns=="1");
+}
+
+bool wikipage::is_category()
+{
+    return (ns=="14");
 }
 
 bool wikipage::has_categories() {

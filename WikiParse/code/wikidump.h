@@ -9,6 +9,7 @@
 using std::cout;
 using std::endl;
 using std::ostream;
+using std::ofstream;
 
 #include <fstream>
 using std::ifstream;
@@ -49,20 +50,19 @@ using std::transform;
 
 /* Local Imports */
 #include "string_utils.h"
-#include "database.h"
 
 class wikidump {
 
 private:
     ifstream           dump_input;
-    database           dump_output;
+    ofstream           dump_output;
     ifstream::pos_type dump_size;
 	unsigned long long articles_read;
 	unsigned long long articles_saved;
 
 public:
     wikidump(string path);
-    void read(string type);
+    void read_articles(string document_path);
 };
 
 #define WIKIDUMP

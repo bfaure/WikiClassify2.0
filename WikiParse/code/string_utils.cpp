@@ -26,7 +26,7 @@ unsigned parse_all(const string &str, const string &tag1, const string &tag2, ve
     return p2;
 }
 
-unsigned save_all(const string &str, const string &tag1, const string &tag2, void (*f)(string, database&, long long unsigned int&), database &db, unsigned long long &articles_read, unsigned long long &articles_saved) {
+unsigned save_all(const string &str, const string &tag1, const string &tag2, void (*f)(string, ofstream&, long long unsigned int&), ofstream &dump_output, unsigned long long &articles_read, unsigned long long &articles_saved) {
     size_t p1 = str.find(tag1);
     size_t p2;
     while (p1!=string::npos) {
@@ -34,7 +34,7 @@ unsigned save_all(const string &str, const string &tag1, const string &tag2, voi
         p1 += tag1.length();
         p2  = str.find(tag2, p1);
         if (p2!=string::npos) {
-            f(str.substr(p1, p2-p1), db, articles_saved);
+            f(str.substr(p1, p2-p1), dump_output, articles_saved);
             p1 = str.find(tag1, p2+tag2.length());
             
         }

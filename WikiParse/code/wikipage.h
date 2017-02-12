@@ -132,7 +132,8 @@ class wikipage
         bool is_redirect();
         bool is_disambig();
         bool is_article();
-        bool is_talk_page();
+        bool is_talk();
+        bool is_category();
 
         bool has_categories();
         bool has_links();

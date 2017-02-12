@@ -1,13 +1,13 @@
 #include "wikidump.h"
 #include "wikipage.h"
 #include "string_utils.h"
-#include "database.h"
 
-void read_page(string page, database &db, unsigned long long &articles_saved) {
+void read_page(string page, ofstream &dump_output, unsigned long long &articles_saved) {
     wikipage wp(page);
-    if (db.add()) {
-        articles_saved++;
-    }
+    articles_saved++;
+    //if (db.add()) {
+    //    articles_saved++;
+    //}
 }
 
 //bool wikipage::save_json(ofstream &file)
@@ -109,10 +109,9 @@ wikidump::wikidump(string path) {
     }
 }
 
-void wikidump::read(string destination) 
-{
+void wikidump::read_articles(string document_path) {
 
-    database dump_output(destination);
+    dump_output = ofstream(document_path);
 
     articles_read = 0;
     articles_saved = 0;
