@@ -78,7 +78,8 @@ class LDA(object):
 
         else:
             self.load()
-            self.load_classifier()
+            self.accuracy, self.precision = self.train_classifier()
+            #self.load_classifier()
 
     # Model I/O
 
@@ -113,9 +114,7 @@ class LDA(object):
         X = self.encode_docs(100000)
         y = self.corpus.get_doc_categories(100000)
         self.classifier = vector_classifier(self.directory)
-        self.classifier.train(X, y)
-        y_pred = self.classifier.get_classes(X)
-        evaluate(y, y_pred, self.corpus.get_category_names())
+        return self.classifier.train(X, y)
 
     def save_classifier(self):
         self.classifier.save()
@@ -170,7 +169,7 @@ class doc2vec(object):
 
         else:
             self.load()
-            self.train_classifier()
+            self.accuracy, self.precision = self.train_classifier()
             #self.load_classifier()
             #self.analogy()
 

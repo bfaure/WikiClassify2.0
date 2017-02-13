@@ -260,7 +260,7 @@ class doc_corpus(object):
 class wiki_corpus(object):
     def __init__(self, corpus):
         self.corpus = corpus
-        self.compile_parser(True)
+        self.compile_parser(recompile=True)
         self.parse()
     
     def parse(self):
