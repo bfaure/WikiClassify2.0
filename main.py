@@ -22,7 +22,7 @@ def main():
     if len(sys.argv) == 2:
         _, email_password = sys.argv
 
-    corpus_name  = 'enwiki'
+    corpus_name  = 'imdb'
     run_LDA      = False
     run_word2vec = True
 

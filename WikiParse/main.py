@@ -85,8 +85,9 @@ def download(url, directory):
                     for data in response.iter_content(chunk_size=4096):
                         dl += len(data)
                         f.write(data)
-                        sys.stdout.write("\r\t\t\t%0.2f%% done" % (100.0*dl/total_length))    
+                        sys.stdout.write("\r\t\t\t%0.1f%% done" % (100.0*dl/total_length))    
                         sys.stdout.flush()
+                    print('')
         except:
             print("\t\t\tCould not download '%s'." % file_name)
     else:
@@ -300,7 +301,8 @@ class imdb_corpus(object):
     def download(self):
         print("\tDownloading imdb corpus...")
         url = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
-        download_tarball(url, self.corpus.raw_directory)
+        path = download(url, self.corpus.raw_directory)
+        expand_tar(path)
 
     def parse(self):
         print("\tParsing dataset...")
