@@ -37,7 +37,7 @@ class vector_classifier(object):
         self.model  = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y[:train_instances])
         self.scores = cross_val_score(self.model,X[train_instances:],y[train_instances:],cv=5)
         print("Accuracy: %0.1f%% (+/- %0.1f%%)" % (100*self.scores.mean(), 100*self.scores.std()*2))
-        return self.model.score(X[train_instances:],y[train_instances:])
+        return self.scores.mean(), self.scores.std()*2
 
     def save(self):
         print("\tSaving classifier model...")

@@ -37,8 +37,8 @@ def main():
 
         encoder = LDA(documents, LDA_directory)
     
-        email_subject = "LDA training finished!"
-        email_body    = "Execution time:\t%0.2f hours\nAccuracy:\t\t%s" % ((time.time()-start_time)/3600, "Unknown")
+        email_subject = "LDA training finished for %s corpus" % corpus_name
+        email_body    = "Execution time: %0.2f hours\nAccuracy:       %0.1f%% +/- %0.1f%%" % ((time.time()-start_time)/3600,100.0*encoder.accuracy,100.0*encoder.precision)
         send_email(email_body, email_password, email_subject)
 
     if run_word2vec:
@@ -46,8 +46,8 @@ def main():
 
         encoder = doc2vec(documents, word2vec_directory)
     
-        email_subject = "word2vec training finished!"
-        email_body    = "Execution time:\t%0.2f hours\nAccuracy:\t\t%s" % ((time.time()-start_time)/3600, "Unknown")
+        email_subject = "word2vec training finished for %s corpus" % corpus_name
+        email_body    = "Execution time: %0.2f hours\nAccuracy:       %0.1f%% +/- %0.1f%%" % ((time.time()-start_time)/3600, 100.0*encoder.accuracy,100.0*encoder.precision)
         send_email(email_body, email_password, email_subject)
 
 if __name__ == "__main__":
