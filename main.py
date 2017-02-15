@@ -22,9 +22,9 @@ def main():
     if len(sys.argv) == 2:
         _, email_password = sys.argv
 
-    corpus_name  = 'imdb'
+    corpus_name  = 'enwiki'
     run_LDA      = False
-    run_word2vec = True
+    run_word2vec = False
 
     corpus_directory     = 'WikiParse/data/corpora/%s' % corpus_name
     LDA_directory        = 'WikiLearn/data/models/LDA/%s' % corpus_name

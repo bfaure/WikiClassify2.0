@@ -121,23 +121,23 @@ class corpus(object):
         elif self.name.endswith('wiki'):
             wiki_corpus(self)
 
-        # Interpret categories
-        self.load_category_map()
-        self.load_category_tree()
-
-        # Create iterators from specialized classes
-        self.docs = doc_corpus(self)
-        self.bags = bag_corpus(self)
-
-        # Obtain preprocessor
-        if not os.path.exists(self.meta_directory):
-            self.train_phrases()
-            self.train_dictionary()
-            self.save_phrases()
-            self.save_dictionary()
-        else:
-            self.load_phrases()
-            self.load_dictionary()
+#        # Interpret categories
+#        self.load_category_map()
+#        self.load_category_tree()
+#
+#        # Create iterators from specialized classes
+#        self.docs = doc_corpus(self)
+#        self.bags = bag_corpus(self)
+#
+#        # Obtain preprocessor
+#        if not os.path.exists(self.meta_directory):
+#            self.train_phrases()
+#            self.train_dictionary()
+#            self.save_phrases()
+#            self.save_dictionary()
+#        else:
+#            self.load_phrases()
+#            self.load_dictionary()
 
     def process(self, text):
         tokens = [x for x in tokenize(text) if x in self.get_words()]
@@ -267,28 +267,30 @@ class wiki_corpus(object):
         for date, url in self.dump_urls():
             path = download(url, self.corpus.raw_directory+'/'+date)
             path = expand_bz2(path)
-            self.run_parser(path, self.corpus.raw_directory+'/documents.tsv', self.corpus.raw_directory+'/category_names.tsv', self.corpus.raw_directory+'/category_tree.tsv', )
+            self.run_parser(path, self.corpus.raw_directory+'/'+date)
+            break
 
     def compile_parser(self, recompile=False):
         print("\tCompiling parser...")
         if not os.path.isfile('wikiparse.out') or recompile:
-            call(["g++","--std=c++11","-O3","WikiParse/code/main.cpp","WikiParse/code/string_utils.cpp", "WikiParse/code/wikidump.cpp", "WikiParse/code/wikipage.cpp", "WikiParse/code/wikitext.cpp","-o","wikiparse.out"])
+            #call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
+            call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
         else:
             print("\t\tParser already compiled.")
 
-    def run_parser(self, dump_path, document_path, category_name_path, category_tree_path):
+    def run_parser(self, dump_path, output_directory):
         print("\tRunning parser...")
-        call(["./wikiparse.out", dump_path, document_path, category_name_path, category_tree_path])
+        call(["./wikiparse.out", dump_path, output_directory])
     
     def dump_urls(self):
-        url = 'https://dumps.wikimedia.org/enwiki/'
+        url = 'https://dumps.wikimedia.org/%s/' % self.corpus.name
         response = requests.get(url)
         tree = html.fromstring(response.text)
         dates = sorted(tree.xpath('//a/@href'),reverse=True)[1:-1]
         for date in dates:
             response = requests.get(url+date)
             if 'in progress' not in response.text:
-                yield date[:-1],'{0}{1}/enwiki-{1}-pages-meta-current.xml.bz2'.format(url,date[:-1])
+                yield date[:-1],'{0}{1}/{2}-{1}-pages-meta-current.xml.bz2'.format(url,date[:-1],self.corpus.name)
 
 #                             IMDb corpus
 #-----------------------------------------------------------------------------#
