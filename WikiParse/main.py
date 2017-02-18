@@ -260,29 +260,13 @@ class doc_corpus(object):
 class wiki_corpus(object):
     def __init__(self, corpus):
         self.corpus = corpus
-        self.compile_parser(recompile=True)
+        self.download()
         self.parse()
     
-    def parse(self):
-        for date, url in self.dump_urls():
-            path = download(url, self.corpus.raw_directory+'/'+date)
-            path = expand_bz2(path)
-            self.run_parser(path, self.corpus.raw_directory+'/'+date)
-            break
+    def download(self):
 
-    def compile_parser(self, recompile=False):
-        print("\tCompiling parser...")
-        if not os.path.isfile('wikiparse.out') or recompile:
-            #call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
-            call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
-        else:
-            print("\t\tParser already compiled.")
-
-    def run_parser(self, dump_path, output_directory):
-        print("\tRunning parser...")
-        call(["./wikiparse.out", dump_path, output_directory])
-    
-    def dump_urls(self):
+        # Recording it catches the case where dumps change
+        current_dumps = []
         url = 'https://dumps.wikimedia.org/%s/' % self.corpus.name
         response = requests.get(url)
         tree = html.fromstring(response.text)
@@ -290,7 +274,30 @@ class wiki_corpus(object):
         for date in dates:
             response = requests.get(url+date)
             if 'in progress' not in response.text:
-                yield date[:-1],'{0}{1}/{2}-{1}-pages-meta-current.xml.bz2'.format(url,date[:-1],self.corpus.name)
+                path = '{0}{1}/{2}-{1}-pages-meta-current.xml.bz2'.format(url,date[:-1],self.corpus.name)
+                current_dumps.append((date[:-1],path))
+
+        for date, url in current_dumps:
+            path = download(url, self.corpus.raw_directory+'/'+date)
+            expand_bz2(path)
+
+    def parse(self):
+        self.compile_parser(recompile=True)
+        for date in os.listdir(self.corpus.raw_directory):
+            if os.path.isdir(self.corpus.raw_directory+'/'+date):
+                print(self.corpus.raw_directory+'/'+date)
+                self.run_parser(self.corpus.raw_directory+'/'+date, self.corpus.raw_directory+'/'+date)
+
+    def compile_parser(self, recompile=False):
+        print("\tCompiling parser...")
+        if not os.path.isfile('wikiparse.out') or recompile:
+            call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
+        else:
+            print("\t\tParser already compiled.")
+
+    def run_parser(self, dump_path, output_directory):
+        print("\tRunning parser...")
+        call(["./wikiparse.out", dump_path, output_directory])
 
 #                             IMDb corpus
 #-----------------------------------------------------------------------------#
