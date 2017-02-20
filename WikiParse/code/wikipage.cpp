@@ -23,6 +23,42 @@ wikipage::wikipage(string page) {
     }
 }
 
+void kosher(string &field) {
+    decode_text(field);
+    replace_target(field,"\n"," ");
+    replace_target(field,"\t"," ");
+    remove_target(field,"\"");
+    string target = "&lt;";
+    string endtarget = "&gt;";
+    remove_between(field,target,endtarget);
+    remove_target(field,"'");
+    trim(field);
+    remove_target(field,"\\");
+    decode_text(field);
+}
+
+void kosher(vector<string> &fields) {
+    for (int i=0; i<fields.size(); i++) {
+        kosher(fields[i]);
+    }
+}
+
+//Save function (save to file)
+void wikipage::save(ofstream &file) {
+    if (!text.empty()) {
+        for(int i=0; i<categories.size(); i++) {
+            if (i) {
+                file<<'\t';
+            }
+            file<<categories[i];
+        }
+        file<<"\t";
+        kosher(text);
+        kosher(categories);
+        file<<text<<'\n';
+    }
+}
+
 void wikipage::read_title(string &page) {
     parse(page, "    <title>", "</title>\n    ", title);
 
@@ -85,7 +121,10 @@ void wikipage::read_contributor(string &page) {
 void wikipage::read_text(string &page) {
     string page_text;
     parse(page,"      <text xml:space=\"preserve\">","</text>\n      ",page_text);
+    
     wikitext wt(page_text);
+    text       = wt.text;
+    categories = wt.categories;
 }
 
 bool wikipage::is_redirect() {

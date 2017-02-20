@@ -33,11 +33,11 @@ class wikitext {
         void read_text(string &text);
     public:
     	wikitext(string text);
+        string text;
         vector<string> categories; 
         vector<string> links;
         vector<string> cited_urls;
         vector<string> cited_authors;
-        string text;
         vector<string> maintenance_categories;
 };
 

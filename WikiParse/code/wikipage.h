@@ -25,6 +25,7 @@ using std::vector;
 #include "string_utils.h"
 
 class wikipage {
+
     private:
         // Get page sections
         void read_title(string &page);
@@ -34,7 +35,12 @@ class wikipage {
         void read_timestamp(string &page);
         void read_contributor(string &page);
         void read_text(string &page);
+
     public:
+        // Constructor
+        wikipage(string page);
+        void save(ofstream &file);
+
         // Page sections
         string title;
         string ns;
@@ -42,10 +48,12 @@ class wikipage {
         string redirect;
         string timestamp;
         string contributor;
-        string text;
 
-    	// Constructor
-        wikipage(string page);
+        // Text sections
+        string text;
+        vector<string> categories; 
+        vector<string> links;
+        unsigned short image_count;
 
         // Boolean checks
         bool is_article();
