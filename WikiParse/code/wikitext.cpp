@@ -353,13 +353,13 @@ void wikitext::read_text(string &text){
     target = "\n";
     remove_target(text, target);
 
-    text = trim(text);
-
     // Remove all escape chars
     remove_target(text,"\\");
 
     // Remove all \t
     remove_target(text,"\t");
+
+    this->text = trim(text);
 }
 
 void percent_decoding(string &text) {

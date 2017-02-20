@@ -277,7 +277,7 @@ class wiki_corpus(object):
                 path = '{0}{1}/{2}-{1}-pages-meta-current.xml.bz2'.format(url,date[:-1],self.corpus.name)
                 current_dumps.append((date[:-1],path))
 
-        for date, url in current_dumps:
+        for date, url in [current_dumps[0]]:
             path = download(url, self.corpus.raw_directory+'/'+date)
             expand_bz2(path)
 
@@ -285,8 +285,8 @@ class wiki_corpus(object):
         self.compile_parser(recompile=True)
         for date in os.listdir(self.corpus.raw_directory):
             if os.path.isdir(self.corpus.raw_directory+'/'+date):
-                print(self.corpus.raw_directory+'/'+date)
-                self.run_parser(self.corpus.raw_directory+'/'+date, self.corpus.raw_directory+'/'+date)
+                dump_path = self.corpus.raw_directory+'/'+date+'/enwiki-%s-pages-meta-current.xml' % date
+                self.run_parser(dump_path, self.corpus.data_directory)
 
     def compile_parser(self, recompile=False):
         print("\tCompiling parser...")
