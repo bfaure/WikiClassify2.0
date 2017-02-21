@@ -2,12 +2,6 @@
 #include "wikipage.h"
 #include "string_utils.h"
 
-void read_page(string page, ofstream &dump_output, unsigned long long &articles_saved) {
-    wikipage wp(page);
-    wp.save(dump_output);
-    articles_saved++;
-}
-
 wikidump::wikidump(string &path) {
     dump_input  = ifstream(path, ifstream::binary);
     if (dump_input.is_open()) {
@@ -16,6 +10,27 @@ wikidump::wikidump(string &path) {
     else {
         cout<<"Could not open dump! ("<<path<<")"<<endl;
     }
+}
+
+unsigned wikidump::save_buffer(const string &str) {
+    string tag1 = "\n  <page>\n";
+    string tag2 = "\n  </page>\n";
+    size_t p1 = str.find(tag1);
+    size_t p2;
+    while (p1!=string::npos) {
+        p1 += tag1.length();
+        p2  = str.find(tag2, p1);
+        if (p2!=string::npos) {
+            articles_read++;
+            wikipage wp(str.substr(p1, p2-p1));
+            wp.save(dump_output);
+            p1 = str.find(tag1, p2+tag2.length());
+        }
+        else {
+            return p1;
+        }
+    }
+    return p2;
 }
 
 void wikidump::read(string output_directory) {
@@ -27,7 +42,6 @@ void wikidump::read(string output_directory) {
     dump_output = ofstream(document_path);
     
     articles_read  = 0;
-    articles_saved = 0;
     
     streampos offset;
     const streampos buffer_size = 2000000;
@@ -38,7 +52,7 @@ void wikidump::read(string output_directory) {
 
     while (dump_input.read(buffer, sizeof(buffer))) {
 
-        offset = save_all(buffer, "\n  <page>\n", "\n  </page>\n", read_page, dump_output, articles_read, articles_saved);
+        offset = save_buffer(buffer);
         dump_input.seekg(dump_input.tellg()-buffer_size+offset);
     
         if (time(0)-start_time % display_refresh_rate == 0) {
@@ -48,7 +62,7 @@ void wikidump::read(string output_directory) {
         }
     
         cout.flush();
-        cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles read, "<<articles_read-articles_saved<<" articles were not saved";
+        cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles parsed.";
         cout.flush();
     }
     

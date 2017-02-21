@@ -29,10 +29,10 @@ class wikidump {
         ofstream dump_output;
         ifstream::pos_type dump_size;
         unsigned long long articles_read;
-        unsigned long long articles_saved;
     
     public:
         wikidump(string &path);
+        unsigned save_buffer(const string &str);
         void read(string output_directory);
 };
 
