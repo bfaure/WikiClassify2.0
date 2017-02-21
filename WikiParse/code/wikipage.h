@@ -13,6 +13,7 @@ using std::ofstream;
 using std::string;
 using std::size_t;
 using std::stoi;
+using std::stol;
 
 #include <vector>
 using std::vector;
@@ -30,7 +31,8 @@ class wikipage {
         // Get page sections
         void read_title(string &page);
         void read_namespace(string &page);
-        void read_ID(string &page);
+        void read_id(string &page);
+        void read_revision(string &page);
         void read_redirect(string &page);
         void read_timestamp(string &page);
         void read_contributor(string &page);
@@ -41,10 +43,18 @@ class wikipage {
         wikipage(string page);
         void save(ofstream &file);
 
+        // Boolean checks
+        bool is_article();
+        bool is_talk();
+        bool is_category();
+        bool is_disambig();
+        bool is_redirect();
+
         // Page sections
         string title;
         string ns;
-        unsigned ID;
+        unsigned id;
+        unsigned long revision;
         string redirect;
         string timestamp;
         string contributor;
@@ -53,14 +63,9 @@ class wikipage {
         string text;
         vector<string> categories; 
         vector<string> links;
-        unsigned short image_count;
-
-        // Boolean checks
-        bool is_article();
-        bool is_talk();
-        bool is_category();
-        bool is_disambig();
-        bool is_redirect();
+        vector<string> cited_urls;
+        vector<string> cited_authors;
+        vector<string> problems;
 };
 
 #define WIKIPAGE

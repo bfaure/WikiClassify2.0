@@ -5,7 +5,7 @@
 wikipage::wikipage(string page) {
     read_title(page);
     read_namespace(page);
-    read_ID(page);
+    read_id(page);
     if (is_article()) {
         read_redirect(page);
         if (!is_redirect()) {
@@ -20,41 +20,6 @@ wikipage::wikipage(string page) {
         read_timestamp(page); 
         read_contributor(page);
         read_text(page);
-    }
-}
-
-void kosher(string &field) {
-    decode_text(field);
-    replace_target(field,"\n"," ");
-    replace_target(field,"\t"," ");
-    remove_target(field,"\"");
-    string target = "&lt;";
-    string endtarget = "&gt;";
-    remove_between(field,target,endtarget);
-    remove_target(field,"'");
-    trim(field);
-    remove_target(field,"\\");
-    decode_text(field);
-}
-
-void kosher(vector<string> &fields) {
-    for (int i=0; i<fields.size(); i++) {
-        kosher(fields[i]);
-    }
-}
-
-//Save function (save to file)
-void wikipage::save(ofstream &file) {
-    if (!text.empty()) {
-        kosher(text);
-        kosher(categories);
-        for(int i=0; i<categories.size(); i++) {
-            if (i) {
-                file<<'\t';
-            }
-            file<<categories[i];
-        }
-        file<<"\t"<<text<<'\n';
     }
 }
 
@@ -88,10 +53,16 @@ void wikipage::read_namespace(string &page) {
     parse(page, "    <ns>", "</ns>\n    ", ns);
 }
 
-void wikipage::read_ID(string &page) {
-    string ID_str; 
-    parse(page, "    <id>", "</id>\n    ", ID_str);
-    ID=stoi(ID_str);
+void wikipage::read_id(string &page) {
+    string id_str; 
+    parse(page, "    <id>", "</id>\n    ", id_str);
+    id = stoi(id_str);
+}
+
+void wikipage::read_revision(string &page) {
+    string revision_str; 
+    parse(page, "<revision>\n      <id>", "</id>\n      ", revision_str);
+    revision = stol(revision_str);
 }
 
 void wikipage::read_redirect(string &page) {
@@ -120,10 +91,14 @@ void wikipage::read_contributor(string &page) {
 void wikipage::read_text(string &page) {
     string page_text;
     parse(page,"      <text xml:space=\"preserve\">","</text>\n      ",page_text);
-    
     wikitext wt(page_text);
-    text       = wt.text;
-    categories = wt.categories;
+
+    text          = wt.text;
+    categories    = wt.categories;
+    links         = wt.links;
+    cited_urls    = wt.cited_urls;
+    cited_authors = wt.cited_authors;
+    problems      = wt.problems;
 }
 
 bool wikipage::is_redirect() {
