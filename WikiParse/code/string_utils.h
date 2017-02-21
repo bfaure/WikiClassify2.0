@@ -24,7 +24,6 @@ using std::isspace;
 string trim(string &s);
 
 unsigned    parse_all(const string &str, const string &tag1, const string &tag2, vector<string> &result);
-unsigned     save_all(const string &str, const string &tag1, const string &tag2, void (*f)(string, ofstream&, long long unsigned int&), ofstream &dump_output, long long unsigned int &articles_read, long long unsigned int &articles_saved);
 void            parse(const string &str, const string &tag1, const string &tag2, string &result);
 unsigned count_string(const string &str, const string &tag);
 

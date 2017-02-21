@@ -46,16 +46,15 @@ void kosher(vector<string> &fields) {
 //Save function (save to file)
 void wikipage::save(ofstream &file) {
     if (!text.empty()) {
+        kosher(text);
+        kosher(categories);
         for(int i=0; i<categories.size(); i++) {
             if (i) {
                 file<<'\t';
             }
             file<<categories[i];
         }
-        file<<"\t";
-        kosher(text);
-        kosher(categories);
-        file<<text<<'\n';
+        file<<"\t"<<text<<'\n';
     }
 }
 
