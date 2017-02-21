@@ -38,7 +38,7 @@ class wikitext {
         vector<string> links;
         vector<string> cited_urls;
         vector<string> cited_authors;
-        vector<string> maintenance_categories;
+        vector<string> problems;
 };
 
 #endif // WIKITEXT_H
