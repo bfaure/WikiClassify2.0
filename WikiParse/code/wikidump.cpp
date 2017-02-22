@@ -64,6 +64,25 @@ void database::save(wikipage &wp) {
             kosher(wp.categories);
             for (int i=0; i<wp.categories.size(); i++) {
             }
+            //cout<<"number of categories: "<<wp.categories.size()<<"\n";
+            //cout<<"number of cited urls: "<<wp.cited_urls.size()<<"\n";
+            //cout<<"number of cited authors: "<<wp.cited_authors.size()<<"\n";
+
+            for (int j=0; j<wp.cited_urls.size(); j++)
+            {
+                if (wp.cited_urls[j]!="")
+                {
+                    cout<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
+                }
+            }
+            for (int j=0; j<wp.cited_authors.size(); j++)
+            {
+                if (wp.cited_authors[j]!="")
+                {
+                    cout<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
+                }
+                
+            }
         }
     }
 }

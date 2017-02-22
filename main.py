@@ -25,12 +25,13 @@ def main():
     corpus_name  = 'enwiki'
     run_LDA      = False
     run_word2vec = False
+    num_downloads = 0
 
     corpus_directory     = 'WikiParse/data/corpora/%s' % corpus_name
     LDA_directory        = 'WikiLearn/data/models/LDA/%s' % corpus_name
     word2vec_directory   = 'WikiLearn/data/models/word2vec/%s' % corpus_name
 
-    documents = corpus(corpus_name, corpus_directory)
+    documents = corpus(corpus_name, corpus_directory, num_downloads=0)
 
     if run_LDA:
         start_time = time.time()
