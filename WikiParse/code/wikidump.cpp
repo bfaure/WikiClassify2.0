@@ -58,6 +58,7 @@ database::database(string &output_directory) {
 }
 
 void database::save(wikipage &wp) {
+    bool print = true;
     if (wp.is_article()) {
         if (!wp.text.empty()) {
             kosher(wp.title);
@@ -67,21 +68,22 @@ void database::save(wikipage &wp) {
             //cout<<"number of categories: "<<wp.categories.size()<<"\n";
             //cout<<"number of cited urls: "<<wp.cited_urls.size()<<"\n";
             //cout<<"number of cited authors: "<<wp.cited_authors.size()<<"\n";
-
-            for (int j=0; j<wp.cited_urls.size(); j++)
+            if (print)
             {
-                if (wp.cited_urls[j]!="")
+                for (int j=0; j<wp.cited_urls.size(); j++)
                 {
-                    cout<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
+                    if (wp.cited_urls[j]!="")
+                    {
+                        cout<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
+                    }
                 }
-            }
-            for (int j=0; j<wp.cited_authors.size(); j++)
-            {
-                if (wp.cited_authors[j]!="")
+                for (int j=0; j<wp.cited_authors.size(); j++)
                 {
-                    cout<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
+                    if (wp.cited_authors[j]!="")
+                    {
+                        cout<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
+                    }       
                 }
-                
             }
         }
     }
