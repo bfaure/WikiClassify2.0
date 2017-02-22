@@ -299,16 +299,41 @@ void wikitext::read_citations(string &text) {
             string cur_citation_url = citation_t[i][1];
             string cur_citation_base_url = citation_t[i][2];
 
-            if (cur_citation_url==last_citation_url and cur_citation_url==last_citation_url)
+            if (cur_citation_url!="" and cur_citation_url!=" " and cur_citation_url!=last_citation_url)
             {
-                continue;
+                bool duplicate = false;
+                for (int k=0; k<cited_urls.size(); k++)
+                {
+                    if (cited_urls[k]==cur_citation_base_url)
+                    {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate)
+                {
+                    cited_urls.push_back(cur_citation_base_url);        
+                    last_citation_url = cur_citation_base_url;
+                }
             }
 
-            cited_urls.push_back(cur_citation_base_url);
-            cited_authors.push_back(cur_citation_author);
-
-            last_citation_author = cur_citation_author;
-            last_citation_url = cur_citation_base_url;
+            if (cur_citation_author!=" " and cur_citation_author!="" and cur_citation_author!=last_citation_author)
+            {
+                bool duplicate = false;
+                for (int k=0; k<cited_authors.size(); k++)
+                {
+                    if (cited_authors[k]==cur_citation_author)
+                    {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate)
+                {
+                    cited_authors.push_back(cur_citation_author);        
+                    last_citation_author = cur_citation_author;
+                } 
+            }
         }
     }
 }
