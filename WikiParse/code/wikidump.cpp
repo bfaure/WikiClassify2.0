@@ -57,6 +57,8 @@ database::database(string &output_directory) {
 
 }
 
+ofstream debug_file("debug_file.txt");
+
 void database::save(wikipage &wp) {
     bool print = true;
     if (wp.is_article()) {
@@ -74,14 +76,16 @@ void database::save(wikipage &wp) {
                 {
                     if (wp.cited_urls[j]!="")
                     {
-                        cout<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
+                        debug_file<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
+                        //cout<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
                     }
                 }
                 for (int j=0; j<wp.cited_authors.size(); j++)
                 {
                     if (wp.cited_authors[j]!="")
                     {
-                        cout<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
+                        debug_file<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
+                        //cout<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
                     }       
                 }
             }
