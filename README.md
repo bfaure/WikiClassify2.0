@@ -22,3 +22,11 @@ When first cloning the repo, run the init.py file to create the directory struct
 [Chrome Extension](https://github.com/lukewielgus/WikiExtension) <br>
 [Project Website](https://github.com/waynesun95/WikiClassifySite) <br>
 [Former Repo](https://github.com/nathankjer/WikiClassify)
+
+#### Running Parser (temp, debugging C++ files...)
+cd into WikiParse/code then compile with...<br>
+`g++ --std=c++11 main.cpp wikidump.cpp wikipage.cpp wikitext.cpp string_utils.cpp -o wikiparse.out`<br>
+then to run the parser...<br>
+`./wikiparse.out <path_to_source> <output_directory>`<br>
+for example...<br>
+`./wikiparse.out ../data/input/simplewiki-latest-pages-articles.xml ../data/`
