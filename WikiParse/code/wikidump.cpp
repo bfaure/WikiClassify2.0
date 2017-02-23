@@ -3,14 +3,14 @@
 #include "string_utils.h"
 
 wikidump::wikidump(string &path, string &output_directory) {
-    dump_input  = ifstream(path, ifstream::binary);
+    dump_input = ifstream(path, ifstream::binary);
     if (dump_input.is_open()) {
         dump_size = ifstream(path, ifstream::ate|ifstream::binary).tellg();
     }
     else {
-        cout<<"Could not open dump! ("<<path<<")"<<endl;
+        cout<<"Could not open dump! ("<<path<<")\n";
     }
-    database db(output_directory);
+    database db();
     articles_read = 0;
 }
 
@@ -25,7 +25,7 @@ void wikidump::read() {
         cout.flush();
         cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles parsed.";
     }
-    cout<<endl;
+    cout<<"\n";
 }
 
 unsigned wikidump::save_buffer(const string &str) {
@@ -50,44 +50,22 @@ unsigned wikidump::save_buffer(const string &str) {
 }
 
 database::database() {
-
+    debug_file = ofstream("debug_file.txt");
 }
-
-database::database(string &output_directory) {
-
-}
-
-ofstream debug_file("debug_file.txt");
 
 void database::save(wikipage &wp) {
-    bool print = true;
     if (wp.is_article()) {
         if (!wp.text.empty()) {
             kosher(wp.title);
             kosher(wp.categories);
             for (int i=0; i<wp.categories.size(); i++) {
             }
-            //cout<<"number of categories: "<<wp.categories.size()<<"\n";
-            //cout<<"number of cited urls: "<<wp.cited_urls.size()<<"\n";
-            //cout<<"number of cited authors: "<<wp.cited_authors.size()<<"\n";
-            if (print)
-            {
-                for (int j=0; j<wp.cited_urls.size(); j++)
-                {
-                    if (wp.cited_urls[j]!="")
-                    {
-                        debug_file<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
-                        //cout<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
-                    }
-                }
-                for (int j=0; j<wp.cited_authors.size(); j++)
-                {
-                    if (wp.cited_authors[j]!="")
-                    {
-                        debug_file<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
-                        //cout<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
-                    }       
-                }
+            for (int j=0; j<wp.cited_domains.size(); j++) {
+                cout<<wp.cited_domains[j]<<"\n";
+                debug_file<<"domain: "<<wp.cited_domains[j]<<"\n";       
+            }
+            for (int j=0; j<wp.cited_authors.size(); j++) {
+                debug_file<<"author: "<<wp.cited_authors[j]<<"\n";      
             }
         }
     }

@@ -22,10 +22,10 @@ def main():
     if len(sys.argv) == 2:
         _, email_password = sys.argv
 
-    corpus_name  = 'enwiki'
+    corpus_name  = 'simplewiki'
     run_LDA      = False
     run_word2vec = False
-    num_downloads = 0
+    num_downloads = 15
 
     corpus_directory     = 'WikiParse/data/corpora/%s' % corpus_name
     LDA_directory        = 'WikiLearn/data/models/LDA/%s' % corpus_name
