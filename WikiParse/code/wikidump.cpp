@@ -57,12 +57,37 @@ database::database(string &output_directory) {
 
 }
 
+ofstream debug_file("debug_file.txt");
+
 void database::save(wikipage &wp) {
+    bool print = true;
     if (wp.is_article()) {
         if (!wp.text.empty()) {
             kosher(wp.title);
             kosher(wp.categories);
             for (int i=0; i<wp.categories.size(); i++) {
+            }
+            //cout<<"number of categories: "<<wp.categories.size()<<"\n";
+            //cout<<"number of cited urls: "<<wp.cited_urls.size()<<"\n";
+            //cout<<"number of cited authors: "<<wp.cited_authors.size()<<"\n";
+            if (print)
+            {
+                for (int j=0; j<wp.cited_urls.size(); j++)
+                {
+                    if (wp.cited_urls[j]!="")
+                    {
+                        debug_file<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
+                        //cout<<"url "<<j<<": "<<wp.cited_urls[j]<<"\n";    
+                    }
+                }
+                for (int j=0; j<wp.cited_authors.size(); j++)
+                {
+                    if (wp.cited_authors[j]!="")
+                    {
+                        debug_file<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
+                        //cout<<"author "<<j<<": "<<wp.cited_authors[j]<<"\n";   
+                    }       
+                }
             }
         }
     }

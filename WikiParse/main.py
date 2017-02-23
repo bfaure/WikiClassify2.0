@@ -99,7 +99,7 @@ def download(url, directory):
 
 class corpus(object):
 
-    def __init__(self, corpus_name, corpus_directory):
+    def __init__(self, corpus_name, corpus_directory,num_downloads=0):
         print("Initializing '%s' corpus..." % corpus_name)
 
         self.name = corpus_name
@@ -119,7 +119,7 @@ class corpus(object):
             imdb_corpus(self)
 
         elif self.name.endswith('wiki'):
-            wiki_corpus(self)
+            wiki_corpus(self,num_downloads)
 
 #        # Interpret categories
 #        self.load_category_map()
@@ -258,12 +258,12 @@ class doc_corpus(object):
 #-----------------------------------------------------------------------------#
 
 class wiki_corpus(object):
-    def __init__(self, corpus):
+    def __init__(self, corpus,num_downloads=0):
         self.corpus = corpus
-        self.download()
+        self.download(num_downloads)
         self.parse()
     
-    def download(self):
+    def download(self,num_downloads):
 
         # Recording it catches the case where dumps change
         current_dumps = []
@@ -277,12 +277,17 @@ class wiki_corpus(object):
                 path = '{0}{1}/{2}-{1}-pages-meta-current.xml.bz2'.format(url,date[:-1],self.corpus.name)
                 current_dumps.append((date[:-1],path))
 
-        for date, url in [current_dumps[0]]:
+        for date, url in current_dumps[:num_downloads+1]:
             path = download(url, self.corpus.raw_directory+'/'+date)
             expand_bz2(path)
 
     def parse(self):
-        self.compile_parser(recompile=True)
+        compiled = self.compile_parser(recompile=True)
+        
+        if not compiled:
+            print("\tCould not compile parser!")
+            return
+
         for date in os.listdir(self.corpus.raw_directory):
             if os.path.isdir(self.corpus.raw_directory+'/'+date):
                 dump_path = self.corpus.raw_directory+'/'+date+'/enwiki-%s-pages-meta-current.xml' % date
@@ -291,9 +296,13 @@ class wiki_corpus(object):
     def compile_parser(self, recompile=False):
         print("\tCompiling parser...")
         if not os.path.isfile('wikiparse.out') or recompile:
-            call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
+            try:
+                call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
+            except:
+                return False
         else:
             print("\t\tParser already compiled.")
+        return True
 
     def run_parser(self, dump_path, output_directory):
         print("\tRunning parser...")
