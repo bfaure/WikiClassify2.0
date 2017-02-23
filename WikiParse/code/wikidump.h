@@ -4,7 +4,6 @@
 
 #include <iostream>
 using std::cout;
-using std::endl;
 using std::ofstream;
 
 #include <fstream>
@@ -26,18 +25,9 @@ using std::string;
 
 class database {
     private:
-        ofstream article_titles;  
-        ofstream article_quality;
-        ofstream article_importance;
-        ofstream article_categories;
-        ofstream article_problems;
-        ofstream article_revisions;
-        ofstream revision_text;
-        ofstream category_names;
-        ofstream category_parents;
+        ofstream debug_file;
     public:
         database();
-        database(string &output_directory);
         void save(wikipage &wp);
 };
 

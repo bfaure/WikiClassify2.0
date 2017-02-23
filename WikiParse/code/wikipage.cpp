@@ -96,7 +96,7 @@ void wikipage::read_text(string &page) {
     text          = wt.text;
     categories    = wt.categories;
     links         = wt.links;
-    cited_urls    = wt.cited_urls;
+    cited_domains = wt.cited_domains;
     cited_authors = wt.cited_authors;
     problems      = wt.problems;
 }

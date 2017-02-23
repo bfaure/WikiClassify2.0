@@ -107,19 +107,13 @@ class corpus(object):
         # Standard directories
         self.meta_directory = corpus_directory+'/meta'
         self.data_directory = corpus_directory+'/data'
-        self.raw_directory  = corpus_directory+'/data/raw'
-
-        # Standard files
-        self.document_path      = self.data_directory+'/documents.tsv'
-        self.category_map_path  = self.data_directory+'/category_names.tsv'
-        self.category_tree_path = self.data_directory+'/category_tree.tsv'
 
         # Load and parse raw corpus
         if self.name == 'imdb':
             imdb_corpus(self)
 
         elif self.name.endswith('wiki'):
-            wiki_corpus(self,num_downloads)
+            wiki_corpus(self, num_downloads)
 
 #        # Interpret categories
 #        self.load_category_map()
@@ -220,39 +214,39 @@ class corpus(object):
 #                             Bag iterator
 #-----------------------------------------------------------------------------#
 
-class bag_corpus(object):
-    def __init__(self, corpus):
-        self.corpus = corpus
-    def __iter__(self):
-        for doc in self.corpus.docs.untagged():
-            yield self.corpus.dictionary.doc2bow(doc)
-
-#                      Tagged Document iterator
-#-----------------------------------------------------------------------------#
-
-class doc_corpus(object):
-    def __init__(self, corpus):
-        self.corpus = corpus
-        print('\tCounting instances...')
-        with open(self.corpus.document_path, 'rb') as fin:
-            self.instances = sum(1 for doc in fin)
-
-    def __iter__(self):
-        for i,doc in enumerate(self.docs()):
-            yield TaggedDocument(self.corpus.trigram[self.corpus.bigram[doc]],[i])
-    def untagged(self):
-        for doc in self.docs():
-            yield self.corpus.trigram[self.corpus.bigram[doc]]
-    def docs(self):
-        with open(self.corpus.document_path, 'rb') as fin:
-            for doc in fin:
-                categories, doc = doc.split('\t')
-                yield doc.split()
-    def categories(self):
-        with open(self.corpus.document_path, 'rb') as fin:
-            for doc in fin:
-                categories, doc = doc.split('\t')
-                yield [int(x.strip()) for x in categories.split(',')]
+#class bag_corpus(object):
+#    def __init__(self, corpus):
+#        self.corpus = corpus
+#    def __iter__(self):
+#        for doc in self.corpus.docs.untagged():
+#            yield self.corpus.dictionary.doc2bow(doc)
+#
+##                      Tagged Document iterator
+##-----------------------------------------------------------------------------#
+#
+#class doc_corpus(object):
+#    def __init__(self, corpus):
+#        self.corpus = corpus
+#        print('\tCounting instances...')
+#        with open(self.corpus.document_path, 'rb') as fin:
+#            self.instances = sum(1 for doc in fin)
+#
+#    def __iter__(self):
+#        for i,doc in enumerate(self.docs()):
+#            yield TaggedDocument(self.corpus.trigram[self.corpus.bigram[doc]],[i])
+#    def untagged(self):
+#        for doc in self.docs():
+#            yield self.corpus.trigram[self.corpus.bigram[doc]]
+#    def docs(self):
+#        with open(self.corpus.document_path, 'rb') as fin:
+#            for doc in fin:
+#                categories, doc = doc.split('\t')
+#                yield doc.split()
+#    def categories(self):
+#        with open(self.corpus.document_path, 'rb') as fin:
+#            for doc in fin:
+#                categories, doc = doc.split('\t')
+#                yield [int(x.strip()) for x in categories.split(',')]
 
 #                          Wikipedia corpus
 #-----------------------------------------------------------------------------#
@@ -270,7 +264,7 @@ class wiki_corpus(object):
         url = 'https://dumps.wikimedia.org/%s/' % self.corpus.name
         response = requests.get(url)
         tree = html.fromstring(response.text)
-        dates = sorted(tree.xpath('//a/@href'),reverse=True)[1:-1]
+        dates = sorted(tree.xpath('//a/@href'))[1:-1]
         for date in dates:
             response = requests.get(url+date)
             if 'in progress' not in response.text:
@@ -278,7 +272,7 @@ class wiki_corpus(object):
                 current_dumps.append((date[:-1],path))
 
         for date, url in current_dumps[:num_downloads+1]:
-            path = download(url, self.corpus.raw_directory+'/'+date)
+            path = download(url, self.corpus.data_directory+'/'+date)
             expand_bz2(path)
 
     def parse(self):
@@ -288,9 +282,9 @@ class wiki_corpus(object):
             print("\tCould not compile parser!")
             return
 
-        for date in os.listdir(self.corpus.raw_directory):
-            if os.path.isdir(self.corpus.raw_directory+'/'+date):
-                dump_path = self.corpus.raw_directory+'/'+date+'/enwiki-%s-pages-meta-current.xml' % date
+        for date in os.listdir(self.corpus.data_directory):
+            if os.path.isdir(self.corpus.data_directory+'/'+date):
+                dump_path = self.corpus.data_directory+'/'+date+'/%s-%s-pages-meta-current.xml' % (self.corpus.name,date)
                 self.run_parser(dump_path, self.corpus.data_directory)
 
     def compile_parser(self, recompile=False):
@@ -310,37 +304,37 @@ class wiki_corpus(object):
 
 #                             IMDb corpus
 #-----------------------------------------------------------------------------#
-class imdb_corpus(object):
-    def __init__(self, corpus):
-        self.corpus = corpus
-        self.download()
-        self.parse()
-
-    def download(self):
-        print("\tDownloading imdb corpus...")
-        url = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
-        path = download(url, self.corpus.raw_directory)
-        expand_tar(path)
-
-    def parse(self):
-        print("\tParsing dataset...")
-        if not os.path.isfile(self.corpus.document_path):
-            document_file      = open(self.corpus.document_path,'a+')
-            category_name_file = open(self.corpus.category_map_path,'a+')
-            category_tree_file = open(self.corpus.category_tree_path,'a+')
-            for category, category_name in enumerate(['neg','pos']):
-                category_name_file.write('%s\t%s\n' % (category,category_name))
-                for subset in ['test','train']:
-                    current_directory = self.corpus.raw_directory+'/aclImdb/'+subset+'/'+category_name
-                    for file_name in os.listdir(current_directory):
-                        if file_name.endswith('.txt'):
-                            with codecs.open(current_directory+'/'+file_name,encoding='utf-8') as f:
-                                doc = f.read()
-                                for bad_str in ['<br />', '\n', '\t']:
-                                    doc = doc.replace(bad_str, ' ')
-                                document_file.write('%s\t%s\n' % (category, ' '.join(tokenize(doc))))
-            document_file.close()
-            category_name_file.close()
-            category_tree_file.close()
-        else:
-            print("\t\tDataset already parsed.")
+#class imdb_corpus(object):
+#    def __init__(self, corpus):
+#        self.corpus = corpus
+#        self.download()
+#        self.parse()
+#
+#    def download(self):
+#        print("\tDownloading imdb corpus...")
+#        url = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
+#        path = download(url, self.corpus.data_directory)
+#        expand_tar(path)
+#
+#    def parse(self):
+#        print("\tParsing dataset...")
+#        if not os.path.isfile(self.corpus.document_path):
+#            document_file      = open(self.corpus.document_path,'a+')
+#            category_name_file = open(self.corpus.category_map_path,'a+')
+#            category_tree_file = open(self.corpus.category_tree_path,'a+')
+#            for category, category_name in enumerate(['neg','pos']):
+#                category_name_file.write('%s\t%s\n' % (category,category_name))
+#                for subset in ['test','train']:
+#                    current_directory = self.corpus.data_directory+'/aclImdb/'+subset+'/'+category_name
+#                    for file_name in os.listdir(current_directory):
+#                        if file_name.endswith('.txt'):
+#                            with codecs.open(current_directory+'/'+file_name,encoding='utf-8') as f:
+#                                doc = f.read()
+#                                for bad_str in ['<br />', '\n', '\t']:
+#                                    doc = doc.replace(bad_str, ' ')
+#                                document_file.write('%s\t%s\n' % (category, ' '.join(tokenize(doc))))
+#            document_file.close()
+#            category_name_file.close()
+#            category_tree_file.close()
+#        else:
+#            print("\t\tDataset already parsed.")

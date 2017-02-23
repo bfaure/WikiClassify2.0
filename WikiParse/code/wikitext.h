@@ -3,7 +3,6 @@
 
 #include <iostream>
 using std::cout;
-using std::endl;
 
 #include <string>
 using std::string;
@@ -23,7 +22,7 @@ void percent_decoding(string &text);
 void remove_templates(string &text);
 void remove_file_references(string &text);
 void remove_image_references(string &text);
-void remove_html_elements(string &text);
+void remove_html(string &text);
 
 class wikitext {
     private:
@@ -36,7 +35,7 @@ class wikitext {
         string text;
         vector<string> categories; 
         vector<string> links;
-        vector<string> cited_urls;
+        vector<string> cited_domains;
         vector<string> cited_authors;
         vector<string> problems;
 };

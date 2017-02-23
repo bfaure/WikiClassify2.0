@@ -3,7 +3,6 @@
 /* Standard Imports */
 #include <iostream>
 using std::cout;
-using std::endl;
 using std::ostream;
 
 #include <fstream>
@@ -84,7 +83,7 @@ class wikipage {
         string text;
         vector<string> categories; 
         vector<string> links;
-        vector<string> cited_urls;
+        vector<string> cited_domains;
         vector<string> cited_authors;
         vector<string> problems;
 };
