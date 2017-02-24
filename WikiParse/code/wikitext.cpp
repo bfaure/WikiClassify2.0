@@ -74,108 +74,73 @@ void wikitext::read_citations(string &text) {
     target = "{{Citation";
     parse_all(text,target,endtarget,citations);
 
-    string author;
-    string domain;
+    read_cited_domains(citations);
+    read_cited_authors(citations);
+}
+
+void wikitext::read_cited_domains(vector<string> &citations) {
     for (int i=0; i<citations.size(); i++) {
+        string domain;
         size_t tag_location = citations[i].find("url", 0);
         if (tag_location!=string::npos) {
-
             size_t equal_location = citations[i].find("=",tag_location);
             size_t end_location = citations[i].find("|",equal_location+1);
             size_t end_location2 = citations[i].find("}}",equal_location+1);
-
             if (end_location2<end_location) {
                 end_location = end_location2;
             }
             domain = citations[i].substr(equal_location+1,end_location-equal_location-1);
-            domain = trim(domain);
-
-            string http_junk = "://";
-            size_t http_junk_location = domain.find(http_junk);
-
-            if (http_junk_location!=string::npos) {
-                domain = domain.substr(http_junk_location+http_junk.size());
-            }
-        
-            size_t first_slash_location = domain.find("/");
-            if (first_slash_location!=string::npos) {
-                domain = domain.substr(0,first_slash_location);
-            }
-        
-            while (count_string(domain,".")>3) {
-                domain = domain.substr(domain.find(".")+1);
-            }
+            parse_domain(domain);
         }
-
         if (domain!="") {
-            bool duplicate = false;
-            for (int k=0; k<cited_domains.size(); k++) {
-                if (cited_domains[k]==domain) {
-                    duplicate = true;
-                    break;
-                }
-            }
-            if (!duplicate) {
+            vector<string>::iterator it;
+            it = find(cited_domains.begin(),cited_domains.end(),domain);
+            if (it==cited_domains.end()) {
                 cited_domains.push_back(domain);
             }
         }
+    }
+}
 
-        tag_location = citations[i].find("author=");
+void parse_domain(string &domain) {
+    domain = trim(domain);
+    string http_junk = "://";
+    size_t http_junk_location = domain.find(http_junk);
+    if (http_junk_location!=string::npos) {
+        domain = domain.substr(http_junk_location+http_junk.size());
+    }
+    size_t first_slash_location = domain.find("/");
+    if (first_slash_location!=string::npos) {
+        domain = domain.substr(0,first_slash_location);
+    }
+    while (count_string(domain,".")>3) {
+        domain = domain.substr(domain.find(".")+1);
+    }
+}
+
+void wikitext::read_cited_authors(vector<string> &citations) {
+    for (int i=0; i<citations.size(); i++) {
+        string author;
+        size_t tag_location = citations[i].find("author=");
         if (tag_location==string::npos) {
             tag_location = citations[i].find("author =");
         }
         if (tag_location!=string::npos) {
-
             size_t equal_location = citations[i].find("=",tag_location);
             size_t end_location = citations[i].find("|",equal_location+1);
             size_t end_location2 = citations[i].find("}}",equal_location+1);
-        
             if (end_location2<end_location) {
                 end_location = end_location2;
             }
-        
             author = citations[i].substr(equal_location+1,end_location-equal_location-1);
-            decode_text(author);
-        
-            // if someone tried to put multiple authors in, keep only the first
-            if ((author.find("&")!=string::npos)) {
-                author = author.substr(0,author.find("&"));
-            }
-        
-            // if someone tried to put multiple authors in, keep only the first
-            if ((author.find(";")!=string::npos)) {
-                author = author.substr(0,author.find(";"));
-            }
-        
-            // if someone tried to put multiple authors in, keep only the first
-            if ((author.find("and")!=string::npos)) {
-                author = author.substr(0,author.find("and"));
-            }
-        
-            // if someone put "By" in front of the name
-            if ((author.find("By ")!=string::npos)) {
-                author = author.substr(author.find("By ")+3);
-            }
-        
-            // if the authors name is listed like "last, first"
-            size_t comma_location = author.find(",");
-            if (comma_location!=string::npos) {
-                string first_name = author.substr(comma_location+1);
-                string last_name  = author.substr(0,comma_location);
-                first_name = trim(first_name);
-                last_name  = trim(last_name);
-
-                author = first_name+" "+last_name;
-            }
+            parse_author(author);
         }
         else {
             size_t first_name_location = citations[i].find("first=");
             size_t last_name_location = citations[i].find("last=");
-          
             if (first_name_location==string::npos) {
                 first_name_location = citations[i].find("first =");
             }
-          
             if (last_name_location==string::npos) {
                 last_name_location = citations[i].find("last =");
             }
@@ -189,7 +154,6 @@ void wikitext::read_citations(string &text) {
                 }
                 string first_name = citations[i].substr(equal_location+1,end_location-equal_location-1);
                 first_name = trim(first_name);
-
                 equal_location = citations[i].find("=",last_name_location);
                 end_location = citations[i].find("|",equal_location+1);
                 end_location2 = citations[i].find("}}",equal_location+1);
@@ -198,25 +162,55 @@ void wikitext::read_citations(string &text) {
                 }
                 string last_name = citations[i].substr(equal_location+1,end_location-equal_location-1);
                 last_name = trim(last_name);
-
                 author = first_name+" "+last_name;
-                decode_text(author);
+                parse_author(author);
             }
         }
-        author = trim(author);
         if (author!="") {
-            bool duplicate = false;
-            for (int k=0; k<cited_authors.size(); k++) {
-                if (cited_authors[k]==author) {
-                    duplicate = true;
-                    break;
-                }
-            }
-            if (!duplicate) {
+            vector<string>::iterator it;
+            it = find(cited_authors.begin(),cited_authors.end(),author);
+            if (it==cited_authors.end()) {
                 cited_authors.push_back(author);
             } 
         }
     }
+}
+
+void parse_author(string &author) {
+
+    decode_text(author);
+    
+    // if someone tried to put multiple authors in, keep only the first
+    if ((author.find("&")!=string::npos)) {
+        author = author.substr(0,author.find("&"));
+    }
+    
+    // if someone tried to put multiple authors in, keep only the first
+    if ((author.find(";")!=string::npos)) {
+        author = author.substr(0,author.find(";"));
+    }
+    
+    // if someone tried to put multiple authors in, keep only the first
+    if ((author.find("and")!=string::npos)) {
+        author = author.substr(0,author.find("and"));
+    }
+    
+    // if someone put "By" in front of the name
+    if ((author.find("By ")!=string::npos)) {
+        author = author.substr(author.find("By ")+3);
+    }
+
+    // if the authors name is listed like "last, first"
+    size_t comma_location = author.find(",");
+    if (comma_location!=string::npos) {
+        string first_name = author.substr(comma_location+1);
+        string last_name  = author.substr(0,comma_location);
+        first_name = trim(first_name);
+        last_name  = trim(last_name);
+
+        author = first_name+" "+last_name;
+    }
+    author = trim(author);
 }
 
 // removes various wikitext and xml
