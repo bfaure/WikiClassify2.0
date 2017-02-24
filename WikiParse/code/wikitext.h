@@ -18,7 +18,8 @@ using std::vector;
 #include <sys/stat.h>
 #include <ctype.h>
 
-void percent_decoding(string &text);
+void decode_text(string &text);
+void remove_references(string &text);
 void remove_templates(string &text);
 void remove_file_references(string &text);
 void remove_image_references(string &text);
