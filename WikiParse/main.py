@@ -128,7 +128,7 @@ class doc_corpus(object):
         with open(self.document_path) as fin:
             for line in fin:
                 values = line.strip().split('\t')
-                if len(values) > 1:
+                if len(values) >= 2:
                     yield values[0], values[1:]
 
     # Phrase methods
@@ -205,7 +205,7 @@ class category_corpus(object):
         with open(self.document_path) as fin:
             for line in fin:
                 values = line.strip().split('\t')
-                if len(values) > 1:
+                if len(values) >= 2:
                     yield values[0], values[1:]
 
 #                             Global functions

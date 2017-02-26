@@ -159,7 +159,7 @@ class doc2vec(object):
         if not os.path.exists(self.directory):
 
             # Create main model
-            self.build(features=100, context_window=10, min_count=3, sample=1e-5, negative=10)
+            self.build(features=100, context_window=30, min_count=1, sample=1e-5, negative=10)
             self.train(epochs=50)
             self.save()
 
@@ -242,12 +242,11 @@ class doc2vec(object):
         self.features = features
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=7)
 
-    def train(self, epochs=10):
-        print("\tTraining doc2vec model...")
-
-        # Main Training Method
         print("\t\tBuilding vocab...")
         self.model.build_vocab(self.corpus)
+
+    def train(self, epochs=10):
+        print("\tTraining doc2vec model...")
 
         t = epoch_timer(epochs)
         for i in xrange(epochs):
