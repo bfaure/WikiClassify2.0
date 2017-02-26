@@ -127,7 +127,7 @@ class doc_corpus(object):
     def indexed_docs(self):
         with open(self.document_path) as fin:
             for line in fin:
-                values = line[:-1].split('\t')
+                values = line.strip().split('\t')
                 if len(values) > 1:
                     yield values[0], values[1:]
 
@@ -204,7 +204,7 @@ class category_corpus(object):
     def indexed_docs(self):
         with open(self.document_path) as fin:
             for line in fin:
-                values = line[:-1].split('\t')
+                values = line.strip().split('\t')
                 if len(values) > 1:
                     yield values[0], values[1:]
 
@@ -215,7 +215,7 @@ def build_mapping(tsv_path):
     mapping = {}
     with open(tsv_path) as f:
         for line in f:
-            values = line[:-1].split('\t')
+            values = line.strip().split('\t')
             if len(values) == 2:
                 key, value = values
                 mapping[key] = value

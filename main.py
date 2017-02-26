@@ -35,8 +35,6 @@ def main():
                 nearest = encoder.get_nearest_word(doc[9:])
                 if nearest:
                     print('\t'.join(nearest))
-            else:
-                print("Nope")
 
 if __name__ == "__main__":
     main()
