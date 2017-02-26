@@ -21,6 +21,36 @@ using std::find;
 #include <sys/stat.h>
 #include <ctype.h>
 
+class wikitext {
+    private:
+        void read_quality();
+        void read_importance();
+        void read_categories();
+        void read_links();
+        void read_text();
+        void read_citations();
+        void read_cited_domains(vector<string> &citations);
+        void read_cited_authors(vector<string> &citations);
+    public:
+    	wikitext(string page_text);
+        void read_article();
+        void read_category();
+        void read_talk();
+
+        // Raw text
+        string page_text;
+
+        // Parsed text
+        string text;
+        string importance;
+        string quality;
+        vector<string> categories; 
+        vector<string> links;
+        vector<string> cited_domains;
+        vector<string> cited_authors;
+        vector<string> problems;
+};
+
 void parse_domain(string &domain);
 void parse_author(string &author);
 
@@ -30,23 +60,5 @@ void remove_templates(string &text);
 void remove_file_references(string &text);
 void remove_image_references(string &text);
 void remove_html(string &text);
-
-class wikitext {
-    private:
-        void read_categories(string &text);
-        void read_links(string &text);
-        void read_citations(string &text);
-        void read_cited_domains(vector<string> &citations);
-        void read_cited_authors(vector<string> &citations);
-        void read_text(string &text);
-    public:
-    	wikitext(string text);
-        string text;
-        vector<string> categories; 
-        vector<string> links;
-        vector<string> cited_domains;
-        vector<string> cited_authors;
-        vector<string> problems;
-};
 
 #endif // WIKITEXT_H

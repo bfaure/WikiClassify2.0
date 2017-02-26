@@ -1,15 +1,55 @@
 #include "wikitext.h"
 #include "string_utils.h"
 
-wikitext::wikitext(string text) {
-    read_categories(text);
-    read_links(text);
-    read_citations(text);
-    read_text(text);
+wikitext::wikitext(string page_text) {
+    this->page_text = page_text;
 }
 
-void wikitext::read_categories(string &text) {
-    parse_all(text, "[[Category:", "]]", categories);
+void wikitext::read_article() {
+    read_categories();
+    read_links();
+    read_citations();
+    read_text();
+    //wt.read_problems();
+}
+
+void wikitext::read_category() {
+    read_categories();
+}
+
+void wikitext::read_talk() {
+    read_quality();
+    read_importance();
+}
+
+void wikitext::read_quality() {
+    size_t tag_location = page_text.find("class", 0);
+    if (tag_location!=string::npos) {
+        size_t equal_location = page_text.find("=",tag_location);
+        size_t end_location   = page_text.find("|",equal_location+1);
+        size_t end_location2  = page_text.find("}}",equal_location+1);
+        if (end_location2<end_location) {
+            end_location = end_location2;
+        }
+        quality = page_text.substr(equal_location+1,end_location-equal_location-1);
+    }
+}
+
+void wikitext::read_importance() {
+    size_t tag_location = page_text.find("importance", 0);
+    if (tag_location!=string::npos) {
+        size_t equal_location = page_text.find("=",tag_location);
+        size_t end_location   = page_text.find("|",equal_location+1);
+        size_t end_location2  = page_text.find("}}",equal_location+1);
+        if (end_location2<end_location) {
+            end_location = end_location2;
+        }
+        importance = page_text.substr(equal_location+1,end_location-equal_location-1);
+    }
+}
+
+void wikitext::read_categories() {
+    parse_all(page_text, "[[Category:", "]]", categories);
     vector<string> temp;
     for (string &category:categories) {
         // if the current category contains an endline we will cut the portion after the endline
@@ -33,8 +73,8 @@ void wikitext::read_categories(string &text) {
     }
 }
 
-void wikitext::read_links(string &text) {
-    parse_all(text, "[[", "]]", links);
+void wikitext::read_links() {
+    parse_all(page_text, "[[", "]]", links);
     for (string &link:links) {
         if (link.find("[[")==string::npos && link.find("\n")==string::npos) {
             string source; string destination;
@@ -63,16 +103,16 @@ void wikitext::read_links(string &text) {
     }
 }
 
-void wikitext::read_citations(string &text) {
+void wikitext::read_citations() {
 
     vector<string> citations;
     string endtarget = "}}";
 
     string target = "{{cite";
-    parse_all(text,target,endtarget,citations);
+    parse_all(page_text,target,endtarget,citations);
 
     target = "{{Citation";
-    parse_all(text,target,endtarget,citations);
+    parse_all(page_text,target,endtarget,citations);
 
     read_cited_domains(citations);
     read_cited_authors(citations);
@@ -113,18 +153,12 @@ void parse_domain(string &domain) {
     if (first_slash_location!=string::npos) {
         domain = domain.substr(0,first_slash_location);
     }
-    while (count_string(domain,".")>3) {
-        domain = domain.substr(domain.find(".")+1);
-    }
 }
 
 void wikitext::read_cited_authors(vector<string> &citations) {
     for (int i=0; i<citations.size(); i++) {
         string author;
-        size_t tag_location = citations[i].find("author=");
-        if (tag_location==string::npos) {
-            tag_location = citations[i].find("author =");
-        }
+        size_t tag_location = citations[i].find("author");
         if (tag_location!=string::npos) {
             size_t equal_location = citations[i].find("=",tag_location);
             size_t end_location = citations[i].find("|",equal_location+1);
@@ -135,36 +169,34 @@ void wikitext::read_cited_authors(vector<string> &citations) {
             author = citations[i].substr(equal_location+1,end_location-equal_location-1);
             parse_author(author);
         }
+        // need to parse out the first and last names
         else {
-            size_t first_name_location = citations[i].find("first=");
-            size_t last_name_location = citations[i].find("last=");
-            if (first_name_location==string::npos) {
-                first_name_location = citations[i].find("first =");
-            }
-            if (last_name_location==string::npos) {
-                last_name_location = citations[i].find("last =");
-            }
-            // need to parse out the first and last names
-            if (first_name_location!=string::npos and last_name_location!=string::npos) {
+            string first_name;
+            string last_name;
+            size_t first_name_location = citations[i].find("first");
+            if (first_name_location!=string::npos) {
                 size_t equal_location = citations[i].find("=",first_name_location);
                 size_t end_location = citations[i].find("|",equal_location+1);
                 size_t end_location2 = citations[i].find("}}",equal_location+1);
                 if (end_location2<end_location) {
                     end_location = end_location2;
                 }
-                string first_name = citations[i].substr(equal_location+1,end_location-equal_location-1);
+                first_name = citations[i].substr(equal_location+1,end_location-equal_location-1);
                 first_name = trim(first_name);
-                equal_location = citations[i].find("=",last_name_location);
-                end_location = citations[i].find("|",equal_location+1);
-                end_location2 = citations[i].find("}}",equal_location+1);
+            }
+            size_t last_name_location = citations[i].find("last");
+            if (last_name_location!=string::npos) {
+                size_t equal_location = citations[i].find("=",last_name_location);
+                size_t end_location = citations[i].find("|",equal_location+1);
+                size_t end_location2 = citations[i].find("}}",equal_location+1);
                 if (end_location2<end_location) {
                     end_location = end_location2;
                 }
-                string last_name = citations[i].substr(equal_location+1,end_location-equal_location-1);
+                last_name = citations[i].substr(equal_location+1,end_location-equal_location-1);
                 last_name = trim(last_name);
-                author = first_name+" "+last_name;
-                parse_author(author);
             }
+            author = first_name+" "+last_name;
+            parse_author(author);
         }
         if (author!="") {
             vector<string>::iterator it;
@@ -214,8 +246,9 @@ void parse_author(string &author) {
 }
 
 // removes various wikitext and xml
-void wikitext::read_text(string &text){
+void wikitext::read_text(){
 
+    text = page_text;
     decode_text(text);
     remove_templates(text);
 
@@ -295,7 +328,7 @@ void wikitext::read_text(string &text){
     // Remove all \t
     remove_target(text,"\t");
 
-    this->text = trim(text);
+    text = trim(text);
 }
 
 void remove_templates(string &text) {

@@ -42,7 +42,7 @@ def expand_tar(file_path):
     print("\t\tExpanding tar...")
     if not os.path.isfile(file_path[:-7]):
         try:
-            tarfile.open(file_path, 'r').extractall(os.path.dirname(file_path))
+            tarfile.open(file_path,'r').extractall(os.path.dirname(file_path))
             os.remove(file_path)
         except:
             print("\t\t\tCould not expand file.")
@@ -97,9 +97,9 @@ def download(url, directory):
 #                          Corpus wrapper class
 #-----------------------------------------------------------------------------#
 
-class corpus(object):
+class wiki_corpus(object):
 
-    def __init__(self, corpus_name, corpus_directory,num_downloads=0):
+    def __init__(self, corpus_name, corpus_directory):
         print("Initializing '%s' corpus..." % corpus_name)
 
         self.name = corpus_name
@@ -108,12 +108,12 @@ class corpus(object):
         self.meta_directory = corpus_directory+'/meta'
         self.data_directory = corpus_directory+'/data'
 
-        # Load and parse raw corpus
-        if self.name == 'imdb':
-            imdb_corpus(self)
-
-        elif self.name.endswith('wiki'):
-            wiki_corpus(self, num_downloads)
+        prev_date = '20010115'
+        for date, dump_url in zip(self.get_dump_dates(),self.get_dump_urls()):
+            dump_path = download(dump_url, self.data_directory+'/'+date)
+            dump_path = expand_bz2(dump_path)
+            self.parse(dump_path, prev_date)
+            prev_date = date
 
 #        # Interpret categories
 #        self.load_category_map()
@@ -132,6 +132,45 @@ class corpus(object):
 #        else:
 #            self.load_phrases()
 #            self.load_dictionary()
+
+    def get_dump_dates(self):
+        url  = 'https://dumps.wikimedia.org/%s/' % self.name
+        tree = html.fromstring(requests.get(url).text)
+        return [x[:-1] for x in sorted(tree.xpath('//a/@href'))[1:-1]]
+
+    def get_dump_urls(self):
+        dump_urls = []
+        url  = 'https://dumps.wikimedia.org/%s/' % self.name
+        for date in self.get_dump_dates():
+            if 'in progress' not in requests.get(url+date).text:
+                dump_url = '{0}{1}/{2}-{1}-pages-meta-current.xml.bz2'.format(url,date,self.name)
+                dump_urls.append(dump_url)
+        return dump_urls
+
+    def parse(self, dump_path, prev_date):
+        compiled = self.compile_parser()
+        if not compiled:
+            print("\tCould not compile parser!")
+            return
+        else:
+            self.run_parser(dump_path, os.path.dirname(dump_path), prev_date)
+
+    def compile_parser(self, recompile=False):
+        print("\tCompiling parser...")
+        if recompile and os.path.isfile('wikiparse.out'):
+            os.remove('wikiparse.out')
+        if not os.path.isfile('wikiparse.out'):
+            try:
+                call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
+            except:
+                return False
+        else:
+            print("\t\tParser already compiled.")
+        return True
+
+    def run_parser(self, dump_path, output_directory, prev_date):
+        print("\tRunning parser...")
+        call(["./wikiparse.out", dump_path, output_directory, prev_date])
 
     def process(self, text):
         tokens = [x for x in tokenize(text) if x in self.get_words()]
@@ -247,94 +286,3 @@ class corpus(object):
 #            for doc in fin:
 #                categories, doc = doc.split('\t')
 #                yield [int(x.strip()) for x in categories.split(',')]
-
-#                          Wikipedia corpus
-#-----------------------------------------------------------------------------#
-
-class wiki_corpus(object):
-    def __init__(self, corpus,num_downloads=0):
-        self.corpus = corpus
-        self.download(num_downloads)
-        self.parse()
-    
-    def download(self,num_downloads):
-
-        # Recording it catches the case where dumps change
-        current_dumps = []
-        url = 'https://dumps.wikimedia.org/%s/' % self.corpus.name
-        response = requests.get(url)
-        tree = html.fromstring(response.text)
-        dates = sorted(tree.xpath('//a/@href'))[1:-1]
-        for date in dates:
-            response = requests.get(url+date)
-            if 'in progress' not in response.text:
-                path = '{0}{1}/{2}-{1}-pages-meta-current.xml.bz2'.format(url,date[:-1],self.corpus.name)
-                current_dumps.append((date[:-1],path))
-
-        for date, url in current_dumps[:num_downloads+1]:
-            path = download(url, self.corpus.data_directory+'/'+date)
-            expand_bz2(path)
-
-    def parse(self):
-        compiled = self.compile_parser(recompile=True)
-        
-        if not compiled:
-            print("\tCould not compile parser!")
-            return
-
-        for date in os.listdir(self.corpus.data_directory):
-            if os.path.isdir(self.corpus.data_directory+'/'+date):
-                dump_path = self.corpus.data_directory+'/'+date+'/%s-%s-pages-meta-current.xml' % (self.corpus.name,date)
-                self.run_parser(dump_path, self.corpus.data_directory)
-
-    def compile_parser(self, recompile=False):
-        print("\tCompiling parser...")
-        if not os.path.isfile('wikiparse.out') or recompile:
-            try:
-                call(["g++","--std=c++11","-O3"]+["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]+["-o","wikiparse.out"])
-            except:
-                return False
-        else:
-            print("\t\tParser already compiled.")
-        return True
-
-    def run_parser(self, dump_path, output_directory):
-        print("\tRunning parser...")
-        call(["./wikiparse.out", dump_path, output_directory])
-
-#                             IMDb corpus
-#-----------------------------------------------------------------------------#
-#class imdb_corpus(object):
-#    def __init__(self, corpus):
-#        self.corpus = corpus
-#        self.download()
-#        self.parse()
-#
-#    def download(self):
-#        print("\tDownloading imdb corpus...")
-#        url = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
-#        path = download(url, self.corpus.data_directory)
-#        expand_tar(path)
-#
-#    def parse(self):
-#        print("\tParsing dataset...")
-#        if not os.path.isfile(self.corpus.document_path):
-#            document_file      = open(self.corpus.document_path,'a+')
-#            category_name_file = open(self.corpus.category_map_path,'a+')
-#            category_tree_file = open(self.corpus.category_tree_path,'a+')
-#            for category, category_name in enumerate(['neg','pos']):
-#                category_name_file.write('%s\t%s\n' % (category,category_name))
-#                for subset in ['test','train']:
-#                    current_directory = self.corpus.data_directory+'/aclImdb/'+subset+'/'+category_name
-#                    for file_name in os.listdir(current_directory):
-#                        if file_name.endswith('.txt'):
-#                            with codecs.open(current_directory+'/'+file_name,encoding='utf-8') as f:
-#                                doc = f.read()
-#                                for bad_str in ['<br />', '\n', '\t']:
-#                                    doc = doc.replace(bad_str, ' ')
-#                                document_file.write('%s\t%s\n' % (category, ' '.join(tokenize(doc))))
-#            document_file.close()
-#            category_name_file.close()
-#            category_tree_file.close()
-#        else:
-#            print("\t\tDataset already parsed.")
