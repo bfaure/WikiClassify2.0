@@ -42,22 +42,26 @@ class wiki_corpus(object):
         self.data_directory = corpus_directory+'/data'
 
         prev_date = '20010115'
-        for date, dump_url in zip(self.get_dump_dates(),self.get_dump_urls()):
-            date_directory = self.data_directory+'/'+date
-            dump_path = download(dump_url, date_directory)
-            dump_path = expand_bz2(dump_path)
-            if not os.path.isfile(date_directory+'/article_revision_text.txt'):
-                self.parse(dump_path, prev_date)
-            prev_date = date
+        date     = self.get_dump_dates()[0]
+        dump_url = self.get_dump_urls()[0]
+        self.date_directory = self.data_directory+'/'+date
+        dump_path = download(dump_url, self.date_directory)
+        dump_path = expand_bz2(dump_path)
+        if not os.path.isfile(self.date_directory+'/article_revision_text.txt'):
+            self.parse(dump_path, prev_date)
+        prev_date = date
 
-            #category_revs  = self.data_directory+'/'+date+'/category_revisions.txt'
-            #category_names = self.data_directory+'/'+date+'/category_names.txt'
-            #category_tree  = self.data_directory+'/'+date+'/category_revision_parents.txt'
+        #category_revs  = self.data_directory+'/'+date+'/category_revisions.txt'
+        #category_names = self.data_directory+'/'+date+'/category_names.txt'
+        #category_tree  = self.data_directory+'/'+date+'/category_revision_parents.txt'
 
-            # Create iterators from specialized classes
-            self.revision_categories = category_corpus(date_directory+'/article_revision_categories.txt')
-            self.category_names = build_mapping(date_directory+'/category_names.txt').values()
-            break
+        # Create iterators from specialized classes
+
+    def get_revision_categories(self):
+        return category_corpus(self.date_directory+'/article_revision_categories.txt')
+
+    def get_category_names(self):
+        return build_mapping(self.date_directory+'/category_names.txt').values()
 
     def get_dump_dates(self):
         url  = 'https://dumps.wikimedia.org/%s/' % self.name
@@ -228,18 +232,6 @@ def check_directory(directory):
     if not os.path.isdir(directory):
         print("\t\tCreating '%s' directory..." % directory)
         os.makedirs(directory)
-
-def expand_tar(file_path):
-    print("\t\tExpanding tar...")
-    if not os.path.isfile(file_path[:-7]):
-        try:
-            tarfile.open(file_path,'r').extractall(os.path.dirname(file_path))
-            os.remove(file_path)
-        except:
-            print("\t\t\tCould not expand file.")
-    else:
-        print("\t\t\tFile already expanded.")
-    return file_path[:-7]
 
 def expand_bz2(file_path):
     print("\t\tExpanding bz2...")

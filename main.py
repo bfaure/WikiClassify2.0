@@ -28,13 +28,13 @@ def main():
         encoder = LDA(documents.categories, LDA_directory)
     if run_word2vec:
         start_time = time.time()
-        encoder = doc2vec(documents.revision_categories, word2vec_directory)
-        for doc in documents.category_names:
-            catname = doc[9:].replace('_',' ')
-            if catname.strip():
-                nearest = encoder.get_nearest_word(doc[9:])
+        encoder = doc2vec(documents.get_revision_categories(), word2vec_directory)
+        with open('related_categories.tsv','w+') as f:
+            for category_name in documents.get_category_names():
+                nearest = encoder.get_nearest_word(category_name)
                 if nearest:
-                    print('\t'.join(nearest))
+                    nearest = [x for x in nearest if x != category_name]
+                    f.write(category_name+'\t'+'\t'.join(nearest)+'\n')
 
 if __name__ == "__main__":
     main()
