@@ -2,16 +2,36 @@
 #include "wikipage.h"
 #include "string_utils.h"
 
-wikidump::wikidump(string &path, string &output_directory) {
+wikidump::wikidump(string &path, string &output_directory, string &cutoff_date) {
+
     dump_input = ifstream(path, ifstream::binary);
+
     if (dump_input.is_open()) {
         dump_size = ifstream(path, ifstream::ate|ifstream::binary).tellg();
     }
     else {
         cout<<"Could not open dump! ("<<path<<")\n";
     }
-    database db();
+
     articles_read = 0;
+
+    cutoff_year  = stoi(cutoff_date.substr(0,4));
+    cutoff_month = stoi(cutoff_date.substr(4,2));
+    cutoff_day   = stoi(cutoff_date.substr(6,2));
+
+    article_titles.open(output_directory+"/article_titles.txt",std::ofstream::out|std::ofstream::trunc);
+    article_revisions.open(output_directory+"/article_revisions.txt",std::ofstream::out|std::ofstream::trunc);
+    article_revision_text.open(output_directory+"/article_revision_text.txt",std::ofstream::out|std::ofstream::trunc);
+    article_revision_categories.open(output_directory+"/article_revision_categories.txt",std::ofstream::out|std::ofstream::trunc);
+    article_revision_cited_authors.open(output_directory+"/article_revision_cited_authors.txt",std::ofstream::out|std::ofstream::trunc);
+    article_revision_cited_domains.open(output_directory+"/article_revision_cited_domains.txt",std::ofstream::out|std::ofstream::trunc);
+
+    category_titles.open(output_directory+"/category_names.txt",std::ofstream::out|std::ofstream::trunc);
+    category_revisions.open(output_directory+"/category_revisions.txt",std::ofstream::out|std::ofstream::trunc);
+    category_revision_parents.open(output_directory+"/category_revision_parents.txt",std::ofstream::out|std::ofstream::trunc);
+    //article_importance.open(output_directory+"/article_importance.txt",std::ofstream::out|std::ofstream::trunc);
+    //article_quality.open(output_directory+"/article_quality.txt",std::ofstream::out|std::ofstream::trunc);
+    //article_problems.open(output_directory+"/article_problems.txt",std::ofstream::out|std::ofstream::trunc);
 }
 
 void wikidump::read() {
@@ -38,8 +58,11 @@ unsigned wikidump::save_buffer(const string &str) {
         p2  = str.find(tag2, p1);
         if (p2!=string::npos) {
             wikipage wp(str.substr(p1, p2-p1));
-            db.save(wp);
-            articles_read++;
+            if (wp.is_after(cutoff_year, cutoff_month, cutoff_day)) {
+                wp.read();
+                save_page(wp);
+                articles_read++;
+            }
             p1 = str.find(tag1, p2+tag2.length());
         }
         else {
@@ -49,40 +72,40 @@ unsigned wikidump::save_buffer(const string &str) {
     return p2;
 }
 
-database::database() {
-    debug_file = ofstream("debug_file.txt");
-}
-
-void database::save(wikipage &wp) {
+void wikidump::save_page(wikipage &wp) {
     if (wp.is_article()) {
-        if (!wp.text.empty()) {
-            kosher(wp.title);
-            kosher(wp.categories);
-            for (int i=0; i<wp.categories.size(); i++) {
+        if (!wp.revision_text.empty()) {
+            article_titles<<wp.id<<'\t'<<wp.title<<'\n';
+            article_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
+            article_revision_text<<wp.revision<<'\t'<<wp.revision_text<<'\n';
+
+            article_revision_categories<<wp.revision;
+            for (int i=0; i<wp.revision_categories.size(); i++) {
+                article_revision_categories<<'\t'<<wp.revision_categories[i];
             }
-            for (int j=0; j<wp.cited_domains.size(); j++) {
-                cout<<wp.cited_domains[j]<<"\n";
-                debug_file<<"domain: "<<wp.cited_domains[j]<<"\n";       
+            article_revision_categories<<'\n';
+
+            article_revision_cited_authors<<wp.revision;
+            for (int i=0; i<wp.revision_cited_authors.size(); i++) {
+                article_revision_cited_authors<<'\t'<<wp.revision_cited_authors[i];
             }
-            for (int j=0; j<wp.cited_authors.size(); j++) {
-                debug_file<<"author: "<<wp.cited_authors[j]<<"\n";      
+            article_revision_cited_authors<<'\n';
+
+            article_revision_cited_domains<<wp.revision;
+            for (int i=0; i<wp.revision_cited_domains.size(); i++) {
+                article_revision_cited_domains<<'\t'<<wp.revision_cited_domains[i];
             }
+            article_revision_cited_domains<<'\n';
         }
     }
-}
+    if (wp.is_category()) {
+        category_titles<<wp.id<<'\t'<<wp.title<<'\n';
+        category_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
 
-void kosher(string &field) {
-    replace_target(field,"\n"," ");
-    replace_target(field,"\t"," ");
-    replace_target(field,"\"","\\\"");
-    replace_target(field,"\\\\\"","\\\"");
-    while (field[field.length()-1] == '\\') {
-        field.erase(field.length()-1);
-    }
-}
-
-void kosher(vector<string> &fields) {
-    for (int i=0; i<fields.size(); i++) {
-        kosher(fields[i]);
+        category_revision_parents<<wp.revision;
+        for (int i=0; i<wp.revision_categories.size(); i++) {
+            category_revision_parents<<'\t'<<wp.revision_categories[i];
+        }
+        category_revision_parents<<'\n';
     }
 }
