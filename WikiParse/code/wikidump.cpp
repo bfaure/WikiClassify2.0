@@ -99,7 +99,9 @@ void wikidump::save_page(wikipage &wp) {
         }
     }
     if (wp.is_category()) {
-        category_titles<<wp.id<<'\t'<<wp.title<<'\n';
+        string category_title = wp.title.substr(9);
+        replace_target(category_title,"_"," ");
+        category_titles<<wp.id<<'\t'<<trim(category_title)<<'\n';
         category_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
 
         category_revision_parents<<wp.revision;
