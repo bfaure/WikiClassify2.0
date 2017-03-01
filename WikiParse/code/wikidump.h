@@ -23,16 +23,8 @@ using std::string;
 #include "wikipage.h"
 #include "string_utils.h"
 
-class wikidump {
+class database {
     private:
-        ifstream dump_input;
-        ifstream::pos_type dump_size;
-        unsigned long long articles_read;
-
-        unsigned int cutoff_year;
-        unsigned int cutoff_month;
-        unsigned int cutoff_day;
-
         ofstream article_titles;
         ofstream article_revisions;
         ofstream article_revision_text;
@@ -42,20 +34,31 @@ class wikidump {
         ofstream article_quality;
         ofstream article_importance;
         ofstream article_problems;
-
         ofstream category_titles;
         ofstream category_revisions;
         ofstream category_revision_parents;
+    public:
+        database();
+        void open(string &oputput_directory);
+        void save_page(wikipage &wp);
+        void save_revision(wikipage &wp);
+};
+
+class wikidump {
+    private:
+        ifstream dump_input;
+        ifstream::pos_type dump_size;
+        database dump_output;
+        unsigned long long articles_read;
+        unsigned int cutoff_year;
+        unsigned int cutoff_month;
+        unsigned int cutoff_day;
 
     public:
         wikidump(string &path, string &output_directory, string &cutoff_date);
         void read();
         unsigned save_buffer(const string &str);
-        void save_page(wikipage &wp);
 };
-
-void kosher(string &field);
-void kosher(vector<string> &fields);
 
 #define WIKIDUMP
 #endif

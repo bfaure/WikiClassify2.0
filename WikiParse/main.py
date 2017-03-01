@@ -36,32 +36,15 @@ class wiki_corpus(object):
         print("Initializing '%s' corpus..." % corpus_name)
 
         self.name = corpus_name
-
-        # Standard directories
         self.meta_directory = corpus_directory+'/meta'
         self.data_directory = corpus_directory+'/data'
-
-        prev_date = '20010115'
-        date     = self.get_dump_dates()[0]
-        dump_url = self.get_dump_urls()[0]
-        self.date_directory = self.data_directory+'/'+date
-        dump_path = download(dump_url, self.date_directory)
-        dump_path = expand_bz2(dump_path)
-        if not os.path.isfile(self.date_directory+'/article_revision_text.txt'):
-            self.parse(dump_path, prev_date)
-        prev_date = date
-
-        #category_revs  = self.data_directory+'/'+date+'/category_revisions.txt'
-        #category_names = self.data_directory+'/'+date+'/category_names.txt'
-        #category_tree  = self.data_directory+'/'+date+'/category_revision_parents.txt'
-
-        # Create iterators from specialized classes
+        self.parse()
 
     def get_revision_categories(self):
-        return category_corpus(self.date_directory+'/article_revision_categories.txt')
+        return category_corpus(self.data_directory+'/article_revision_categories.txt')
 
     def get_category_names(self):
-        return build_mapping(self.date_directory+'/category_names.txt').values()
+        return build_mapping(self.data_directory+'/category_names.txt').values()
 
     def get_dump_dates(self):
         url  = 'https://dumps.wikimedia.org/%s/' % self.name
@@ -72,18 +55,26 @@ class wiki_corpus(object):
         dump_urls = []
         url  = 'https://dumps.wikimedia.org/%s/' % self.name
         for date in self.get_dump_dates():
-            if 'in progress' not in requests.get(url+date).text:
+            dump_date_text = requests.get(url+date).text
+            in_progress = 'in progress' in dump_date_text or 'Partial dump' in dump_date_text
+            if not in_progress:
                 dump_url = '{0}{1}/{2}-{1}-pages-meta-current.xml.bz2'.format(url,date,self.name)
                 dump_urls.append(dump_url)
         return dump_urls
 
-    def parse(self, dump_path, prev_date):
-        compiled = self.compile_parser()
+    def parse(self):
+        compiled = self.compile_parser(recompile=True)
         if not compiled:
             print("\tCould not compile parser!")
             return
         else:
-            self.run_parser(dump_path, os.path.dirname(dump_path), prev_date)
+            prev_date = '20010115'
+            for date, dump_url in zip(self.get_dump_dates(),self.get_dump_urls()):
+                date_directory = self.data_directory+'/'+date
+                dump_path = download(dump_url, date_directory)
+                dump_path = expand_bz2(dump_path)
+                self.run_parser(dump_path, self.data_directory, prev_date)
+                prev_date = date
 
     def compile_parser(self, recompile=False):
         print("\tCompiling parser...")
