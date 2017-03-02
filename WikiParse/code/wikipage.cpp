@@ -89,6 +89,7 @@ void wikipage::read_revision() {
 void wikipage::read_redirect() {
     if (is_article()) {
         parse(dump_page, "    <redirect title=\"", "\" />", redirect);
+        replace_target(redirect," ","_");
     }
 }
 
