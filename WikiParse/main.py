@@ -43,6 +43,15 @@ class wiki_corpus(object):
         else:
             print("\tAlready parsed!")
 
+    def get_revision_text(self):
+        text = text_corpus(self.data_directory+'/article_revision_text.txt')
+        if not os.path.isfile(self.meta_directory+'/dictionary.dict'):
+            text.train()
+            text.save(self.meta_directory)
+        else:
+            text.load(self.meta_directory)
+        return text
+
     def get_revision_categories(self):
         return category_corpus(self.data_directory+'/article_revision_categories.txt')
 
@@ -51,9 +60,6 @@ class wiki_corpus(object):
 
     def get_revision_cited_domains(self):
         return category_corpus(self.data_directory+'/article_revision_cited_domains.txt')
-
-    def get_category_names(self):
-        return build_mapping(self.data_directory+'/category_names.txt').values()
 
     def get_dump_dates(self):
         url  = 'https://dumps.wikimedia.org/%s/' % self.name
@@ -113,28 +119,27 @@ class text_corpus(object):
 
     def __iter__(self):
         for i, doc in self.indexed_docs():
-            tokens = [x for x in doc if x in self.get_words()]
-            yield TaggedDocument(self.trigram[self.bigram[tokens]],[i])
+            yield TaggedDocument(self.trigram[self.bigram[doc]],[i])
 
     def process(self, doc):
-        for i, doc in self.indexed_docs():
-            tokens = [x for x in doc if x in self.get_words()]
-            yield self.trigram[self.bigram[tokens]]
+        for doc in self.docs():
+            yield self.trigram[self.bigram[doc]]
 
     def docs_phrased(self):
-        for tokens in self.docs():
-            self.trigram[self.bigram[tokens]]
+        for doc in self.docs():
+            yield self.trigram[self.bigram[doc]]
 
     def docs(self):
         for _, doc in self.indexed_docs():
-            yield [x for x in doc]
+            yield doc
 
     def indexed_docs(self):
-        with open(self.document_path) as fin:
+        with open(self.document_path,'rb') as fin:
             for line in fin:
-                i, doc = line.strip().split('\t')
-                doc = doc.split(' ')
-                yield i, doc
+                if line.strip().count('\t') == 1:
+                    i, doc = line.decode('utf-8',errors='replace').strip().split('\t')
+                    doc = tokenize(doc)
+                    yield i, doc
 
     # Phrase methods
 
@@ -163,7 +168,7 @@ class text_corpus(object):
         print("\t\tTraining bigram detector...")
         self.bigram = Phraser(Phrases(self.docs(), min_count=5, threshold=10, max_vocab_size=100000))
         print("\t\tTraining trigram detector...")
-        self.trigram = Phraser(Phrases(self.bigram[self.docs.docs()], min_count=5, threshold=10, max_vocab_size=100000))
+        self.trigram = Phraser(Phrases(self.bigram[self.docs()], min_count=5, threshold=10, max_vocab_size=100000))
 
         print("\tBuilding dictionary...")
         self.dictionary = Dictionary(self.docs_phrased(), prune_at=2000000)
@@ -172,9 +177,6 @@ class text_corpus(object):
     def get_word_map(self):
         print("\tGetting word map...")
         return dict((v,k) for k,v in self.dictionary.token2id.iteritems())
-
-    def get_words(self):
-        return self.dictionary.values()
 
 #    # Category methods
 #
@@ -209,7 +211,7 @@ class category_corpus(object):
     def indexed_docs(self):
         with open(self.document_path) as fin:
             for line in fin:
-                if line.count('\t') == 1 and line.count(' ') > 1:
+                if line.strip().count('\t') == 1 and line.count(' ') > 1:
                     i, doc = line.strip().split('\t')
                     doc = doc.split(' ')
                     yield i, doc

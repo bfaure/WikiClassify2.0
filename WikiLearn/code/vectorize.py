@@ -159,8 +159,8 @@ class doc2vec(object):
         if not os.path.exists(self.directory):
 
             # Create main model
-            self.build(features=100, context_window=30, min_count=1, sample=1e-5, negative=10)
-            self.train(epochs=50)
+            self.build(features=100, context_window=10, min_count=3, sample=1e-5, negative=10)
+            self.train(epochs=10)
             self.save()
 
             # Create classifier
