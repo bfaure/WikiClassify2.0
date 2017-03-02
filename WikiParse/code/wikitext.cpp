@@ -71,6 +71,10 @@ void wikitext::read_categories() {
             //cout<<"Found new category: "<<temp[i].substr(temp[i].find(tag)+tag.size())<<"\n";
         }
     }
+    for (string &category:categories) {
+        category = "Category:"+category;
+        replace_target(category," ","_");
+    }
 }
 
 void wikitext::read_links() {
@@ -202,6 +206,7 @@ void wikitext::read_cited_authors(vector<string> &citations) {
             vector<string>::iterator it;
             it = find(cited_authors.begin(),cited_authors.end(),author);
             if (it==cited_authors.end()) {
+                replace_target(author," ","_");
                 cited_authors.push_back(author);
             } 
         }

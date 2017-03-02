@@ -66,12 +66,13 @@ database::database() {
 
 void database::open(string &output_directory) {
                     article_titles.open(output_directory+"/article_titles.txt",ofstream::out|ofstream::trunc|ofstream::binary);
+                   category_titles.open(output_directory+"/category_names.txt",ofstream::out|ofstream::trunc|ofstream::binary);
+                    page_redirects.open(output_directory+"/page_redirects.txt",ofstream::out|ofstream::trunc|ofstream::binary);
                  article_revisions.open(output_directory+"/article_revisions.txt",ofstream::out|ofstream::app|ofstream::binary);
              article_revision_text.open(output_directory+"/article_revision_text.txt",ofstream::out|ofstream::app|ofstream::binary);
        article_revision_categories.open(output_directory+"/article_revision_categories.txt",ofstream::out|ofstream::app|ofstream::binary);
     article_revision_cited_authors.open(output_directory+"/article_revision_cited_authors.txt",ofstream::out|ofstream::app|ofstream::binary);
     article_revision_cited_domains.open(output_directory+"/article_revision_cited_domains.txt",ofstream::out|ofstream::app|ofstream::binary);
-                   category_titles.open(output_directory+"/category_names.txt",ofstream::out|ofstream::trunc|ofstream::binary);
                 category_revisions.open(output_directory+"/category_revisions.txt",ofstream::out|ofstream::app|ofstream::binary);
          category_revision_parents.open(output_directory+"/category_revision_parents.txt",ofstream::out|ofstream::app|ofstream::binary);
     //article_importance.open(output_directory+"/article_importance.txt",ofstream::out|ofstream::trunc|ofstream::binary);
@@ -80,13 +81,14 @@ void database::open(string &output_directory) {
 }
 
 void database::save_page(wikipage &wp) {
+    if (wp.is_redirect()) {
+        page_redirects<<wp.title<<'\t'<<wp.redirect<<'\n';
+    }
     if (wp.is_article()) {
         article_titles<<wp.id<<'\t'<<wp.title<<'\n';
     }
     if (wp.is_category()) {
-        string category_title = wp.title.substr(9);
-        replace_target(category_title,"_"," ");
-        category_titles<<wp.id<<'\t'<<trim(category_title)<<'\n';
+        category_titles<<wp.id<<'\t'<<trim(wp.title)<<'\n';
     }
 }
 
@@ -98,19 +100,19 @@ void database::save_revision(wikipage &wp) {
 
             article_revision_categories<<wp.revision;
             for (int i=0; i<wp.revision_categories.size(); i++) {
-                article_revision_categories<<'\t'<<wp.revision_categories[i];
+                article_revision_categories<<' '<<wp.revision_categories[i];
             }
             article_revision_categories<<'\n';
 
             article_revision_cited_authors<<wp.revision;
             for (int i=0; i<wp.revision_cited_authors.size(); i++) {
-                article_revision_cited_authors<<'\t'<<wp.revision_cited_authors[i];
+                article_revision_cited_authors<<' '<<wp.revision_cited_authors[i];
             }
             article_revision_cited_authors<<'\n';
 
             article_revision_cited_domains<<wp.revision;
             for (int i=0; i<wp.revision_cited_domains.size(); i++) {
-                article_revision_cited_domains<<'\t'<<wp.revision_cited_domains[i];
+                article_revision_cited_domains<<' '<<wp.revision_cited_domains[i];
             }
             article_revision_cited_domains<<'\n';
         }
@@ -120,7 +122,7 @@ void database::save_revision(wikipage &wp) {
 
         category_revision_parents<<wp.revision;
         for (int i=0; i<wp.revision_categories.size(); i++) {
-            category_revision_parents<<'\t'<<wp.revision_categories[i];
+            category_revision_parents<<' '<<wp.revision_categories[i];
         }
         category_revision_parents<<'\n';
     }

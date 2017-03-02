@@ -25,6 +25,7 @@ using std::string;
 
 class database {
     private:
+        ofstream page_redirects;
         ofstream article_titles;
         ofstream article_revisions;
         ofstream article_revision_text;
