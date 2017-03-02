@@ -43,7 +43,7 @@ class wiki_corpus(object):
         else:
             print("\tAlready parsed!")
 
-    def get_revision_text(self):
+    def get_revision_words(self):
         text = text_corpus(self.data_directory+'/article_revision_text.txt')
         if not os.path.isfile(self.meta_directory+'/dictionary.dict'):
             text.train()
