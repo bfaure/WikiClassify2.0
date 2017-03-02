@@ -46,6 +46,12 @@ class wiki_corpus(object):
     def get_revision_categories(self):
         return category_corpus(self.data_directory+'/article_revision_categories.txt')
 
+    def get_revision_cited_authors(self):
+        return category_corpus(self.data_directory+'/article_revision_cited_authors.txt')
+
+    def get_revision_cited_domains(self):
+        return category_corpus(self.data_directory+'/article_revision_cited_domains.txt')
+
     def get_category_names(self):
         return build_mapping(self.data_directory+'/category_names.txt').values()
 
