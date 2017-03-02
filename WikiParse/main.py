@@ -38,7 +38,10 @@ class wiki_corpus(object):
         self.name = corpus_name
         self.meta_directory = corpus_directory+'/meta'
         self.data_directory = corpus_directory+'/data'
-        self.parse()
+        if not os.path.isfile(self.data_directory+'/article_revision_text.txt'):
+            self.parse()
+        else:
+            print("\tAlready parsed!")
 
     def get_revision_categories(self):
         return category_corpus(self.data_directory+'/article_revision_categories.txt')
@@ -96,10 +99,11 @@ class wiki_corpus(object):
 #                      Tagged Document iterator
 #-----------------------------------------------------------------------------#
 
-class doc_corpus(object):
+class text_corpus(object):
 
     def __init__(self, document_path):
         self.document_path  = document_path
+        self.instances = sum(1 for line in open(self.document_path))
 
     def __iter__(self):
         for i, doc in self.indexed_docs():
@@ -122,9 +126,9 @@ class doc_corpus(object):
     def indexed_docs(self):
         with open(self.document_path) as fin:
             for line in fin:
-                values = line.strip().split('\t')
-                if len(values) >= 2:
-                    yield values[0], values[1:]
+                i, doc = line.strip().split('\t')
+                doc = doc.split(' ')
+                yield i, doc
 
     # Phrase methods
 
@@ -199,9 +203,10 @@ class category_corpus(object):
     def indexed_docs(self):
         with open(self.document_path) as fin:
             for line in fin:
-                values = line.strip().split('\t')
-                if len(values) >= 2:
-                    yield values[0], values[1:]
+                if line.count('\t') == 1 and line.count(' ') > 1:
+                    i, doc = line.strip().split('\t')
+                    doc = doc.split(' ')
+                    yield i, doc
 
 #                             Global functions
 #-----------------------------------------------------------------------------#

@@ -98,21 +98,21 @@ void database::save_revision(wikipage &wp) {
             article_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
             article_revision_text<<wp.revision<<'\t'<<wp.revision_text<<'\n';
 
-            article_revision_categories<<wp.revision;
+            article_revision_categories<<wp.revision<<'\t';;
             for (int i=0; i<wp.revision_categories.size(); i++) {
-                article_revision_categories<<' '<<wp.revision_categories[i];
+                article_revision_categories<<wp.revision_categories[i]<<' ';
             }
             article_revision_categories<<'\n';
 
-            article_revision_cited_authors<<wp.revision;
+            article_revision_cited_authors<<wp.revision<<'\t';;
             for (int i=0; i<wp.revision_cited_authors.size(); i++) {
-                article_revision_cited_authors<<' '<<wp.revision_cited_authors[i];
+                article_revision_cited_authors<<wp.revision_cited_authors[i]<<' ';
             }
             article_revision_cited_authors<<'\n';
 
-            article_revision_cited_domains<<wp.revision;
+            article_revision_cited_domains<<wp.revision<<'\t';;
             for (int i=0; i<wp.revision_cited_domains.size(); i++) {
-                article_revision_cited_domains<<' '<<wp.revision_cited_domains[i];
+                article_revision_cited_domains<<wp.revision_cited_domains[i]<<' ';
             }
             article_revision_cited_domains<<'\n';
         }
@@ -120,9 +120,9 @@ void database::save_revision(wikipage &wp) {
     if (wp.is_category()) {
         category_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
 
-        category_revision_parents<<wp.revision;
+        category_revision_parents<<wp.revision<<'\t';
         for (int i=0; i<wp.revision_categories.size(); i++) {
-            category_revision_parents<<' '<<wp.revision_categories[i];
+            category_revision_parents<<wp.revision_categories[i]<<' ';
         }
         category_revision_parents<<'\n';
     }
