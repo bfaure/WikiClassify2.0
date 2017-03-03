@@ -66,7 +66,7 @@ database::database() {
 
 void database::open(string &output_directory) {
                     article_titles.open(output_directory+"/article_titles.txt",ofstream::out|ofstream::trunc|ofstream::binary);
-                   category_titles.open(output_directory+"/category_names.txt",ofstream::out|ofstream::trunc|ofstream::binary);
+                   category_titles.open(output_directory+"/category_titles.txt",ofstream::out|ofstream::trunc|ofstream::binary);
                     page_redirects.open(output_directory+"/page_redirects.txt",ofstream::out|ofstream::trunc|ofstream::binary);
                  article_revisions.open(output_directory+"/article_revisions.txt",ofstream::out|ofstream::app|ofstream::binary);
         article_revision_timestamp.open(output_directory+"/article_revision_timestamp.txt",ofstream::out|ofstream::app|ofstream::binary);
@@ -95,9 +95,9 @@ void database::save_page(wikipage &wp) {
 
 void database::save_revision(wikipage &wp) {
     if (wp.is_article()) {
+        article_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
+        article_revision_timestamp<<wp.revision<<'\t'<<wp.revision_year<<wp.revision_month<<wp.revision_day<<'\n';
         if (!wp.revision_text.empty()) {
-            article_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
-            article_revision_timestamp<<wp.revision<<'\t'<<wp.revision_year<<wp.revision_month<<wp.revision_day<<'\n';
             article_revision_text<<wp.revision<<'\t'<<wp.revision_text<<'\n';
 
             article_revision_categories<<wp.revision<<'\t';;

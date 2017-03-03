@@ -42,6 +42,7 @@ def save_related_docs(doc_iter, model_name):
 
 def main():
     documents = wiki_corpus(corpus_name, corpus_directory)
+    revision_map = documents.get_revision_titles()
     save_related_tokens(documents.get_revision_words(), 'words')
     save_related_tokens(documents.get_revision_categories(), 'categories')
     save_related_tokens(documents.get_revision_cited_authors(), 'cited_authors')
@@ -50,6 +51,19 @@ def main():
     save_related_docs(documents.get_revision_categories(), 'categories')
     save_related_docs(documents.get_revision_cited_authors(), 'cited_authors')
     save_related_docs(documents.get_revision_cited_domains(), 'cited_domains')
+    for file in ['words','categories','cited_authors','cited_domains']:
+        with open('related_%s_docs.tsv' % file) as f:
+            for line in f:
+                related = []
+                for doc_id in line.strip().split('\t'):
+                    try:
+                        related.append(revision_map[doc_id])
+                    except:
+                        continue
+                related = sorted(set(related), key=lambda x: related.index(x))
+                if len(related):
+                    with open('related_%s_titles.tsv' % file, 'a+') as g:
+                        g.write('\t'.join(related)+'\n')
 
 if __name__ == "__main__":
     main()
