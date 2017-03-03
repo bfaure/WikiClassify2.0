@@ -42,6 +42,10 @@ def save_related_docs(doc_iter, model_name):
 
 def main():
     documents = wiki_corpus(corpus_name, corpus_directory)
+    save_related_tokens(documents.get_revision_words(), 'words')
+    save_related_tokens(documents.get_revision_categories(), 'categories')
+    save_related_tokens(documents.get_revision_cited_authors(), 'cited_authors')
+    save_related_tokens(documents.get_revision_cited_domains(), 'cited_domains')
     save_related_docs(documents.get_revision_words(), 'words')
     save_related_docs(documents.get_revision_categories(), 'categories')
     save_related_docs(documents.get_revision_cited_authors(), 'cited_authors')
