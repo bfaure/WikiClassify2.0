@@ -24,19 +24,28 @@ word2vec_directory = 'WikiLearn/data/models/doc2vec/%s' % corpus_name
 
 def save_related_tokens(doc_iter, model_name):
     encoder = doc2vec(doc_iter, word2vec_directory+'/'+model_name)
-    with open('related_%s.tsv' % model_name,'w+') as f:
+    print('Backtesting...')
+    with open('related_%s_tokens.tsv' % model_name,'w+') as f:
         for word in encoder.model.index2word:
             nearest = encoder.get_nearest_word(word)
             if nearest:
                 nearest = [x for x in nearest if x != word]
                 f.write(word+'\t'+'\t'.join(nearest)+'\n')
 
+def save_related_docs(doc_iter, model_name):
+    encoder = doc2vec(doc_iter, word2vec_directory+'/'+model_name)
+    print('Backtesting...')
+    with open('related_%s_docs.tsv' % model_name,'w+') as f:
+        for doc_id in encoder.model.docvecs.offset2doctag:
+            nearest = encoder.get_nearest_doc(doc_id)
+            f.write(doc_id+'\t'+'\t'.join(nearest)+'\n')
+
 def main():
     documents = wiki_corpus(corpus_name, corpus_directory)
-    save_related_tokens(doc_iter=documents.get_revision_words(), model_name='words')
-    save_related_tokens(doc_iter=documents.get_revision_categories(), model_name='categories')
-    save_related_tokens(doc_iter=documents.get_revision_cited_authors(), model_name='cited_authors')
-    save_related_tokens(doc_iter=documents.get_revision_cited_domains(), model_name='cited_domains')
+    save_related_docs(documents.get_revision_words(), 'words')
+    save_related_docs(documents.get_revision_categories(), 'categories')
+    save_related_docs(documents.get_revision_cited_authors(), 'cited_authors')
+    save_related_docs(documents.get_revision_cited_domains(), 'cited_domains')
 
 if __name__ == "__main__":
     main()

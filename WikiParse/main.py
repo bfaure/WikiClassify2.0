@@ -43,6 +43,25 @@ class wiki_corpus(object):
         else:
             print("\tAlready parsed!")
 
+    def get_revision_titles(self):
+        revision_map, title_map = {}, {}
+        print('Fetching article titles...')
+        with open(self.data_directory+'/article_titles.txt') as f:
+            for line in f:
+                if line.strip().count('\t') == 1:
+                    i, j = line.strip().split('\t')
+                    title_map[i] = j
+        print('Fetching article revisions...')
+        with open(self.data_directory+'/article_revisions.txt') as f:
+            for line in f:
+                if line.strip().count('\t') == 1:
+                    i, j = line.strip().split('\t')
+                    try:
+                        revision_map[i] = title_map[j]
+                    except:
+                        pass
+        return revision_map
+
     def get_revision_words(self):
         text = text_corpus(self.data_directory+'/article_revision_text.txt')
         if not os.path.isfile(self.meta_directory+'/dictionary.dict'):
@@ -121,9 +140,8 @@ class text_corpus(object):
         for i, doc in self.indexed_docs():
             yield TaggedDocument(self.trigram[self.bigram[doc]],[i])
 
-    def process(self, doc):
-        for doc in self.docs():
-            yield self.trigram[self.bigram[doc]]
+    def process(self, text):
+        return self.trigram[self.bigram[tokenize(text)]]
 
     def docs_phrased(self):
         for doc in self.docs():
