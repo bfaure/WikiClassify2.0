@@ -48,18 +48,16 @@ class wiki_corpus(object):
         print('Fetching article titles...')
         with open(self.data_directory+'/article_titles.txt') as f:
             for line in f:
-                if line.strip().count('\t') == 1:
-                    i, j = line.strip().split('\t')
-                    title_map[i] = j
+                i, j = line.strip().split('\t')
+                title_map[i] = j
         print('Fetching article revisions...')
         with open(self.data_directory+'/article_revisions.txt') as f:
             for line in f:
-                if line.strip().count('\t') == 1:
-                    i, j = line.strip().split('\t')
-                    try:
-                        revision_map[i] = title_map[j]
-                    except:
-                        pass
+                i, j = line.strip().split('\t')
+                try:
+                    revision_map[i] = title_map[j]
+                except:
+                    continue
         return revision_map
 
     def get_revision_words(self):
