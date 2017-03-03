@@ -70,9 +70,9 @@ class wikipage {
 
         // Revision sections
         unsigned long  revision;
-        unsigned int   revision_year;
-        unsigned int   revision_month;
-        unsigned int   revision_day;
+        string         revision_year;
+        string         revision_month;
+        string         revision_day;
         string         revision_text;
         string         revision_importance;
         string         revision_quality;

@@ -96,9 +96,9 @@ void wikipage::read_redirect() {
 void wikipage::read_timestamp() {
     string timestamp;
     parse(dump_page, "      <timestamp>", "</timestamp>\n      ", timestamp);
-    revision_year  = stoi(timestamp.substr(0,4));
-    revision_month = stoi(timestamp.substr(5,2));
-    revision_day   = stoi(timestamp.substr(8,2));
+    revision_year  = timestamp.substr(0,4);
+    revision_month = timestamp.substr(5,2);
+    revision_day   = timestamp.substr(8,2);
 }
 
 void wikipage::read_text() {
@@ -125,14 +125,19 @@ void wikipage::read_text() {
     }
 }
 
-bool wikipage::is_after(unsigned int &year, unsigned int &month, unsigned int &day) {
-    if (revision_year>year) {
+bool wikipage::is_after(unsigned int &cutoff_year, unsigned int &cutoff_month, unsigned int &cutoff_day) {
+    
+    unsigned int year  = stoi(revision_year);
+    unsigned int month = stoi(revision_month);
+    unsigned int day   = stoi(revision_day);
+
+    if (year>cutoff_year) {
         return true;
     }
-    else if (revision_year==year&&revision_month>month) {
+    else if (year==cutoff_year&&month>cutoff_month) {
         return true;
     }
-    else if (revision_day==month&&revision_day>day) {
+    else if (month==cutoff_month&&day>cutoff_day) {
         return true;
     }
     return false;

@@ -69,6 +69,7 @@ void database::open(string &output_directory) {
                    category_titles.open(output_directory+"/category_names.txt",ofstream::out|ofstream::trunc|ofstream::binary);
                     page_redirects.open(output_directory+"/page_redirects.txt",ofstream::out|ofstream::trunc|ofstream::binary);
                  article_revisions.open(output_directory+"/article_revisions.txt",ofstream::out|ofstream::app|ofstream::binary);
+        article_revision_timestamp.open(output_directory+"/article_revision_timestamp.txt",ofstream::out|ofstream::app|ofstream::binary);
              article_revision_text.open(output_directory+"/article_revision_text.txt",ofstream::out|ofstream::app|ofstream::binary);
        article_revision_categories.open(output_directory+"/article_revision_categories.txt",ofstream::out|ofstream::app|ofstream::binary);
     article_revision_cited_authors.open(output_directory+"/article_revision_cited_authors.txt",ofstream::out|ofstream::app|ofstream::binary);
@@ -96,6 +97,7 @@ void database::save_revision(wikipage &wp) {
     if (wp.is_article()) {
         if (!wp.revision_text.empty()) {
             article_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
+            article_revision_timestamp<<wp.revision<<'\t'<<wp.revision_year<<wp.revision_month<<wp.revision_day<<'\n';
             article_revision_text<<wp.revision<<'\t'<<wp.revision_text<<'\n';
 
             article_revision_categories<<wp.revision<<'\t';;

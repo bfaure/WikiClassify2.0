@@ -28,6 +28,7 @@ class database {
         ofstream page_redirects;
         ofstream article_titles;
         ofstream article_revisions;
+        ofstream article_revision_timestamp;
         ofstream article_revision_text;
         ofstream article_revision_categories;
         ofstream article_revision_cited_authors;

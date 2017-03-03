@@ -220,7 +220,7 @@ class doc2vec(object):
                 print('Not all of the words occur!')
 
     def get_nearest_doc(self, doc_id):
-        return [x[0] for x in self.model.docvecs.most_similar(doc_id,topn=10)]
+        return [x[0] for x in self.model.docvecs.most_similar(doc_id,topn=20)]
 
     #def get_nearest_doc(self, text):
     #    return [x[0] for x in self.model.docvecs.most_similar(self.encode_doc(text),topn=10)]
