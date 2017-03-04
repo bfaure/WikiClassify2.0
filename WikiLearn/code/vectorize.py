@@ -156,23 +156,6 @@ class doc2vec(object):
         self.corpus    = corpus
         self.directory = directory
 
-        if not os.path.exists(self.directory):
-
-            # Create main model
-            self.build(features=100, context_window=50, min_count=1, sample=1e-5, negative=5)
-            self.train(epochs=50)
-            self.save()
-
-            # Create classifier
-            #self.train_classifier()
-            #self.save_classifier()
-
-        else:
-            self.load()
-            #self.accuracy, self.precision = self.train_classifier()
-            #self.load_classifier()
-            #self.analogy()
-
     def evaluate(self):
         url = 'http://download.tensorflow.org/data/questions-words.txt'
         return
