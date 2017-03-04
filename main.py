@@ -42,7 +42,7 @@ def save_related(model_name):
             encoder.train(epochs=100)
         encoder.save()
     else:
-        self.load()
+        encoder.load()
 
     print('Backtesting...')
     with open('related_%s_tokens.tsv' % model_name,'w+') as f:
