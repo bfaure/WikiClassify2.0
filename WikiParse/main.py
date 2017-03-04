@@ -43,6 +43,16 @@ class wiki_corpus(object):
         else:
             print("\tAlready parsed!")
 
+    def get_doc_iter(self, mode):
+        if mode =='words':
+            return self.get_revision_words()
+        elif mode == 'categories':
+            return self.get_revision_categories()
+        elif mode == 'cited_authors':
+            return self.get_revision_cited_authors()
+        elif mode == 'cited_domains':
+            return self.get_revision_cited_domains()
+
     def get_revision_titles(self):
         revision_map, title_map = {}, {}
         print('Fetching article titles...')
@@ -155,7 +165,8 @@ class text_corpus(object):
                 if line.strip().count('\t') == 1:
                     i, doc = line.decode('utf-8',errors='replace').strip().split('\t')
                     doc = tokenize(doc)
-                    yield i, doc
+                    if len(doc) > 1:
+                        yield i, doc
 
     # Phrase methods
 
@@ -230,7 +241,8 @@ class category_corpus(object):
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
                     i, doc = line.strip().split('\t')
                     doc = doc.split(' ')
-                    yield i, doc
+                    if len(doc) > 1:
+                        yield i, doc
 
 #                             Global functions
 #-----------------------------------------------------------------------------#
