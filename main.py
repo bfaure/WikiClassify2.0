@@ -35,7 +35,7 @@ def save_related(model_name):
             encoder.build(features=200, context_window=50, min_count=1, sample=1e-5, negative=5)
             encoder.train(epochs=50)
         elif model_name == 'links':
-            encoder.build(features=200, context_window=50, min_count=1, sample=1e-5, negative=5)
+            encoder.build(features=200, context_window=50, min_count=2, sample=1e-5, negative=5)
             encoder.train(epochs=50)
         elif model_name == 'cited_authors':
             encoder.build(features=20, context_window=50, min_count=1)
