@@ -31,6 +31,7 @@ class database {
         ofstream article_revision_timestamp;
         ofstream article_revision_text;
         ofstream article_revision_categories;
+        ofstream article_revision_links;
         ofstream article_revision_cited_authors;
         ofstream article_revision_cited_domains;
         ofstream article_quality;

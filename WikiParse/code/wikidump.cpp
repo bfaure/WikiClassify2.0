@@ -72,6 +72,7 @@ void database::open(string &output_directory) {
         article_revision_timestamp.open(output_directory+"/article_revision_timestamp.txt",ofstream::out|ofstream::app|ofstream::binary);
              article_revision_text.open(output_directory+"/article_revision_text.txt",ofstream::out|ofstream::app|ofstream::binary);
        article_revision_categories.open(output_directory+"/article_revision_categories.txt",ofstream::out|ofstream::app|ofstream::binary);
+            article_revision_links.open(output_directory+"/article_revision_links.txt",ofstream::out|ofstream::app|ofstream::binary);
     article_revision_cited_authors.open(output_directory+"/article_revision_cited_authors.txt",ofstream::out|ofstream::app|ofstream::binary);
     article_revision_cited_domains.open(output_directory+"/article_revision_cited_domains.txt",ofstream::out|ofstream::app|ofstream::binary);
                 category_revisions.open(output_directory+"/category_revisions.txt",ofstream::out|ofstream::app|ofstream::binary);
@@ -105,6 +106,12 @@ void database::save_revision(wikipage &wp) {
                 article_revision_categories<<wp.revision_categories[i]<<' ';
             }
             article_revision_categories<<'\n';
+
+            article_revision_links<<wp.revision<<'\t';;
+            for (int i=0; i<wp.revision_links.size(); i++) {
+                article_revision_links<<wp.revision_links[i]<<' ';
+            }
+            article_revision_links<<'\n';
 
             article_revision_cited_authors<<wp.revision<<'\t';;
             for (int i=0; i<wp.revision_cited_authors.size(); i++) {

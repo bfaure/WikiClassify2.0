@@ -104,6 +104,7 @@ void wikitext::read_links() {
                 source.erase(remove(source.begin(), source.end(), '\\'), source.end());
             }
         }
+        replace_target(link," ","_");
     }
 }
 
