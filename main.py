@@ -59,7 +59,7 @@ def save_related(model_name):
             f.write(doc_id+'\t'+'\t'.join(nearest)+'\n')
 
     revision_map = documents.get_revision_titles()
-    with open('related_%s_docs.tsv' % model_name, 'w+') as f:
+    with open('related_%s_docs.tsv' % model_name) as f:
         for line in f:
             related = []
             for doc_id in line.strip().split('\t'):
