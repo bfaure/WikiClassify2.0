@@ -18,6 +18,7 @@ When first cloning the repo, run the init.py file to create the directory struct
 ## Dependencies
 
 * `python 2.7`
+* `numpy`
 * `gcc` (for parser)
 * `gensim` (for feature extraction)
 * `sklearn` (for classification)
