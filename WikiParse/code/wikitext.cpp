@@ -84,24 +84,18 @@ void wikitext::read_links() {
             string source; string destination;
             string::size_type link_sep = link.find('|');
             if (link_sep != string::npos) {
-                source      = link.substr(link_sep+1);
                 destination = link.substr(0,link_sep);
+                source      = link.substr(link_sep+1);
             }
             else {
-                source      = link;
                 destination = link;
+                source      = link;
             }
-
             // Trim
-            source      = trim(source);
             destination = trim(destination);
-            if (!source.empty() and !destination.empty() and source.find('|') == string::npos and destination.find('\\') == string::npos) {
-
-                // Make lowercase
-                transform(source.begin(), source.end(), source.begin(), ::tolower);
-
-                // Remove backslash character
-                source.erase(remove(source.begin(), source.end(), '\\'), source.end());
+            source      = trim(source);
+            if (!destination.empty() and destination.find('|') == string::npos) {
+                link = destination;
             }
         }
         replace_target(link," ","_");
