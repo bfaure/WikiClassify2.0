@@ -48,6 +48,8 @@ class wiki_corpus(object):
             return self.get_revision_words()
         elif mode == 'categories':
             return self.get_revision_categories()
+        elif mode == 'links':
+            return self.get_revision_links()
         elif mode == 'cited_authors':
             return self.get_revision_cited_authors()
         elif mode == 'cited_domains':
@@ -81,6 +83,9 @@ class wiki_corpus(object):
 
     def get_revision_categories(self):
         return category_corpus(self.data_directory+'/article_revision_categories.txt')
+
+    def get_revision_links(self):
+        return category_corpus(self.data_directory+'/article_revision_links.txt')
 
     def get_revision_cited_authors(self):
         return category_corpus(self.data_directory+'/article_revision_cited_authors.txt')

@@ -34,6 +34,9 @@ def save_related(model_name):
         elif model_name == 'categories':
             encoder.build(features=200, context_window=50, min_count=1, sample=1e-5, negative=5)
             encoder.train(epochs=50)
+        elif model_name == 'links':
+            encoder.build(features=200, context_window=50, min_count=1, sample=1e-5, negative=5)
+            encoder.train(epochs=50)
         elif model_name == 'cited_authors':
             encoder.build(features=20, context_window=50, min_count=1)
             encoder.train(epochs=100)
@@ -73,7 +76,7 @@ def save_related(model_name):
                     g.write('\t'.join(related)+'\n')
 
 def main():
-    for word_type in ['words','categories','cited_authors','cited_domains']:
+    for word_type in ['links']:#['words','categories','links','cited_authors','cited_domains']:
         save_related(word_type)
 
 if __name__ == "__main__":
