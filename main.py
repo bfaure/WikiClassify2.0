@@ -9,75 +9,66 @@ import os, sys, time
 #                            Local imports
 #-----------------------------------------------------------------------------#
 
-from WikiParse.main           import wiki_corpus
+from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
 from WikiLearn.code.vectorize import LDA, doc2vec
 
 #                            Main function
 #-----------------------------------------------------------------------------#
 
-corpus_name   = 'simplewiki'
-run_LDA       = False
-run_word2vec  = True
-corpus_directory   = 'WikiParse/data/corpora/%s' % corpus_name
-LDA_directory      = 'WikiLearn/data/models/LDA/%s' % corpus_name
-word2vec_directory = 'WikiLearn/data/models/doc2vec/%s' % corpus_name
+def save_related():
+    
+    encoder_directory = 'WikiLearn/data/models/tokenizer'
 
-def save_related(model_name):
-    documents = wiki_corpus(corpus_name, corpus_directory)
+    encoder = get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,20,10)
+    save_related_tokens(encoder, 'related_authors.tsv')
+    save_related_docs(encoder, 'related_docs_authors.tsv')
 
-    doc_iter  = documents.get_doc_iter(model_name)
-    encoder = doc2vec(doc_iter, word2vec_directory+'/'+model_name)
-    if not os.path.exists(word2vec_directory+'/'+model_name):
-        if model_name == 'words':
-            encoder.build(features=400, context_window=10, min_count=5, sample=1e-5, negative=20)
-            encoder.train(epochs=10)
-        elif model_name == 'categories':
-            encoder.build(features=200, context_window=50, min_count=1, sample=1e-5, negative=5)
-            encoder.train(epochs=50)
-        elif model_name == 'links':
-            encoder.build(features=200, context_window=50, min_count=2, sample=1e-5, negative=5)
-            encoder.train(epochs=50)
-        elif model_name == 'cited_authors':
-            encoder.build(features=20, context_window=50, min_count=1)
-            encoder.train(epochs=100)
-        elif model_name == 'cited_domains':
-            encoder.build(features=80, context_window=50, min_count=1)
-            encoder.train(epochs=100)
-        encoder.save()
-    else:
-        encoder.load()
+    encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,50,1,5,20)
+    save_related_tokens(encoder, 'related_authors.tsv')
+    save_related_docs(encoder, 'related_docs_authors.tsv')
 
-    print('Backtesting...')
-    with open('related_%s_tokens.tsv' % model_name,'w+') as f:
+    encoder = get_encoder('links.tsv',False,encoder_directory+'/links',200,50,2,5,20)
+    save_related_tokens(encoder, 'related_authors.tsv')
+    save_related_docs(encoder, 'related_docs_authors.tsv')
+
+    encoder = get_encoder('authors.tsv',False,encoder_directory+'/authors',20,50,1,1,50)
+    save_related_tokens(encoder, 'related_authors.tsv')
+    save_related_docs(encoder, 'related_docs_authors.tsv')
+
+    encoder = get_encoder('domains.tsv',False,encoder_directory+'/domains',80,50,1,1,50)
+    save_related_tokens(encoder, 'related_authors.tsv')
+    save_related_docs(encoder, 'related_docs_authors.tsv')
+
+def save_related_tokens(encoder, path):
+    print('Saving related tokens...')
+    with open(path,'w+') as f:
         for word in encoder.model.index2word:
             nearest = encoder.get_nearest_word(word)
-            if nearest:
-                nearest = [x for x in nearest if x != word]
-                f.write(word+'\t'+'\t'.join(nearest)+'\n')
+            f.write(word+'\t\t'.join(nearest)+'\n')
 
-    print('Backtesting...')
-    with open('related_%s_docs.tsv' % model_name,'w+') as f:
+def save_related_docs(encoder, path):
+    print('Saving related docs...')
+    with open(path,'w+') as f:
         for doc_id in encoder.model.docvecs.offset2doctag:
             nearest = encoder.get_nearest_doc(doc_id)
-            f.write(doc_id+'\t'+'\t'.join(nearest)+'\n')
+            f.write(doc_id+'\t\t'.join(nearest)+'\n')
 
-    revision_map = documents.get_revision_titles()
-    with open('related_%s_docs.tsv' % model_name) as f:
-        for line in f:
-            related = []
-            for doc_id in line.strip().split('\t'):
-                try:
-                    related.append(revision_map[doc_id])
-                except:
-                    continue
-            related = sorted(set(related), key=lambda x: related.index(x))
-            if len(related):
-                with open('related_%s_titles.tsv' % model_name, 'a+') as g:
-                    g.write('\t'.join(related)+'\n')
+def get_encoder(tsv_path, make_phrases, directory, features, context_window, min_count, negative, epochs):
+    documents = gensim_corpus(tsv_path,directory,make_phrases)
+    encoder = doc2vec(documents, directory)
+    if not os.path.isfile(os.path.join(directory,'word2vec.d2v')):
+        encoder.build(features, context_window, min_count, negative)
+        encoder.train(epochs)
+        encoder.save(directory)
+    else:
+        encoder.load(directory)
+    return encoder
 
 def main():
-    for word_type in ['links']:#['words','categories','links','cited_authors','cited_domains']:
-        save_related(word_type)
+    if not os.path.isfile('text.tsv'):
+        dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
+        parse_wikidump(dump_path)
+    save_related()
 
 if __name__ == "__main__":
     main()

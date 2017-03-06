@@ -7,7 +7,6 @@ wikipage::wikipage(string dump_page) {
     read_title();
     read_namespace();
     read_id();
-    read_revision();
     read_redirect();
     read_timestamp();
 }
@@ -23,14 +22,14 @@ void wikipage::make_kosher() {
     kosher(ns);
     kosher(redirect);
     // Clean items within text
-    kosher(revision_text);
-    kosher(revision_importance);
-    kosher(revision_quality);
-    kosher(revision_categories); 
-    kosher(revision_links);
-    kosher(revision_cited_domains);
-    kosher(revision_cited_authors);
-    kosher(revision_problems);
+    kosher(text);
+    kosher(importance);
+    kosher(quality);
+    kosher(categories); 
+    kosher(links);
+    kosher(cited_domains);
+    kosher(cited_authors);
+    kosher(problems);
 }
 
 void kosher(vector<string> &fields) {
@@ -42,6 +41,7 @@ void kosher(vector<string> &fields) {
 void kosher(string &field) {
     replace_target(field,"\n"," ");
     replace_target(field,"\t"," ");
+    decode_text(field);
 }
 
 void wikipage::read_title() {
@@ -80,12 +80,6 @@ void wikipage::read_id() {
     id = stoi(id_str);
 }
 
-void wikipage::read_revision() {
-    string revision_str; 
-    parse(dump_page, "<revision>\n      <id>", "</id>\n      ", revision_str);
-    revision = stol(revision_str);
-}
-
 void wikipage::read_redirect() {
     if (is_article()) {
         parse(dump_page, "    <redirect title=\"", "\" />", redirect);
@@ -96,9 +90,9 @@ void wikipage::read_redirect() {
 void wikipage::read_timestamp() {
     string timestamp;
     parse(dump_page, "      <timestamp>", "</timestamp>\n      ", timestamp);
-    revision_year  = timestamp.substr(0,4);
-    revision_month = timestamp.substr(5,2);
-    revision_day   = timestamp.substr(8,2);
+    year  = timestamp.substr(0,4);
+    month = timestamp.substr(5,2);
+    day   = timestamp.substr(8,2);
 }
 
 void wikipage::read_text() {
@@ -107,37 +101,37 @@ void wikipage::read_text() {
     wikitext wt(page_text);
     if (is_article() && !is_redirect()) {
         wt.read_article();
-        revision_text          = wt.text;
-        revision_categories    = wt.categories;
-        revision_links         = wt.links;
-        revision_cited_domains = wt.cited_domains;
-        revision_cited_authors = wt.cited_authors;
-        revision_problems      = wt.problems;
+        text          = wt.text;
+        categories    = wt.categories;
+        links         = wt.links;
+        cited_domains = wt.cited_domains;
+        cited_authors = wt.cited_authors;
+        problems      = wt.problems;
     }
     else if (is_category()) {
         wt.read_category();
-        revision_categories    = wt.categories;
+        categories    = wt.categories;
     }
     else if (is_talk()) {
         wt.read_talk();
-        revision_importance = wt.importance;
-        revision_quality    = wt.quality;
+        importance = wt.importance;
+        quality    = wt.quality;
     }
 }
 
 bool wikipage::is_after(unsigned int &cutoff_year, unsigned int &cutoff_month, unsigned int &cutoff_day) {
     
-    unsigned int year  = stoi(revision_year);
-    unsigned int month = stoi(revision_month);
-    unsigned int day   = stoi(revision_day);
+    unsigned int page_year  = stoi(year);
+    unsigned int page_month = stoi(month);
+    unsigned int page_day   = stoi(day);
 
-    if (year>cutoff_year) {
+    if (page_year>cutoff_year) {
         return true;
     }
-    else if (year==cutoff_year&&month>cutoff_month) {
+    else if (page_year==cutoff_year&&page_month>cutoff_month) {
         return true;
     }
-    else if (month==cutoff_month&&day>cutoff_day) {
+    else if (page_month==cutoff_month&&page_day>cutoff_day) {
         return true;
     }
     return false;
