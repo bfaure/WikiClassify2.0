@@ -104,9 +104,9 @@ def gensim_corpus(tsv_path, directory, make_phrases=False,):
     if make_phrases:
         if not os.path.isfile(directory+'/bigrams.pkl'):
             text.train_phraser()
-            text.save_phraser()
+            text.save_phraser(directory)
         else:
-            text.load_phraser()
+            text.load_phraser(directory)
     return text
 
 #                      Tagged Document iterator
