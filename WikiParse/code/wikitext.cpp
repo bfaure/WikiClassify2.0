@@ -50,6 +50,7 @@ void wikitext::read_importance() {
 
 void wikitext::read_categories() {
     parse_all(page_text, "[[Category:", "]]", categories);
+    parse_all(page_text, "[[category:", "]]", categories);
     vector<string> temp;
     for (string &category:categories) {
         // if the current category contains an endline we will cut the portion after the endline
@@ -72,6 +73,7 @@ void wikitext::read_categories() {
         }
     }
     for (string &category:categories) {
+        category[0] = toupper(category[0]);
         category = "Category:"+category;
         replace_target(category," ","_");
     }
@@ -92,6 +94,7 @@ void wikitext::read_links() {
         destination = trim(destination);
         source      = trim(source);
         link = destination;
+        link[0] = toupper(link[0]);
         replace_target(link," ","_");
     }
 }
@@ -107,11 +110,11 @@ void wikitext::read_citations() {
     target = "{{Citation";
     parse_all(page_text,target,endtarget,citations);
 
-    read_cited_domains(citations);
-    read_cited_authors(citations);
+    read_domains(citations);
+    read_authors(citations);
 }
 
-void wikitext::read_cited_domains(vector<string> &citations) {
+void wikitext::read_domains(vector<string> &citations) {
     for (int i=0; i<citations.size(); i++) {
         string domain;
         size_t tag_location = citations[i].find("url", 0);
@@ -127,9 +130,9 @@ void wikitext::read_cited_domains(vector<string> &citations) {
         }
         if (domain!="") {
             vector<string>::iterator it;
-            it = find(cited_domains.begin(),cited_domains.end(),domain);
-            if (it==cited_domains.end()) {
-                cited_domains.push_back(domain);
+            it = find(domains.begin(),domains.end(),domain);
+            if (it==domains.end()) {
+                domains.push_back(domain);
             }
         }
     }
@@ -148,7 +151,7 @@ void parse_domain(string &domain) {
     }
 }
 
-void wikitext::read_cited_authors(vector<string> &citations) {
+void wikitext::read_authors(vector<string> &citations) {
     for (int i=0; i<citations.size(); i++) {
         string author;
         size_t tag_location = citations[i].find("author");
@@ -193,10 +196,10 @@ void wikitext::read_cited_authors(vector<string> &citations) {
         }
         if (author!="") {
             vector<string>::iterator it;
-            it = find(cited_authors.begin(),cited_authors.end(),author);
-            if (it==cited_authors.end()) {
+            it = find(authors.begin(),authors.end(),author);
+            if (it==authors.end()) {
                 replace_target(author," ","_");
-                cited_authors.push_back(author);
+                authors.push_back(author);
             } 
         }
     }

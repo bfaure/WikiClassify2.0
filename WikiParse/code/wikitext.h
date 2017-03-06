@@ -8,6 +8,8 @@ using std::cout;
 using std::string;
 using std::size_t;
 
+#include <cctype>
+
 #include <vector>
 using std::vector;
 
@@ -29,8 +31,8 @@ class wikitext {
         void read_links();
         void read_text();
         void read_citations();
-        void read_cited_domains(vector<string> &citations);
-        void read_cited_authors(vector<string> &citations);
+        void read_domains(vector<string> &citations);
+        void read_authors(vector<string> &citations);
     public:
     	wikitext(string page_text);
         void read_article();
@@ -46,8 +48,8 @@ class wikitext {
         string quality;
         vector<string> categories; 
         vector<string> links;
-        vector<string> cited_domains;
-        vector<string> cited_authors;
+        vector<string> domains;
+        vector<string> authors;
         vector<string> problems;
 };
 

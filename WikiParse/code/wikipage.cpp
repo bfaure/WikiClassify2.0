@@ -17,18 +17,14 @@ void wikipage::read() {
 }
 
 void wikipage::make_kosher() {
-    // Clean, just to make sure
-    kosher(title);
-    kosher(ns);
-    kosher(redirect);
     // Clean items within text
     kosher(text);
     kosher(importance);
     kosher(quality);
     kosher(categories); 
     kosher(links);
-    kosher(cited_domains);
-    kosher(cited_authors);
+    kosher(domains);
+    kosher(authors);
     kosher(problems);
 }
 
@@ -41,11 +37,10 @@ void kosher(vector<string> &fields) {
 void kosher(string &field) {
     replace_target(field,"\n"," ");
     replace_target(field,"\t"," ");
-    decode_text(field);
 }
 
 void wikipage::read_title() {
-    parse(dump_page, "    <title>", "</title>\n    ", title);
+    parse(dump_page, "<title>", "</title>", title);
 
     // Fix Title
     bool condition = true;
@@ -71,25 +66,26 @@ void wikipage::read_title() {
 }
 
 void wikipage::read_namespace() {
-    parse(dump_page, "    <ns>", "</ns>\n    ", ns);
+    parse(dump_page, "<ns>", "</ns>", ns);
 }
 
 void wikipage::read_id() {
     string id_str; 
-    parse(dump_page, "    <id>", "</id>\n    ", id_str);
+    parse(dump_page, "    <id>", "</id>", id_str);
     id = stoi(id_str);
 }
 
 void wikipage::read_redirect() {
     if (is_article()) {
-        parse(dump_page, "    <redirect title=\"", "\" />", redirect);
+        parse(dump_page, "<redirect title=\"", "\" />", redirect);
+        redirect[0] = toupper(redirect[0]);
         replace_target(redirect," ","_");
     }
 }
 
 void wikipage::read_timestamp() {
     string timestamp;
-    parse(dump_page, "      <timestamp>", "</timestamp>\n      ", timestamp);
+    parse(dump_page, "<timestamp>", "</timestamp>", timestamp);
     year  = timestamp.substr(0,4);
     month = timestamp.substr(5,2);
     day   = timestamp.substr(8,2);
@@ -97,15 +93,15 @@ void wikipage::read_timestamp() {
 
 void wikipage::read_text() {
     string page_text;
-    parse(dump_page,"      <text xml:space=\"preserve\">","</text>\n      ",page_text);
+    parse(dump_page,"<text xml:space=\"preserve\">","</text>",page_text);
     wikitext wt(page_text);
     if (is_article() && !is_redirect()) {
         wt.read_article();
         text          = wt.text;
         categories    = wt.categories;
         links         = wt.links;
-        cited_domains = wt.cited_domains;
-        cited_authors = wt.cited_authors;
+        domains = wt.domains;
+        authors = wt.authors;
         problems      = wt.problems;
     }
     else if (is_category()) {
