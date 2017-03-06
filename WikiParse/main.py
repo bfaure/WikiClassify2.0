@@ -33,7 +33,9 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 def download_wikidump(corpus_name, directory):
     url  = 'https://dumps.wikimedia.org/{0}/latest/{0}-latest-pages-meta-current.xml.bz2'.format(corpus_name)
-    return download(url, directory)
+    file_path = download(url, directory)
+    file_path = expand_bz2(file_path)
+    return file_path
 
 def download(url, directory):
     file_name = os.path.basename(urlparse(url)[2])
@@ -60,6 +62,23 @@ def download(url, directory):
     else:
         print("\t\t\t'%s' already exists." % file_name)
     return file_path
+
+def expand_bz2(file_path):
+    print("\t\tExpanding bz2...")
+    if not os.path.isfile(file_path[:-4]):
+        file_size = os.path.getsize(file_path)
+        try:
+            with open(file_path[:-4], 'wb') as new_file, bz2.BZ2File(file_path, 'rb') as file:
+                for data in iter(lambda : file.read(100 * 1024), b''):
+                    new_file.write(data)
+                    sys.stdout.write("\r\t\t\t%0.1f%% done" % (100.0*file.tell()/file_size))    
+                    sys.stdout.flush()
+            os.remove(file_path)
+        except:
+            print("\t\t\tCould not expand file.")
+    else:
+        print("\t\t\tFile already expanded.")
+    return file_path[:-4]
 
 def parse_wikidump(dump_path, cutoff_date='20010115'):
     dump_path = 'WikiParse/data/corpora/simplewiki/data/simplewiki-latest-pages-meta-current.xml'
