@@ -38,6 +38,8 @@ def download_wikidump(corpus_name, directory):
     return file_path
 
 def download(url, directory):
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     file_name = os.path.basename(urlparse(url)[2])
     file_path = os.path.join(directory, file_name)
     print("\t\tDownloading '%s'..." % file_name)
