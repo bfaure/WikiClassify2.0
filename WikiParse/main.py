@@ -83,7 +83,7 @@ def expand_bz2(file_path):
 
 def parse_wikidump(dump_path, cutoff_date='20010115'):
     dump_path = 'WikiParse/data/corpora/simplewiki/data/simplewiki-latest-pages-meta-current.xml'
-    compiled = False
+    compiled = True
     if compiled:
         try:
             print("\tCompiling parser...")
