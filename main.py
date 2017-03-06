@@ -68,7 +68,8 @@ def main():
     if not os.path.isfile('text.tsv'):
         dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
         parse_wikidump(dump_path)
-    save_related()
+    if os.path.isfile('text.tsv'):
+        save_related()
 
 if __name__ == "__main__":
     main()
