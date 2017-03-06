@@ -16,7 +16,7 @@ from WikiLearn.code.vectorize import LDA, doc2vec
 #-----------------------------------------------------------------------------#
 
 def save_related():
-    
+
     encoder_directory = 'WikiLearn/data/models/tokenizer'
 
     encoder = get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,20,10)

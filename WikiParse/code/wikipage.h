@@ -76,8 +76,8 @@ class wikipage {
         string         quality;
         vector<string> categories; 
         vector<string> links;
-        vector<string> cited_domains;
-        vector<string> cited_authors;
+        vector<string> domains;
+        vector<string> authors;
         vector<string> problems;
 };
 

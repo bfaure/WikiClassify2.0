@@ -27,7 +27,7 @@ using std::map;
 #include "wikipage.h"
 #include "string_utils.h"
 
-class database {
+class wikidump {
     private:
 
         ofstream titles;
@@ -37,33 +37,30 @@ class database {
         ofstream links;
         ofstream authors;
         ofstream domains;
-
         //ofstream quality;
         //ofstream importance;
         //ofstream problems;
         ofstream category_parents;
-    public:
-        database();
-        void save_page(wikipage &wp);
-};
 
-class wikidump {
-    private:
         ifstream dump_input;
         ifstream::pos_type dump_size;
-        database dump_output;
-        unsigned long long articles_read;
-        unsigned int cutoff_year;
-        unsigned int cutoff_month;
-        unsigned int cutoff_day;
+        unsigned articles_read;
+        unsigned cutoff_year;
+        unsigned cutoff_month;
+        unsigned cutoff_day;
 
-        map<string, unsigned> titles;
-        map<string, string> redirects;
+        map<string, unsigned> title_map;
+        map<string, string> redirect_map;
 
     public:
         wikidump(string &path, string &cutoff_date);
-        void read();
-        unsigned save_buffer(const string &str);
+        void read(bool build_keys=true);
+        unsigned save_buffer(const string &str,bool build_keys);
+        void tokenize_page(wikipage& wp);
+        void save_keys();
+
+        void connect_database();
+        void save_page(wikipage &wp);
 };
 
 
