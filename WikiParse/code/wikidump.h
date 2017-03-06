@@ -21,7 +21,6 @@ using std::map;
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <bzlib.h>
 
 /* Local Imports */
 #include "wikipage.h"
