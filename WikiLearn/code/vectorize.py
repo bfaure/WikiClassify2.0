@@ -156,57 +156,8 @@ class doc2vec(object):
         self.corpus    = corpus
         self.directory = directory
 
-    def evaluate(self):
-        url = 'http://download.tensorflow.org/data/questions-words.txt'
-        return
-
-    def nearest(self):
-    
-        print('\nInterface for finding nearest words')
-        while True:
-            sentence = raw_input("\nEnter a list of words:\n")
-            if not sentence:
-                return
-            try:
-                print(' '.join(self.get_nearest_word(sentence)))
-            except ValueError:
-                print('None of the words occur!')
-            
-    def outlier(self):
-    
-        print('\nInterface for finding outlier word')
-        while True:
-            sentence = raw_input("\nEnter a list of words:\n")
-            if not sentence:
-                return
-            try:
-                print(self.get_outlier_word(sentence))
-            except ValueError:
-                print('None of the words occur!')
-
-    def analogy(self):
-    
-        print('\nInterface for solving analogies')
-        while True:
-            w = raw_input("\nEnter first word of analogy:\n")
-            if not w:
-                return
-            print("is to")
-            x = raw_input()
-            print("as")
-            y = raw_input()
-            print("is to")
-            try:
-                analogy = self.get_word_analogy(w,x,y)
-                print(' '.join(analogy))
-            except:
-                print('Not all of the words occur!')
-
     def get_nearest_doc(self, doc_id):
         return [x[0] for x in self.model.docvecs.most_similar(doc_id,topn=20)]
-
-    #def get_nearest_doc(self, text):
-    #    return [x[0] for x in self.model.docvecs.most_similar(self.encode_doc(text),topn=10)]
 
     def get_nearest_word(self, text):
         try:
@@ -246,15 +197,13 @@ class doc2vec(object):
         print('\tTime elapsed: %0.2f hours' % (elapsed))
         #self.model.init_sims(replace=True)
         
-    def save(self):
+    def save(self, directory):
         print("\tSaving doc2vec model...")
-        if not os.path.exists(self.directory):
-            os.makedirs(self.directory)
-        self.model.save(self.directory+'/word2vec.d2v')
+        self.model.save(directory+'/word2vec.d2v')
     
-    def load(self):
+    def load(self, directory):
         print("\tLoading doc2vec model...")
-        self.model = Doc2Vec.load(self.directory+'/word2vec.d2v')
+        self.model = Doc2Vec.load(directory+'/word2vec.d2v')
         self.features = self.model.docvecs[0].shape[0]
     
     def train_classifier(self):

@@ -35,7 +35,6 @@ class wikipage {
         void read_title();
         void read_namespace();
         void read_id();
-        void read_revision();
         void read_redirect();
         void read_timestamp();
         void read_text();
@@ -69,18 +68,17 @@ class wikipage {
         string redirect;
 
         // Revision sections
-        unsigned long  revision;
-        string         revision_year;
-        string         revision_month;
-        string         revision_day;
-        string         revision_text;
-        string         revision_importance;
-        string         revision_quality;
-        vector<string> revision_categories; 
-        vector<string> revision_links;
-        vector<string> revision_cited_domains;
-        vector<string> revision_cited_authors;
-        vector<string> revision_problems;
+        string         year;
+        string         month;
+        string         day;
+        string         text;
+        string         importance;
+        string         quality;
+        vector<string> categories; 
+        vector<string> links;
+        vector<string> cited_domains;
+        vector<string> cited_authors;
+        vector<string> problems;
 };
 
 #define WIKIPAGE

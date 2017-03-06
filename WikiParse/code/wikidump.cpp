@@ -2,8 +2,7 @@
 #include "wikipage.h"
 #include "string_utils.h"
 
-wikidump::wikidump(string &path, string &output_directory, string &cutoff_date) {
-
+wikidump::wikidump(string &path, string &cutoff_date) {
     dump_input = ifstream(path,ifstream::binary);
     if (dump_input.is_open()) {
         dump_size = ifstream(path,ifstream::ate|ifstream::binary).tellg();
@@ -11,17 +10,23 @@ wikidump::wikidump(string &path, string &output_directory, string &cutoff_date) 
     else {
         cout<<"Could not open dump! ("<<path<<")\n";
     }
-
-    dump_output.open(output_directory);
-
-    articles_read = 0;
-
     cutoff_year  = stoi(cutoff_date.substr(0,4));
     cutoff_month = stoi(cutoff_date.substr(4,2));
     cutoff_day   = stoi(cutoff_date.substr(6,2));
 }
 
 void wikidump::read() {
+    //int bzError;
+    //char buf[4096];
+    //BZFILE *bzf = BZ2_bzReadOpen(&bzError, file_path.c_str(), 0, 0, NULL, 0);
+    //while (bzError == BZ_OK) {
+    //  int nread = BZ2_bzRead(&bzError, bzf, buf, sizeof buf);
+    //  if (bzError == BZ_OK || bzError == BZ_STREAM_END) {
+    //    continue;
+    //  }
+    //}
+    //BZ2_bzReadClose(&bzError, bzf);
+    articles_read = 0;
     streampos offset;
     const streampos buffer_size = 2000000;
     char buffer[(unsigned)buffer_size];
@@ -45,12 +50,16 @@ unsigned wikidump::save_buffer(const string &str) {
         p2  = str.find(tag2, p1);
         if (p2!=string::npos) {
             wikipage wp(str.substr(p1, p2-p1));
-            dump_output.save_page(wp);
             if (wp.is_after(cutoff_year, cutoff_month, cutoff_day)) {
                 wp.read();
-                dump_output.save_revision(wp);
-                articles_read++;
+                dump_output.save_page(wp);
             }
+//            wikipage wp(str);
+//            titles[wp.title] = wp.id;
+//            if (!wp.redirect.empty()) {
+//                redirects[wp.title] = wp.redirect;
+//            }
+            articles_read++;
             p1 = str.find(tag1, p2+tag2.length());
         }
         else {
@@ -61,78 +70,56 @@ unsigned wikidump::save_buffer(const string &str) {
 }
 
 database::database() {
-
-}
-
-void database::open(string &output_directory) {
-                    article_titles.open(output_directory+"/article_titles.txt",ofstream::out|ofstream::trunc|ofstream::binary);
-                   category_titles.open(output_directory+"/category_titles.txt",ofstream::out|ofstream::trunc|ofstream::binary);
-                    page_redirects.open(output_directory+"/page_redirects.txt",ofstream::out|ofstream::trunc|ofstream::binary);
-                 article_revisions.open(output_directory+"/article_revisions.txt",ofstream::out|ofstream::app|ofstream::binary);
-        article_revision_timestamp.open(output_directory+"/article_revision_timestamp.txt",ofstream::out|ofstream::app|ofstream::binary);
-             article_revision_text.open(output_directory+"/article_revision_text.txt",ofstream::out|ofstream::app|ofstream::binary);
-       article_revision_categories.open(output_directory+"/article_revision_categories.txt",ofstream::out|ofstream::app|ofstream::binary);
-            article_revision_links.open(output_directory+"/article_revision_links.txt",ofstream::out|ofstream::app|ofstream::binary);
-    article_revision_cited_authors.open(output_directory+"/article_revision_cited_authors.txt",ofstream::out|ofstream::app|ofstream::binary);
-    article_revision_cited_domains.open(output_directory+"/article_revision_cited_domains.txt",ofstream::out|ofstream::app|ofstream::binary);
-                category_revisions.open(output_directory+"/category_revisions.txt",ofstream::out|ofstream::app|ofstream::binary);
-         category_revision_parents.open(output_directory+"/category_revision_parents.txt",ofstream::out|ofstream::app|ofstream::binary);
-    //article_importance.open(output_directory+"/article_importance.txt",ofstream::out|ofstream::trunc|ofstream::binary);
-    //article_quality.open(output_directory+"/article_quality.txt",ofstream::out|ofstream::trunc|ofstream::binary);
-    //article_problems.open(output_directory+"/article_problems.txt",ofstream::out|ofstream::trunc|ofstream::binary);
+    titles.open("titles.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    redirects.open("redirects.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    text.open("text.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    categories.open("categories.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    links.open("links.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    authors.open("authors.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    domains.open("domains.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    //importance.open(output_directory+"/importance.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    //quality.open(output_directory+"/quality.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    //problems.open(output_directory+"/problems.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    category_parents.open("category_parents.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
 }
 
 void database::save_page(wikipage &wp) {
-    if (wp.is_redirect()) {
-        page_redirects<<wp.title<<'\t'<<wp.redirect<<'\n';
-    }
+    titles<<wp.id<<'\t'<<wp.title<<'\n';
     if (wp.is_article()) {
-        article_titles<<wp.id<<'\t'<<wp.title<<'\n';
-    }
-    if (wp.is_category()) {
-        category_titles<<wp.id<<'\t'<<trim(wp.title)<<'\n';
-    }
-}
+        if (!wp.text.empty()) {
+            text<<wp.id<<'\t'<<wp.text<<'\n';
 
-void database::save_revision(wikipage &wp) {
-    if (wp.is_article()) {
-        article_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
-        article_revision_timestamp<<wp.revision<<'\t'<<wp.revision_year<<wp.revision_month<<wp.revision_day<<'\n';
-        if (!wp.revision_text.empty()) {
-            article_revision_text<<wp.revision<<'\t'<<wp.revision_text<<'\n';
-
-            article_revision_categories<<wp.revision<<'\t';;
-            for (int i=0; i<wp.revision_categories.size(); i++) {
-                article_revision_categories<<wp.revision_categories[i]<<' ';
+            categories<<wp.id<<'\t';;
+            for (int i=0; i<wp.categories.size(); i++) {
+                categories<<wp.categories[i]<<' ';
             }
-            article_revision_categories<<'\n';
+            categories<<'\n';
 
-            article_revision_links<<wp.revision<<'\t';;
-            for (int i=0; i<wp.revision_links.size(); i++) {
-                article_revision_links<<wp.revision_links[i]<<' ';
+            links<<wp.id<<'\t';;
+            for (int i=0; i<wp.links.size(); i++) {
+                links<<wp.links[i]<<' ';
             }
-            article_revision_links<<'\n';
+            links<<'\n';
 
-            article_revision_cited_authors<<wp.revision<<'\t';;
-            for (int i=0; i<wp.revision_cited_authors.size(); i++) {
-                article_revision_cited_authors<<wp.revision_cited_authors[i]<<' ';
+            authors<<wp.id<<'\t';;
+            for (int i=0; i<wp.authors.size(); i++) {
+                authors<<wp.authors[i]<<' ';
             }
-            article_revision_cited_authors<<'\n';
+            authors<<'\n';
 
-            article_revision_cited_domains<<wp.revision<<'\t';;
-            for (int i=0; i<wp.revision_cited_domains.size(); i++) {
-                article_revision_cited_domains<<wp.revision_cited_domains[i]<<' ';
+            domains<<wp.id<<'\t';;
+            for (int i=0; i<wp.domains.size(); i++) {
+                domains<<wp.domains[i]<<' ';
             }
-            article_revision_cited_domains<<'\n';
+            domains<<'\n';
         }
     }
     if (wp.is_category()) {
-        category_revisions<<wp.revision<<'\t'<<wp.id<<'\n';
 
-        category_revision_parents<<wp.revision<<'\t';
-        for (int i=0; i<wp.revision_categories.size(); i++) {
-            category_revision_parents<<wp.revision_categories[i]<<' ';
+        category_parents<<wp.id<<'\t';
+        for (int i=0; i<wp.categories.size(); i++) {
+            category_parents<<wp.categories[i]<<' ';
         }
-        category_revision_parents<<'\n';
+        category_parents<<'\n';
     }
 }

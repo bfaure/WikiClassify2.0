@@ -80,24 +80,18 @@ void wikitext::read_categories() {
 void wikitext::read_links() {
     parse_all(page_text, "[[", "]]", links);
     for (string &link:links) {
-        if (link.find("[[")==string::npos && link.find("\n")==string::npos) {
-            string source; string destination;
-            string::size_type link_sep = link.find('|');
-            if (link_sep != string::npos) {
-                destination = link.substr(0,link_sep);
-                source      = link.substr(link_sep+1);
-            }
-            else {
-                destination = link;
-                source      = link;
-            }
-            // Trim
-            destination = trim(destination);
-            source      = trim(source);
-            if (!destination.empty() and destination.find('|') == string::npos) {
-                link = destination;
-            }
+        string destination = link;
+        string source      = link;
+        string::size_type link_sep = link.find('|');
+        while (link_sep != string::npos) {
+            destination = link.substr(0,link_sep);
+            source      = link.substr(link_sep+1);
+            link_sep = destination.find('|');
         }
+        // Trim
+        destination = trim(destination);
+        source      = trim(source);
+        link = destination;
         replace_target(link," ","_");
     }
 }
