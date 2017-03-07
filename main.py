@@ -24,7 +24,6 @@ def save_related():
     save_related_tokens(encoder, 'related_text.tsv')
     save_related_docs(encoder, 'related_docs_text.tsv')
     save_doc_strings(doc_ids, 'related_docs_text.tsv', 'related_titles_text.tsv')
-    save_doc_strings(doc_ids, 'related_docs_text.tsv', 'related_titles_text.tsv')
 
     encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,50,1,5,20)
     save_related_tokens(encoder, 'related_categories.tsv')
@@ -41,14 +40,10 @@ def save_related():
     encoder = get_encoder('authors.tsv',False,encoder_directory+'/authors',20,50,1,1,50)
     save_related_tokens(encoder, 'related_authors.tsv')
     save_related_docs(encoder, 'related_docs_authors.tsv')
-    save_doc_strings(doc_ids, 'related_docs_authors.tsv', 'related_titles_authors.tsv')
-    save_doc_strings(doc_ids, 'related_authors.tsv', 'related_authors_titles.tsv')
 
     encoder = get_encoder('domains.tsv',False,encoder_directory+'/domains',80,50,1,1,50)
     save_related_tokens(encoder, 'related_domains.tsv')
     save_related_docs(encoder, 'related_docs_domains.tsv')
-    save_doc_strings(doc_ids, 'related_docs_domains.tsv', 'related_titles_domains.tsv')
-    save_doc_strings(doc_ids, 'related_domains.tsv', 'related_domains_titles.tsv')
 
 
 def save_related_tokens(encoder, path):
