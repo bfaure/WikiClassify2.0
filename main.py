@@ -27,13 +27,13 @@ def save_related():
 
     encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
     save_related_tokens(encoder, 'output/related_tokens/categories.tsv')
-    save_doc_strings(doc_ids, 'related_categories.tsv', 'related_categories_titles.tsv')
+    save_doc_strings(doc_ids, 'output/related_tokens/categories.tsv', 'output/related_tokens_(readable)/categories.tsv')
     save_related_docs(encoder, 'output/related_docs/by_categories.tsv')
     save_doc_strings(doc_ids, 'output/related_docs/by_categories.tsv', 'output/related_docs_(readable)/by_categories.tsv')
 
     encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
     save_related_tokens(encoder, 'output/related_tokens/links.tsv')
-    save_doc_strings(doc_ids, 'related_links.tsv', 'related_links_titles.tsv')
+    save_doc_strings(doc_ids, 'output/related_tokens/links.tsv', 'output/related_tokens_(readable)/links.tsv')
     save_related_docs(encoder, 'output/related_docs/by_links.tsv')
     save_doc_strings(doc_ids, 'output/related_docs/by_links.tsv', 'output/related_docs_(readable)/by_links.tsv')
 
