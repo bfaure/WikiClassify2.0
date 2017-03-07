@@ -20,34 +20,29 @@ def save_related():
     encoder_directory = 'WikiLearn/data/models/tokenizer'
     doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
 
-    encoder = get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,20,10)
-    save_related_tokens(encoder, 'related_text.tsv')
-    save_related_docs(encoder, 'related_docs_text.tsv')
-    save_doc_strings(doc_ids, 'related_docs_text.tsv', 'related_titles_text.tsv')
+    encoder = get_encoder('text.tsv',True,encoder_directory+'/text',300,10,5,20,10)
+    save_related_tokens(encoder, 'output/related_tokens/words.tsv')
+    save_related_docs(encoder, 'output/related_docs/by_words.tsv')
+    save_doc_strings(doc_ids, 'output/related_docs/by_words.tsv', 'output/related_docs_(readable)/by_words.tsv')
 
-    encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,50,1,5,20)
-    save_related_tokens(encoder, 'related_categories.tsv')
-    save_related_docs(encoder, 'related_docs_categories.tsv')
-    save_doc_strings(doc_ids, 'related_docs_categories.tsv', 'related_titles_categories.tsv')
+    encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+    save_related_tokens(encoder, 'output/related_tokens/categories.tsv')
     save_doc_strings(doc_ids, 'related_categories.tsv', 'related_categories_titles.tsv')
+    save_related_docs(encoder, 'output/related_docs/by_categories.tsv')
+    save_doc_strings(doc_ids, 'output/related_docs/by_categories.tsv', 'output/related_docs_(readable)/by_categories.tsv')
 
-    encoder = get_encoder('links.tsv',False,encoder_directory+'/links',200,50,2,5,20)
-    save_related_tokens(encoder, 'related_links.tsv')
-    save_related_docs(encoder, 'related_docs_links.tsv')
-    save_doc_strings(doc_ids, 'related_docs_links.tsv', 'related_titles_links.tsv')
+    encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+    save_related_tokens(encoder, 'output/related_tokens/links.tsv')
     save_doc_strings(doc_ids, 'related_links.tsv', 'related_links_titles.tsv')
-
-    encoder = get_encoder('authors.tsv',False,encoder_directory+'/authors',20,50,1,1,50)
-    save_related_tokens(encoder, 'related_authors.tsv')
-    save_related_docs(encoder, 'related_docs_authors.tsv')
-
-    encoder = get_encoder('domains.tsv',False,encoder_directory+'/domains',80,50,1,1,50)
-    save_related_tokens(encoder, 'related_domains.tsv')
-    save_related_docs(encoder, 'related_docs_domains.tsv')
+    save_related_docs(encoder, 'output/related_docs/by_links.tsv')
+    save_doc_strings(doc_ids, 'output/related_docs/by_links.tsv', 'output/related_docs_(readable)/by_links.tsv')
 
 
 def save_related_tokens(encoder, path):
     print('Saving related tokens...')
+    directory = os.path.dirname(path)
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     with open(path,'w+') as f:
         for word in encoder.model.index2word:
             nearest = encoder.get_nearest_word(word)
@@ -55,12 +50,19 @@ def save_related_tokens(encoder, path):
 
 def save_related_docs(encoder, path):
     print('Saving related docs...')
+    directory = os.path.dirname(path)
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     with open(path,'w+') as f:
         for doc_id in encoder.model.docvecs.offset2doctag:
             nearest = encoder.get_nearest_doc(doc_id)
             f.write(doc_id+'\t'+'\t'.join(nearest)+'\n')
 
 def save_doc_strings(doc_ids, old_tsv_path, new_tsv_path):
+    print('Making file human readable...')
+    directory = os.path.dirname(new_tsv_path)
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     with open(new_tsv_path,'w+') as g:
         with open(old_tsv_path) as f:
             for x in f:
