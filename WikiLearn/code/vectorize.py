@@ -166,7 +166,7 @@ class doc2vec(object):
             return None
         
     def get_outlier_word(self, text):
-      return self.model.doesnt_match(text)   
+        return self.model.doesnt_match(text)   
 
     def get_word_analogy(self, x, y, z):
         return [x[0] for x in self.model.most_similar(positive=[self.encode_word(y),self.encode_word(z)],negative=[self.encode_word(x)])]

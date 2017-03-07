@@ -18,26 +18,33 @@ from WikiLearn.code.vectorize import LDA, doc2vec
 def save_related():
 
     encoder_directory = 'WikiLearn/data/models/tokenizer'
+    doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
 
     encoder = get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,20,10)
     save_related_tokens(encoder, 'related_text.tsv')
     save_related_docs(encoder, 'related_docs_text.tsv')
+    save_doc_strings(doc_ids, 'related_docs_text.tsv', 'related_titles_text.tsv')
 
     encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,50,1,5,20)
     save_related_tokens(encoder, 'related_categories.tsv')
     save_related_docs(encoder, 'related_docs_categories.tsv')
+    save_doc_strings(doc_ids, 'related_docs_categories.tsv', 'related_titles_categories.tsv')
 
     encoder = get_encoder('links.tsv',False,encoder_directory+'/links',200,50,2,5,20)
     save_related_tokens(encoder, 'related_links.tsv')
     save_related_docs(encoder, 'related_docs_links.tsv')
+    save_doc_strings(doc_ids, 'related_docs_links.tsv', 'related_titles_links.tsv')
 
     encoder = get_encoder('authors.tsv',False,encoder_directory+'/authors',20,50,1,1,50)
     save_related_tokens(encoder, 'related_authors.tsv')
     save_related_docs(encoder, 'related_docs_authors.tsv')
+    save_doc_strings(doc_ids, 'related_docs_authors.tsv', 'related_titles_authors.tsv')
 
     encoder = get_encoder('domains.tsv',False,encoder_directory+'/domains',80,50,1,1,50)
     save_related_tokens(encoder, 'related_domains.tsv')
     save_related_docs(encoder, 'related_docs_domains.tsv')
+    save_doc_strings(doc_ids, 'related_docs_domains.tsv', 'related_titles_domains.tsv')
+
 
 def save_related_tokens(encoder, path):
     print('Saving related tokens...')
@@ -52,6 +59,17 @@ def save_related_docs(encoder, path):
         for doc_id in encoder.model.docvecs.offset2doctag:
             nearest = encoder.get_nearest_doc(doc_id)
             f.write(doc_id+'\t'+'\t'.join(nearest)+'\n')
+
+def save_doc_strings(doc_ids, old_tsv_path, new_tsv_path):
+    with open(new_tsv_path,'w+') as g:
+        with open(old_tsv_path) as f:
+            for x in f:
+                for y in x.strip().split('\t'):
+                    try:
+                        g.write('%s\t' % doc_ids[y])
+                    except:
+                        pass
+                g.write('\n')
 
 def get_encoder(tsv_path, make_phrases, directory, features, context_window, min_count, negative, epochs):
     documents = gensim_corpus(tsv_path,directory,make_phrases)
