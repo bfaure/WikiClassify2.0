@@ -126,26 +126,26 @@ void wikidump::save_page(wikipage &wp) {
         }
         links<<'\n';
 
-        authors<<wp.id<<'\t';;
-        for (int i=0; i<wp.authors.size(); i++) {
-            authors<<wp.authors[i]<<' ';
-        }
-        authors<<'\n';
-
-        domains<<wp.id<<'\t';;
-        for (int i=0; i<wp.domains.size(); i++) {
-            domains<<wp.domains[i]<<' ';
-        }
-        domains<<'\n';
+//        authors<<wp.id<<'\t';;
+//        for (int i=0; i<wp.authors.size(); i++) {
+//            authors<<wp.authors[i]<<' ';
+//        }
+//        authors<<'\n';
+//
+//        domains<<wp.id<<'\t';;
+//        for (int i=0; i<wp.domains.size(); i++) {
+//            domains<<wp.domains[i]<<' ';
+//        }
+//        domains<<'\n';
     }
-    if (wp.is_category()) {
-
-        category_parents<<wp.id<<'\t';;
-        for (auto& category:wp.categories) {
-            if (title_map.find(category) != title_map.end()) {
-                category_parents<<title_map[category]<<"\n";
-            }
-        }
-        categories<<'\n';
-    }
+//    if (wp.is_category()) {
+//
+//        category_parents<<wp.id<<'\t';;
+//        for (auto& category:wp.categories) {
+//            if (title_map.find(category) != title_map.end()) {
+//                category_parents<<title_map[category]<<"\n";
+//            }
+//        }
+//        categories<<'\n';
+//    }
 }

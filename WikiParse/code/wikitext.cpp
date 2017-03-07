@@ -81,7 +81,15 @@ void wikitext::read_categories() {
 
 void wikitext::read_links() {
     parse_all(page_text, "[[", "]]", links);
-    for (string &link:links) {
+    for (vector<string>::iterator it=links.begin(); it!=links.end();) {
+        if (it->find("Category:")!=string::npos||it->find("File:")!=string::npos) {
+            it = links.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+    for (auto& link:links) {
         string destination = link;
         string source      = link;
         string::size_type link_sep = link.find('|');
