@@ -161,7 +161,7 @@ class doc2vec(object):
 
     def get_nearest_word(self, text):
         try:
-            return [x[0] for x in self.model.most_similar(self.encode_words(text),topn=10)]
+            return [x[0] for x in self.model.most_similar(self.encode_words(text),topn=10) if x not in text.split(' ')]
         except:
             return None
         

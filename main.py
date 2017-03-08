@@ -138,8 +138,97 @@ class PriorityQueue:
             if item.value==value: return cost 
         return -1
 
-def get_shortest_path(start_query,end_query,encoder):
-    print("\nCalculating shortest vector from "+str(start_query)+" to "+str(end_query)+"...")
+def astar_algo(start_query,end_query,encoder,weight=1.0):
+    print("Using A* Search...")
+
+    start_vector = encoder.get_nearest_word(start_query)
+    end_vector = encoder.get_nearest_word(end_query)
+
+    if start_vector==None: print("Could not find relation vector for "+start_query)
+    if end_vector==None: print("Could not find relation vector for "+end_query)
+    if start_vector==None or end_vector==None: return -1
+
+    start_elem = elem_t(start_query,parent=None,cost=0)
+    
+    frontier = PriorityQueue()
+    start_elem_cost = float(encoder.model.similarity(start_query,end_query))
+    start_elem.cost = start_elem_cost
+    frontier.push(start_elem)
+
+    cost_list = {}
+    cost_list[start_query] = 0
+
+    path_end = start_elem 
+    path_cost = 0
+    explored = []
+    search_start = time()
+    return_code = "NONE"
+
+    while True:
+        print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(path_cost)[:5],end="\r")
+        sys.stdout.flush()
+
+        if frontier.length()==0:
+            print("\nA* Search failed to find a connecting path.")
+            return_code = "NOT FOUND"
+            break
+
+        cur_node = frontier.pop()
+        explored.append(cur_node)
+
+        if cur_node.value==end_query:
+            print("\nFound connection.")
+            path_end = cur_node 
+            break
+
+        neighbors = encoder.get_nearest_word(cur_node.value)
+        #neighbors = self.by_categories.get_related(cur_node.value)
+        if neighbors==None:
+            continue
+        
+        base_cost = cost_list[cur_node.value]
+        path_cost = base_cost
+
+        for neighbor in neighbors:
+            #base_cost*=1.1
+            transition_cost = encoder.model.similarity(cur_node.value,neighbor)
+            cost = base_cost+transition_cost
+
+            new_elem = elem_t(neighbor,parent=cur_node,cost=cost)
+            new_elem.column_offset = neighbors.index(neighbor)+1
+
+            if (neighbor not in cost_list or cost<cost_list[neighbor]) and neighbor not in explored:
+                cost_list[neighbor] = cost 
+                priority = cost + (float(weight) * float((encoder.model.similarity(neighbor,end_query)))/4.0)
+                new_elem.cost = priority 
+                frontier.push(new_elem)
+
+    print("                                                                \r",end="\r")
+    print("\nReconstructing path...\n")
+
+    def rectify_path(path_end):
+        path = []
+        offsets = []
+
+        cur = path_end
+        path.append(path_end.value)
+        offsets.append(path_end.column_offset)
+
+        while True:
+            cur = cur.parent
+            if cur==None: break
+            path.append(cur.value)
+            offsets.append(cur.column_offset)
+        return path,offsets 
+
+    solution_path,offsets = rectify_path(path_end)
+    for item,offset in zip(reversed(solution_path),reversed(offsets)):
+        indent = ''.join("=" for _ in range(offset))
+        if len(indent)==0: indent = ""
+        print(indent+item)
+
+def ucs_algo(start_query,end_query,encoder):
+    print("Using Uniform-Cost Search...")
 
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
@@ -154,7 +243,6 @@ def get_shortest_path(start_query,end_query,encoder):
     frontier.push(start_elem)
 
     path_end = start_elem 
-    path_length = 1
     path_cost = 0
     explored = []
     search_start = time()
@@ -185,11 +273,13 @@ def get_shortest_path(start_query,end_query,encoder):
             continue
         
         #neighbors = neighbors[1:]
-        base_cost = path_cost+1
+        base_cost = path_cost
 
         for neighbor in neighbors:
-            #base_cost+=1
-            new_elem = elem_t(neighbor,parent=cur_node,cost=base_cost)
+            #if neighbor==cur_node.value: continue
+            base_cost+=0.1
+
+            new_elem = elem_t(neighbor,parent=cur_node,cost=base_cost+encoder.model.similarity(cur_node.value,neighbor))
             new_elem.column_offset = neighbors.index(neighbor)+1
 
             if neighbor not in explored and not frontier.has(neighbor):
@@ -222,6 +312,11 @@ def get_shortest_path(start_query,end_query,encoder):
         if len(indent)==0: indent = ""
         print(indent+item)
 
+def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
+    print("\nCalculating shortest vector from "+str(start_query)+" to "+str(end_query)+"...")
+    if algo   == "UCS": return ucs_algo(start_query,end_query,encoder)
+    elif algo == "A*":  return astar_algo(start_query,end_query,encoder)
+    else: print("ERROR: algo input not recognized")
 
 def path_search_interface():
 
@@ -245,7 +340,8 @@ def path_search_interface():
         query2 = query2.lower()
         
         if " " in [query1,query2]: continue
-        get_shortest_path(query1,query2,text_encoder)
+        get_shortest_path(query1,query2,text_encoder,algo="A*")
+        print("\n")
 
     print("Done")
 
