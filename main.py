@@ -148,7 +148,7 @@ class PriorityQueue:
 def get_transition_cost(word1,word2,encoder):
     return 1.0-float(encoder.model.similarity(word1,word2)) 
 
-def rectify_path(path_end):
+def rectify_path(path_end,dictionary=None):
     path = []
     offsets = []
 
@@ -161,13 +161,31 @@ def rectify_path(path_end):
         if cur==None: break
         path.append(cur.value)
         offsets.append(cur.column_offset)
-    return path,offsets 
-
-def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
 
     if dictionary is not None:
-        print(start_query+" --> "+str(dictionary.get(start_query)))
-        return
+        for i in range(len(path)):
+            path[i] = dictionary[path[i]]
+
+    return path,offsets 
+    
+def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
+    
+    if dictionary is not None:
+        saved_start_query = start_query 
+        saved_end_query = end_query 
+
+        try:
+            start_key = next(key for key,value in dictionary.items() if value==start_query)
+        except:
+            print("Could not find dictionary id for "+start_query)
+        try:
+            end_key = next(key for key,value in dictionary.items() if value==end_query)
+        except:
+            print("Could not find dictionary id for "+end_query)
+        if start_key==None or end_key==None: return -1
+
+        start_query = start_key 
+        end_query = end_key
 
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
@@ -232,7 +250,7 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
     print("                                                                \r",end="\r")
     print("\nReconstructing path...\n")
 
-    solution_path,offsets = rectify_path(path_end)
+    solution_path,offsets = rectify_path(path_end,dictionary)
     for item,offset in zip(reversed(solution_path),reversed(offsets)):
         #indent = ''.join("=" for _ in range(offset))
         #if len(indent)==0: indent = ""
@@ -317,7 +335,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
         while True:
             b_factor = raw_input("Enter branching factor (5-1000): ")
             if b_factor == "":
-                b_factor = 50
+                b_factor = 100
 
             if b_factor in ["exit","Exit"]:
                 return
@@ -328,7 +346,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
         while True:
             weight = raw_input("Enter A* weight (1-1000): ")
             if weight=="":
-                weight = 10
+                weight = 2
 
             if weight in ["exit","Exit"]:
                 return
@@ -340,10 +358,10 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
     else: print("ERROR: algo input not recognized")
 
 def path_search_interface():
-    from gensim.corpora import Dictionary as gensim_dict 
 
     encoder_directory = "WikiLearn/data/models/tokenizer"
-    #doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
+    
+    doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
 
     print("Loading encoders...")
     text_encoder = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
@@ -370,28 +388,34 @@ def path_search_interface():
         query2 = raw_input("Second query: ")
         if query2 in ["exit","Exit"]: break
         query1 = query1.replace(" ","_")
-        query1 = query1.lower()
+        #query1 = query1.lower()
         query2 = query2.replace(" ","_")
-        query2 = query2.lower()
+        #query2 = query2.lower()
         if " " in [query1,query2]: continue
 
         while True:
             source = raw_input("\n\"text\", \"cat\", or \"link\" based? ")
             if source == "":
+                query1 = query1.lower()
+                query2 = query2.lower()
                 source = text_encoder
-                dictionary = None 
+                dictionary = None
                 break
             if source in ["text","TEXT","Text","t"]:
+                query1 = query1.lower()
+                query2 = query2.lower()
                 source = text_encoder
-                dictionary = None 
+                dictionary = None
                 break
             if source in ["cat","CAT","Cat","c"]:
                 source = cat_encoder 
-                dictionary = gensim_dict.load(encoder_directory+"/categories/dictionary.dict")
+                query1 = "Category:"+query1
+                query2 = "Category:"+query2
+                dictionary = doc_ids
                 break
             if source in ["link","LINK","Link","l"]:
                 source = link_encoder
-                dictionary = gensim_dict.load(encoder_directory+"/links/dictionary.dict")
+                dictionary = doc_ids
                 break
             if source in ["exit","Exit"]:
                 return
