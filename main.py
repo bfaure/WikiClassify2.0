@@ -184,11 +184,11 @@ def get_shortest_path(start_query,end_query,encoder):
         if neighbors==None:
             continue
         
-        neighbors = neighbors[1:]
+        #neighbors = neighbors[1:]
         base_cost = path_cost+1
 
         for neighbor in neighbors:
-            base_cost+=1
+            #base_cost+=1
             new_elem = elem_t(neighbor,parent=cur_node,cost=base_cost)
             new_elem.column_offset = neighbors.index(neighbor)+1
 
@@ -228,8 +228,10 @@ def path_search_interface():
     encoder_directory = "WikiLearn/data/models/tokenizer"
     doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
 
-    print("Loading encoder...")
+    print("Loading encoders...")
     text_encoder = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
+    cat_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+    link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
 
     while True:
         query1 = raw_input("First query: ")
@@ -238,7 +240,9 @@ def path_search_interface():
         if query2 in ["exit","Exit"]: break
 
         query1 = query1.replace(" ","_")
+        query1 = query1.tolower()
         query2 = query2.replace(" ","_")
+        query2 = query2.tolower()
         
         if " " in [query1,query2]: continue
         get_shortest_path(query1,query2,text_encoder)
