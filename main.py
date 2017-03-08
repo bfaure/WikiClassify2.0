@@ -166,10 +166,7 @@ def rectify_path(path_end):
         offsets.append(cur.column_offset)
     return path,offsets 
 
-def astar_algo(start_query,end_query,encoder,weight=7.0):
-    
-    neighbor_length = 50
-    weight = weight*neighbor_length
+def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10):
 
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
@@ -215,7 +212,7 @@ def astar_algo(start_query,end_query,encoder,weight=7.0):
             path_end = cur_node 
             break
 
-        neighbors = encoder.get_nearest_word(cur_word,topn=neighbor_length)
+        neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
         if neighbors==None: continue
         base_cost = cost_list[cur_word]
 
@@ -236,9 +233,10 @@ def astar_algo(start_query,end_query,encoder,weight=7.0):
 
     solution_path,offsets = rectify_path(path_end)
     for item,offset in zip(reversed(solution_path),reversed(offsets)):
-        indent = ''.join("=" for _ in range(offset))
-        if len(indent)==0: indent = ""
-        print(indent+item)
+        #indent = ''.join("=" for _ in range(offset))
+        #if len(indent)==0: indent = ""
+        #print(indent+item)
+        print("--> "+item)
 
 def ucs_algo(start_query,end_query,encoder):
     start_vector = encoder.get_nearest_word(start_query)
@@ -306,17 +304,29 @@ def ucs_algo(start_query,end_query,encoder):
 def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
     sys.stdout.write("\nCalculating shortest vector from \""+str(start_query)+"\" to \""+str(end_query)+"\"...")
     if algo   == "UCS": 
-        sys.stdout.write(" using UCS\n")
+        sys.stdout.write(" using UCS\n\n")
         return ucs_algo(start_query,end_query,encoder)
     elif algo == "A*":  
-        sys.stdout.write(" using A*\n")
+        sys.stdout.write(" using A*\n\n")
+        print("Note: high branching factor = more creative but slower")
+        print("Note: low weight = low cost but slower")
         while True:
-            weight = raw_input("Enter A* weight: ")
+            b_factor = raw_input("Enter branching factor (5-1000): ")
+            if b_factor in ["exit","Exit"]:
+                return
+            try:
+                b_factor = int(b_factor)
+                break
+            except: continue
+        while True:
+            weight = raw_input("Enter A* weight (1-1000): ")
+            if weight in ["exit","Exit"]:
+                return
             try:
                 weight = float(weight)
                 break
             except: continue
-        return astar_algo(start_query,end_query,encoder,weight=weight)
+        return astar_algo(start_query,end_query,encoder,weight=weight,branching_factor=b_factor)
     else: print("ERROR: algo input not recognized")
 
 def path_search_interface():
