@@ -117,6 +117,7 @@ class PriorityQueue:
     def clear(self):
         self._queue = []
         self._index = []
+
     def has(self,value):
         for item in self._queue:
             queued_elem = item[-1]
@@ -125,8 +126,7 @@ class PriorityQueue:
 
     def update(self,new_elem):
         i=0
-        while i<len(self._queue):
-            queued_elem = self._queue[i][-1]
+        for cost,_,_queued_elem in self._queue:
             if queued_elem.value==new_elem.value:
                 del self._queue[i]
                 break
@@ -139,7 +139,9 @@ class PriorityQueue:
         return -1
 
 def get_transition_cost(word1,word2,encoder):
-    return float(1.0-float(encoder.model.similarity(word1,word2)))
+    val = 1.0-float(encoder.model.similarity(word1,word2))
+    if val>1: return 1.0
+    else: return val
 
 def rectify_path(path_end):
     path = []
@@ -160,6 +162,9 @@ def astar_algo(start_query,end_query,encoder,weight=7.0):
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
 
+    start_similarity = encoder.model.similarity(start_query,end_query)
+    print("Query meaning similarity: "+str(start_similarity)[:6])
+
     if start_vector==None:  print("Could not find relation vector for "+start_query)
     if end_vector==None:    print("Could not find relation vector for "+end_query)
     if start_vector==None or end_vector==None: return -1
@@ -167,7 +172,6 @@ def astar_algo(start_query,end_query,encoder,weight=7.0):
     start_elem = elem_t(start_query,parent=None,cost=0)
     
     frontier = PriorityQueue()
-    #start_elem_cost = 1.0 - float(encoder.model.similarity(start_query,end_query))
     start_elem_cost = get_transition_cost(start_query,end_query,encoder)
     start_elem.cost = start_elem_cost
     frontier.push(start_elem)
@@ -191,28 +195,28 @@ def astar_algo(start_query,end_query,encoder,weight=7.0):
             break
 
         cur_node = frontier.pop()
-        explored.append(cur_node)
+        cur_word = cur_node.value
+        explored.append(cur_word)
 
-        if cur_node.value==end_query:
+        if cur_word==end_query:
             print("\nFound connection.")
             path_end = cur_node 
             break
 
-        neighbors = encoder.get_nearest_word(cur_node.value)
+        neighbors = encoder.get_nearest_word(cur_word)
         if neighbors==None: continue
-        
-        base_cost = cost_list[cur_node.value]
+        base_cost = cost_list[cur_word]
 
-        for neighbor in neighbors:
-            if cur_node.value==neighbor: continue
-            cost = base_cost+get_transition_cost(cur_node.value,neighbor,encoder)
+        for neighbor_word in neighbors:
+            if cur_word==neighbor_word: continue
+            cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
 
-            new_elem = elem_t(neighbor,parent=cur_node,cost=cost)
-            new_elem.column_offset = neighbors.index(neighbor)
+            new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
+            new_elem.column_offset = neighbors.index(neighbor_word)
 
-            if (neighbor not in cost_list or cost<cost_list[neighbor]) and neighbor not in explored:
-                cost_list[neighbor] = cost 
-                new_elem.cost = cost + float(weight)*(get_transition_cost(neighbor,end_query,encoder))
+            if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
+                cost_list[neighbor_word] = cost 
+                new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
                 frontier.push(new_elem)
 
     print("                                                                \r",end="\r")
@@ -304,7 +308,6 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
     else: print("ERROR: algo input not recognized")
 
 def path_search_interface():
-
     encoder_directory = "WikiLearn/data/models/tokenizer"
     #doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
 
@@ -314,30 +317,29 @@ def path_search_interface():
     #link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
 
     while True:
-        algo = raw_input("Which algorithm (ucs or astar): ")
+        algo = raw_input("\nWhich algorithm (ucs or astar): ")
         if algo in ["ucs","UCS"]: 
             algo = "UCS"
             break
         elif algo in ["a*","A*","astar","AStar","a_star","A_star"]:
             algo = "A*"
             break
-
+        elif algo in ["exit","Exit"]:
+            return
     while True:
-        query1 = raw_input("First query: ")
+        query1 = raw_input("\nFirst query: ")
         if query1 in ["exit","Exit"]: break
         query2 = raw_input("Second query: ")
         if query2 in ["exit","Exit"]: break
-
         query1 = query1.replace(" ","_")
         query1 = query1.lower()
         query2 = query2.replace(" ","_")
         query2 = query2.lower()
-        
         if " " in [query1,query2]: continue
         get_shortest_path(query1,query2,text_encoder,algo=algo)
         print("\n")
-
     print("Done")
+
 
 
 

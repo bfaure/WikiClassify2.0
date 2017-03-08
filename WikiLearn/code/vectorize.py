@@ -159,9 +159,9 @@ class doc2vec(object):
     def get_nearest_doc(self, doc_id):
         return [x[0] for x in self.model.docvecs.most_similar(doc_id,topn=20)]
 
-    def get_nearest_word(self, text):
+    def get_nearest_word(self, text, topn=10):
         try:
-            return [x[0] for x in self.model.most_similar(self.encode_words(text),topn=10) if x not in text.split(' ')]
+            return [x[0] for x in self.model.most_similar(self.encode_words(text),topn=topn) if x!=text]
         except:
             return None
         
