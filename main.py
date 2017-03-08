@@ -190,6 +190,7 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
 				print("Could not find dictionary id for "+start_query)
 				for key,value in dictionary.items():
 					#if abs(len(value)-len(saved_start_query))>2: continue
+					if value.lower()[:9]!=start_query.lower()[:9]: continue
 					if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.80:
 						wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
 						if wants_this in ["y","Y","yes","Yes",""]:
@@ -212,7 +213,8 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
 			except:
 				print("Could not find dictionary id for "+end_query)
 				for key,value in dictionary.items():
-					if abs(len(value)-len(saved_end_query))>2: continue
+					if value.lower()[:9]!=start_query.lower()[:9]: continue
+					#if abs(len(value)-len(saved_end_query))>2: continue
 					if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.8:
 						wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
 						if wants_this in ["y","Y","yes","Yes",""]:
