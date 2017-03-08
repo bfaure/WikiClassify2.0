@@ -138,7 +138,7 @@ class PriorityQueue:
             if item.value==value: return cost 
         return -1
 
-def astar_algo(start_query,end_query,encoder,weight=4.0):
+def astar_algo(start_query,end_query,encoder,weight=10.0):
     print("Using A* Search...")
 
     start_vector = encoder.get_nearest_word(start_query)
@@ -163,8 +163,6 @@ def astar_algo(start_query,end_query,encoder,weight=4.0):
     explored = []
     search_start = time()
     return_code = "NONE"
-
-    f = open("delete_me.txt","w")
 
     while True:
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(path_cost)[:5],end="\r")
@@ -196,7 +194,6 @@ def astar_algo(start_query,end_query,encoder,weight=4.0):
             #base_cost+= base_cost*0.05
 
             transition_cost = encoder.model.similarity(cur_node.value,neighbor)
-            f.write(str(transition_cost)+"\n")
             cost = base_cost+transition_cost
 
             new_elem = elem_t(neighbor,parent=cur_node,cost=cost)
