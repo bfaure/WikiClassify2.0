@@ -230,8 +230,8 @@ def path_search_interface():
 
     print("Loading encoders...")
     text_encoder = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
-    cat_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-    link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+    #cat_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+    #link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
 
     while True:
         query1 = raw_input("First query: ")
@@ -240,9 +240,9 @@ def path_search_interface():
         if query2 in ["exit","Exit"]: break
 
         query1 = query1.replace(" ","_")
-        query1 = query1.tolower()
+        query1 = query1.lower()
         query2 = query2.replace(" ","_")
-        query2 = query2.tolower()
+        query2 = query2.lower()
         
         if " " in [query1,query2]: continue
         get_shortest_path(query1,query2,text_encoder)
