@@ -92,7 +92,14 @@ def parse_wikidump(dump_path, cutoff_date='20010115'):
         except:
             return False
     if os.path.isfile('wikiparse.out'):
-        call(["./wikiparse.out", dump_path, cutoff_date])
+        print("\tCalling ./wikiparse.out...")
+        if os.name == "nt":
+            print("\tDetected Windows, altering command...")
+            call(["wikiparse.out",dump_path,cutoff_date])
+        else:
+            call(["./wikiparse.out", dump_path, cutoff_date])
+    else:
+        print("\tERROR: Could not find wikiparse.out")
 
 def gensim_corpus(tsv_path, directory, make_phrases=False,):
     text = text_corpus(tsv_path)
