@@ -5,7 +5,10 @@ from __future__ import print_function
 #                          Standard imports
 #-----------------------------------------------------------------------------#
 import os, sys, time
-
+#                          Search Related imports
+#-----------------------------------------------------------------------------#
+from time import time
+import heapq, codecs
 #                            Local imports
 #-----------------------------------------------------------------------------#
 
@@ -84,7 +87,173 @@ def get_encoder(tsv_path, make_phrases, directory, features, context_window, min
         encoder.load(directory)
     return encoder
 
+class elem_t:
+    def __init__(self,value,parent=None,cost=None):
+        self.value = value 
+        self.parent = parent 
+        self.cost = cost
+        self.column_offset = 0
+
+class PriorityQueue:
+    def __init__(self):
+        self._queue = []
+        self._index = 0
+
+    def push(self,item):
+        cost = int(item.cost)
+        heapq.heappush(self._queue, (cost,self._index,item) )
+        self._index +=1
+
+    def top(self):
+        return self._queue[0][-1]
+
+    def pop(self):
+        index,item = heapq.heappop(self._queue)[1:]
+        return item 
+
+    def length(self):
+        return len(self._queue)
+
+    def clear(self):
+        self._queue = []
+        self._index = []
+    def has(self,value):
+        for item in self._queue:
+            queued_elem = item[-1]
+            if queued_elem.value==value: return True
+        return False
+
+    def update(self,new_elem):
+        i=0
+        while i<len(self._queue):
+            queued_elem = self._queue[i][-1]
+            if queued_elem.value==new_elem.value:
+                del self._queue[i]
+                break
+            i+=1
+        self.push(new_elem)
+
+    def get_cost(self,value):
+        for cost,_,item in self._queue:
+            if item.value==value: return cost 
+        return -1
+
+def get_shortest_path(start_query,end_query,encoder):
+    print("\nCalculating shortest vector from "+str(start_query)+" to "+str(end_query)+"...")
+
+    start_vector = encoder.model.get_nearest_word(start_query)
+    end_vector = encoder.model.get_nearest_word(end_query)
+
+    if start_vector==None: print("Could not find relation vector for "+start_query)
+    if end_vector==None: print("Could not find relation vector for "+end_query)
+    if start_vector==None or end_vector==None: return -1
+
+    start_elem = elem_t(start_query,parent=None,cost=0)
+    
+    total_items = self.by_categories.get_num_rows()
+    frontier = PriorityQueue()
+    frontier.push(start_elem)
+
+    path_end = start_elem 
+    path_length = 1
+    path_cost = 0
+    explored = []
+    search_start = time()
+    return_code = "NONE"
+
+    while True:
+
+        print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(path_cost)[:5],end="\r")
+        sys.stdout.flush()
+
+        if frontier.length()==0:
+            print("\nUniform-Cost Search failed to find a connecting path.")
+            return_code = "NOT FOUND"
+            break
+
+        cur_node = frontier.pop()
+        path_cost = cur_node.cost 
+
+        if cur_node.value == end_query:
+            print("\nFound connection.")
+            path_end = cur_node
+            break
+
+        explored.append(cur_node.value)
+        neighbors = encoder.model.get_nearest_word(cur_node.value)
+        #neighbors = self.by_categories.get_related(cur_node.value)
+        if neighbors==None:
+            continue
+        
+        neighbors = neighbors[1:]
+        base_cost = path_cost+1
+
+        for neighbor in neighbors:
+            base_cost+=1
+            new_elem = elem_t(neighbor,parent=cur_node,cost=base_cost)
+            new_elem.column_offset = neighbors.index(neighbor)+1
+
+            if neighbor not in explored and not frontier.has(neighbor):
+                frontier.push(new_elem)
+
+            elif frontier.has(neighbor) and frontier.get_cost(neighbor)>base_cost: 
+                frontier.update(new_elem)
+
+    print("                                                                \r",end="\r")
+    print("\nReconstructing path...\n")
+
+    def rectify_path(path_end):
+        path = []
+        offsets = []
+
+        cur = path_end
+        path.append(path_end.value)
+        offsets.append(path_end.column_offset)
+
+        while True:
+            cur = cur.parent
+            if cur==None: break
+            path.append(cur.value)
+            offsets.append(cur.column_offset)
+        return path,offsets 
+
+    solution_path,offsets = rectify_path(path_end)
+    for item,offset in zip(reversed(solution_path),reversed(offsets)):
+        indent = ''.join("=" for _ in range(offset))
+        if len(indent)==0: indent = ""
+        print(indent+item)
+
+
+def path_search_interface():
+
+    encoder_directory = "WikiLearn/data/models/tokenizer"
+    doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
+
+    print("Loading encoder...")
+    text_encoder = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
+
+    while True:
+        query1 = raw_input("First query: ")
+        if query1 in ["exit","Exit"]: break
+        query2 = raw_input("Second query: ")
+        if query2 in ["exit","Exit"]: break
+
+        query1 = query1.replace(" ","_")
+        query2 = query2.replace(" ","_")
+        
+        if " " in [query1,query2]: continue
+        get_shortest_path(query1,query2,text_encoder)
+
+    print("Done")
+
+
+
 def main():
+    path_interactive = True
+    if path_interactive:
+        path_search_interface()
+        return
+
     if not os.path.isfile('text.tsv'):
         dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
         parse_wikidump(dump_path)
