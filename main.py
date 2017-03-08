@@ -202,7 +202,7 @@ def astar_algo(start_query,end_query,encoder,weight=10.0):
             if (neighbor not in cost_list or cost<cost_list[neighbor]) and neighbor not in explored:
                 cost_list[neighbor] = cost 
                 heuristic = float(encoder.model.similarity(neighbor,end_query))
-                priority = cost + ((float(weight)*(1-heuristic)))
+                priority = cost + ((float(weight)*(1.0-heuristic)))
                 new_elem.cost = priority 
                 frontier.push(new_elem)
 
