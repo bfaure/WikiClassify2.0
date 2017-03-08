@@ -173,15 +173,24 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
     if dictionary is not None:
         saved_start_query = start_query 
         saved_end_query = end_query 
+        start_key = None 
+        end_key = None
 
         try:
             start_key = next(key for key,value in dictionary.items() if value==start_query)
         except:
-            print("Could not find dictionary id for "+start_query)
+            try:
+                start_key = next(key for key,value in dictionary.items() if value.lower()==start_query.lower())
+            except:
+                print("Could not find dictionary id for "+start_query)
         try:
             end_key = next(key for key,value in dictionary.items() if value==end_query)
         except:
-            print("Could not find dictionary id for "+end_query)
+            try:
+                end_key = next(key for key,value in dictionary.items() if value.lower()==end_query.lower())
+            except:
+                print("Could not find dictionary id for "+end_query)
+        
         if start_key==None or end_key==None: return -1
 
         start_query = start_key 
@@ -428,7 +437,7 @@ def path_search_interface():
 
 
 def main():
-    path_interactive = False
+    path_interactive = True
     if path_interactive:
         path_search_interface()
         return
