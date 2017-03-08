@@ -98,10 +98,11 @@ class PriorityQueue:
     def __init__(self):
         self._queue = []
         self._index = 0
+        #self._contents = {}
 
     def push(self,item):
-        cost = int(item.cost)
-        heapq.heappush(self._queue, (cost,self._index,item) )
+        #self._contents[item.value] = True
+        heapq.heappush(self._queue, (item.cost,self._index,item) )
         self._index +=1
 
     def top(self):
@@ -109,6 +110,7 @@ class PriorityQueue:
 
     def pop(self):
         index,item = heapq.heappop(self._queue)[1:]
+        #self._contents[item.value] = False
         return item 
 
     def length(self):
@@ -119,10 +121,15 @@ class PriorityQueue:
         self._index = []
 
     def has(self,value):
+        '''
+        if value in self._contents: return True
+        else: return False
+        '''
         for item in self._queue:
             queued_elem = item[-1]
             if queued_elem.value==value: return True
         return False
+        
 
     def update(self,new_elem):
         i=0
@@ -139,6 +146,7 @@ class PriorityQueue:
         return -1
 
 def get_transition_cost(word1,word2,encoder):
+    return 1.0-float(encoder.model.similarity(word1,word2)) 
     val = 1.0-float(encoder.model.similarity(word1,word2))
     if val>1: return 1.0
     else: return val
@@ -159,15 +167,19 @@ def rectify_path(path_end):
     return path,offsets 
 
 def astar_algo(start_query,end_query,encoder,weight=7.0):
+    
+    neighbor_length = 50
+    weight = weight*neighbor_length
+
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
-
-    start_similarity = encoder.model.similarity(start_query,end_query)
-    print("Query meaning similarity: "+str(start_similarity)[:6])
 
     if start_vector==None:  print("Could not find relation vector for "+start_query)
     if end_vector==None:    print("Could not find relation vector for "+end_query)
     if start_vector==None or end_vector==None: return -1
+
+    start_similarity = encoder.model.similarity(start_query,end_query)
+    print("Query meaning similarity: "+str(start_similarity)[:6])
 
     start_elem = elem_t(start_query,parent=None,cost=0)
     
@@ -203,7 +215,7 @@ def astar_algo(start_query,end_query,encoder,weight=7.0):
             path_end = cur_node 
             break
 
-        neighbors = encoder.get_nearest_word(cur_word)
+        neighbors = encoder.get_nearest_word(cur_word,topn=neighbor_length)
         if neighbors==None: continue
         base_cost = cost_list[cur_word]
 
@@ -292,7 +304,7 @@ def ucs_algo(start_query,end_query,encoder):
         print(indent+item)
 
 def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
-    sys.stdout.write("\nCalculating shortest vector from "+str(start_query)+" to "+str(end_query)+"...")
+    sys.stdout.write("\nCalculating shortest vector from \""+str(start_query)+"\" to \""+str(end_query)+"\"...")
     if algo   == "UCS": 
         sys.stdout.write(" using UCS\n")
         return ucs_algo(start_query,end_query,encoder)
@@ -301,7 +313,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
         while True:
             weight = raw_input("Enter A* weight: ")
             try:
-                weight = int(weight)
+                weight = float(weight)
                 break
             except: continue
         return astar_algo(start_query,end_query,encoder,weight=weight)
