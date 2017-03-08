@@ -233,7 +233,10 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10):
         #indent = ''.join("=" for _ in range(offset))
         #if len(indent)==0: indent = ""
         #print(indent+item)
-        print("--> "+item)
+        if solution_path.index(item) in [0,len(solution_path)-1]:
+            print("\""+item+"\"")
+        else:
+            print("-->\t\""+item+"\"  ("+str(offset)+") \t")
 
 def ucs_algo(start_query,end_query,encoder):
     start_vector = encoder.get_nearest_word(start_query)
@@ -309,6 +312,9 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
         print("Note: low weight = low cost but slower")
         while True:
             b_factor = raw_input("Enter branching factor (5-1000): ")
+            if b_factor == "":
+                b_factor = 50
+
             if b_factor in ["exit","Exit"]:
                 return
             try:
@@ -317,6 +323,9 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
             except: continue
         while True:
             weight = raw_input("Enter A* weight (1-1000): ")
+            if weight=="":
+                weight = 10
+
             if weight in ["exit","Exit"]:
                 return
             try:
@@ -337,6 +346,9 @@ def path_search_interface():
 
     while True:
         algo = raw_input("\nWhich algorithm (ucs or astar): ")
+        if algo == "":
+            algo = "A*"
+            break
         if algo in ["ucs","UCS"]: 
             algo = "UCS"
             break
