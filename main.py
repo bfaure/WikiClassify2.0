@@ -138,7 +138,7 @@ class PriorityQueue:
             if item.value==value: return cost 
         return -1
 
-def astar_algo(start_query,end_query,encoder,weight=1.0):
+def astar_algo(start_query,end_query,encoder,weight=4.0):
     print("Using A* Search...")
 
     start_vector = encoder.get_nearest_word(start_query)
@@ -188,7 +188,7 @@ def astar_algo(start_query,end_query,encoder,weight=1.0):
         if neighbors==None:
             continue
         
-        base_cost = cost_list[cur_node.value]+1
+        base_cost = cost_list[cur_node.value]
         path_cost = base_cost
 
         for neighbor in neighbors:
@@ -204,7 +204,8 @@ def astar_algo(start_query,end_query,encoder,weight=1.0):
 
             if (neighbor not in cost_list or cost<cost_list[neighbor]) and neighbor not in explored:
                 cost_list[neighbor] = cost 
-                priority = cost + (float(weight) * float((encoder.model.similarity(neighbor,end_query)))/100)
+                heuristic = float(encoder.model.similarity(neighbor,end_query))
+                priority = cost + ((float(weight)*(1-heuristic)))
                 new_elem.cost = priority 
                 frontier.push(new_elem)
 
