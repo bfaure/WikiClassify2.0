@@ -9,6 +9,7 @@ import os, sys, time
 #-----------------------------------------------------------------------------#
 from time import time
 import heapq, codecs
+from difflib import SequenceMatcher
 #                            Local imports
 #-----------------------------------------------------------------------------#
 
@@ -168,6 +169,10 @@ def rectify_path(path_end,dictionary=None):
 
     return path,offsets 
     
+
+def string_compare(str1,str2):
+    return SequenceMatcher(None,str1,str2).ratio()
+
 def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
     
     if dictionary is not None:
@@ -183,6 +188,22 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
                 start_key = next(key for key,value in dictionary.items() if value.lower()==start_query.lower())
             except:
                 print("Could not find dictionary id for "+start_query)
+                for key,value in dictionary.items():
+                    #if abs(len(value)-len(saved_start_query))>2: continue
+                    if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.80:
+                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
+                        if wants_this in ["y","Y","yes","Yes",""]:
+                            start_key = key 
+                            saved_start_query = value 
+                            break
+                        if wants_this in ["r","restart"]:
+                            print("Canceling search.")
+                            return
+
+        if start_key==None: 
+            print("Canceling search, could not locate "+start_query)
+            return -1
+
         try:
             end_key = next(key for key,value in dictionary.items() if value==end_query)
         except:
@@ -190,7 +211,18 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
                 end_key = next(key for key,value in dictionary.items() if value.lower()==end_query.lower())
             except:
                 print("Could not find dictionary id for "+end_query)
-        
+                for key,value in dictionary.items():
+                    if abs(len(value)-len(saved_end_query))>2: continue
+                    if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.8:
+                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
+                        if wants_this in ["y","Y","yes","Yes",""]:
+                            end_key = key 
+                            saved_end_query = value 
+                            break
+                        if wants_this in ["r","restart"]:
+                            print("Canceling search.")
+                            return
+
         if start_key==None or end_key==None: return -1
 
         start_query = start_key 
@@ -204,7 +236,7 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
     if start_vector==None or end_vector==None: return -1
 
     start_similarity = encoder.model.similarity(start_query,end_query)
-    print("Query meaning similarity: "+str(start_similarity)[:6])
+    print("\nQuery meaning similarity: "+str(start_similarity)[:6])
 
     start_elem = elem_t(start_query,parent=None,cost=0)
     
@@ -363,6 +395,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
                 weight = float(weight)
                 break
             except: continue
+        print("\n")
         return astar_algo(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
     else: print("ERROR: algo input not recognized")
 
@@ -378,7 +411,7 @@ def path_search_interface():
     link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
 
     while True:
-        algo = raw_input("\nWhich algorithm (ucs or astar): ")
+        algo = raw_input("\nWhich algorithm (UCS or [A*]): ")
         if algo == "":
             algo = "A*"
             break
@@ -403,7 +436,7 @@ def path_search_interface():
         if " " in [query1,query2]: continue
 
         while True:
-            source = raw_input("\n\"text\", \"cat\", or \"link\" based? ")
+            source = raw_input("\n[\"text\"], \"cat\", or \"link\" based? ")
             if source == "":
                 query1 = query1.lower()
                 query2 = query2.lower()
@@ -423,9 +456,11 @@ def path_search_interface():
                 dictionary = doc_ids
                 break
             if source in ["link","LINK","Link","l"]:
-                source = link_encoder
-                dictionary = doc_ids
-                break
+                print("Link-based WIP")
+                continue
+                #source = link_encoder
+                #dictionary = doc_ids
+                #break
             if source in ["exit","Exit"]:
                 return
 
