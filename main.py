@@ -147,9 +147,6 @@ class PriorityQueue:
 
 def get_transition_cost(word1,word2,encoder):
     return 1.0-float(encoder.model.similarity(word1,word2)) 
-    val = 1.0-float(encoder.model.similarity(word1,word2))
-    if val>1: return 1.0
-    else: return val
 
 def rectify_path(path_end):
     path = []
