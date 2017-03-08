@@ -23,7 +23,7 @@ def save_related():
     encoder_directory = 'WikiLearn/data/models/tokenizer'
     doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
 
-    encoder = get_encoder('text.tsv',True,encoder_directory+'/text',300,10,5,20,10)
+    encoder = get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
     #save_related_tokens(encoder, 'output/related_tokens/words.tsv')
     #save_related_docs(encoder, 'output/related_docs/by_words.tsv')
     #save_doc_strings(doc_ids, 'output/related_docs/by_words.tsv', 'output/related_docs_(readable)/by_words.tsv')
@@ -428,7 +428,7 @@ def path_search_interface():
 
 
 def main():
-    path_interactive = True
+    path_interactive = False
     if path_interactive:
         path_search_interface()
         return
