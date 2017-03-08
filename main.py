@@ -164,6 +164,8 @@ def astar_algo(start_query,end_query,encoder,weight=1.0):
     search_start = time()
     return_code = "NONE"
 
+    f = open("delete_me.txt","w")
+
     while True:
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(path_cost)[:5],end="\r")
         sys.stdout.flush()
@@ -186,12 +188,15 @@ def astar_algo(start_query,end_query,encoder,weight=1.0):
         if neighbors==None:
             continue
         
-        base_cost = cost_list[cur_node.value]
+        base_cost = cost_list[cur_node.value]+1
         path_cost = base_cost
 
         for neighbor in neighbors:
-            #base_cost*=1.1
+            if cur_node.value==neighbor: continue
+            #base_cost+= base_cost*0.05
+
             transition_cost = encoder.model.similarity(cur_node.value,neighbor)
+            f.write(str(transition_cost)+"\n")
             cost = base_cost+transition_cost
 
             new_elem = elem_t(neighbor,parent=cur_node,cost=cost)
@@ -199,7 +204,7 @@ def astar_algo(start_query,end_query,encoder,weight=1.0):
 
             if (neighbor not in cost_list or cost<cost_list[neighbor]) and neighbor not in explored:
                 cost_list[neighbor] = cost 
-                priority = cost + (float(weight) * float((encoder.model.similarity(neighbor,end_query)))/4.0)
+                priority = cost + (float(weight) * float((encoder.model.similarity(neighbor,end_query)))/100)
                 new_elem.cost = priority 
                 frontier.push(new_elem)
 
