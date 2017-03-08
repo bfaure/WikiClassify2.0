@@ -141,8 +141,8 @@ class PriorityQueue:
 def get_shortest_path(start_query,end_query,encoder):
     print("\nCalculating shortest vector from "+str(start_query)+" to "+str(end_query)+"...")
 
-    start_vector = encoder.model.get_nearest_word(start_query)
-    end_vector = encoder.model.get_nearest_word(end_query)
+    start_vector = encoder.get_nearest_word(start_query)
+    end_vector = encoder.get_nearest_word(end_query)
 
     if start_vector==None: print("Could not find relation vector for "+start_query)
     if end_vector==None: print("Could not find relation vector for "+end_query)
@@ -150,7 +150,6 @@ def get_shortest_path(start_query,end_query,encoder):
 
     start_elem = elem_t(start_query,parent=None,cost=0)
     
-    total_items = self.by_categories.get_num_rows()
     frontier = PriorityQueue()
     frontier.push(start_elem)
 
@@ -180,7 +179,7 @@ def get_shortest_path(start_query,end_query,encoder):
             break
 
         explored.append(cur_node.value)
-        neighbors = encoder.model.get_nearest_word(cur_node.value)
+        neighbors = encoder.get_nearest_word(cur_node.value)
         #neighbors = self.by_categories.get_related(cur_node.value)
         if neighbors==None:
             continue
