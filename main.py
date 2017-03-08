@@ -24,21 +24,21 @@ def save_related():
     doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
 
     encoder = get_encoder('text.tsv',True,encoder_directory+'/text',300,10,5,20,10)
-    save_related_tokens(encoder, 'output/related_tokens/words.tsv')
-    save_related_docs(encoder, 'output/related_docs/by_words.tsv')
-    save_doc_strings(doc_ids, 'output/related_docs/by_words.tsv', 'output/related_docs_(readable)/by_words.tsv')
+    #save_related_tokens(encoder, 'output/related_tokens/words.tsv')
+    #save_related_docs(encoder, 'output/related_docs/by_words.tsv')
+    #save_doc_strings(doc_ids, 'output/related_docs/by_words.tsv', 'output/related_docs_(readable)/by_words.tsv')
 
     encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-    save_related_tokens(encoder, 'output/related_tokens/categories.tsv')
-    save_doc_strings(doc_ids, 'output/related_tokens/categories.tsv', 'output/related_tokens_(readable)/categories.tsv')
-    save_related_docs(encoder, 'output/related_docs/by_categories.tsv')
-    save_doc_strings(doc_ids, 'output/related_docs/by_categories.tsv', 'output/related_docs_(readable)/by_categories.tsv')
+    #save_related_tokens(encoder, 'output/related_tokens/categories.tsv')
+    #save_doc_strings(doc_ids, 'output/related_tokens/categories.tsv', 'output/related_tokens_(readable)/categories.tsv')
+    #save_related_docs(encoder, 'output/related_docs/by_categories.tsv')
+    #save_doc_strings(doc_ids, 'output/related_docs/by_categories.tsv', 'output/related_docs_(readable)/by_categories.tsv')
 
     encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
-    save_related_tokens(encoder, 'output/related_tokens/links.tsv')
-    save_doc_strings(doc_ids, 'output/related_tokens/links.tsv', 'output/related_tokens_(readable)/links.tsv')
-    save_related_docs(encoder, 'output/related_docs/by_links.tsv')
-    save_doc_strings(doc_ids, 'output/related_docs/by_links.tsv', 'output/related_docs_(readable)/by_links.tsv')
+    #save_related_tokens(encoder, 'output/related_tokens/links.tsv')
+    #save_doc_strings(doc_ids, 'output/related_tokens/links.tsv', 'output/related_tokens_(readable)/links.tsv')
+    #save_related_docs(encoder, 'output/related_docs/by_links.tsv')
+    #save_doc_strings(doc_ids, 'output/related_docs/by_links.tsv', 'output/related_docs_(readable)/by_links.tsv')
 
 
 def save_related_tokens(encoder, path):
@@ -163,7 +163,11 @@ def rectify_path(path_end):
         offsets.append(cur.column_offset)
     return path,offsets 
 
-def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10):
+def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
+
+    if dictionary is not None:
+        print(start_query+" --> "+str(dictionary.get(start_query)))
+        return
 
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
@@ -238,7 +242,7 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10):
         else:
             print("-->\t\""+item+"\"  ("+str(offset)+") \t")
 
-def ucs_algo(start_query,end_query,encoder):
+def ucs_algo(start_query,end_query,encoder,dictionary=None):
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
 
@@ -301,11 +305,11 @@ def ucs_algo(start_query,end_query,encoder):
         if len(indent)==0: indent = ""
         print(indent+item)
 
-def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
+def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
     sys.stdout.write("\nCalculating shortest vector from \""+str(start_query)+"\" to \""+str(end_query)+"\"...")
     if algo   == "UCS": 
         sys.stdout.write(" using UCS\n\n")
-        return ucs_algo(start_query,end_query,encoder)
+        return ucs_algo(start_query,end_query,encoder,dictionary=dictionary)
     elif algo == "A*":  
         sys.stdout.write(" using A*\n\n")
         print("Note: high branching factor = more creative but slower")
@@ -332,17 +336,19 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS"):
                 weight = float(weight)
                 break
             except: continue
-        return astar_algo(start_query,end_query,encoder,weight=weight,branching_factor=b_factor)
+        return astar_algo(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
     else: print("ERROR: algo input not recognized")
 
 def path_search_interface():
+    from gensim.corpora import Dictionary as gensim_dict 
+
     encoder_directory = "WikiLearn/data/models/tokenizer"
     #doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
 
     print("Loading encoders...")
     text_encoder = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
-    #cat_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-    #link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+    cat_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+    link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
 
     while True:
         algo = raw_input("\nWhich algorithm (ucs or astar): ")
@@ -352,11 +358,12 @@ def path_search_interface():
         if algo in ["ucs","UCS"]: 
             algo = "UCS"
             break
-        elif algo in ["a*","A*","astar","AStar","a_star","A_star"]:
+        if algo in ["a*","A*","astar","AStar","a_star","A_star"]:
             algo = "A*"
             break
-        elif algo in ["exit","Exit"]:
+        if algo in ["exit","Exit"]:
             return
+
     while True:
         query1 = raw_input("\nFirst query: ")
         if query1 in ["exit","Exit"]: break
@@ -367,7 +374,29 @@ def path_search_interface():
         query2 = query2.replace(" ","_")
         query2 = query2.lower()
         if " " in [query1,query2]: continue
-        get_shortest_path(query1,query2,text_encoder,algo=algo)
+
+        while True:
+            source = raw_input("\n\"text\", \"cat\", or \"link\" based? ")
+            if source == "":
+                source = text_encoder
+                dictionary = None 
+                break
+            if source in ["text","TEXT","Text","t"]:
+                source = text_encoder
+                dictionary = None 
+                break
+            if source in ["cat","CAT","Cat","c"]:
+                source = cat_encoder 
+                dictionary = gensim_dict.load(encoder_directory+"/categories/dictionary.dict")
+                break
+            if source in ["link","LINK","Link","l"]:
+                source = link_encoder
+                dictionary = gensim_dict.load(encoder_directory+"/links/dictionary.dict")
+                break
+            if source in ["exit","Exit"]:
+                return
+
+        get_shortest_path(query1,query2,source,algo=algo,dictionary=dictionary)
         print("\n")
     print("Done")
 
