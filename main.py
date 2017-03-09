@@ -169,176 +169,139 @@ def rectify_path(path_end,dictionary=None):
 
 def string_compare(str1,str2):
 	return SequenceMatcher(None,str1,str2).ratio()
-'''
-def astar_convene(left_query,right_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
-	if dictionary is not None: return -1
 
-	left_vector = encoder.get_nearest_word(left_query,branching_factor)
-	right_vector = encoder.get_nearest_word(right_query,branching_factor)
+def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
+	if dictionary is not None:
+		saved_start_query = start_query 
+		saved_end_query = end_query 
+		start_key = None 
+		end_key = None
 
-	if left_vector==None: print("Could not find relation vector for "+left_query)
-	if right_vector==None: print("Could not find relation vector for "+right_query)
-	if left_vector==None or right_vector==None: return -1
+		try:
+			start_key = next(key for key,value in dictionary.items() if value==start_query)
+		except:
+			try:
+				start_key = next(key for key,value in dictionary.items() if value.lower()==start_query.lower())
+			except:
+				print("Could not find dictionary id for "+start_query)
+				for key,value in dictionary.items():
+					#if abs(len(value)-len(saved_start_query))>2: continue
+					if value.lower()[:9]!=start_query.lower()[:9]: continue
+					if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
+						wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
+						if wants_this in ["y","Y","yes","Yes",""]:
+							start_key = key 
+							saved_start_query = value 
+							break
+						if wants_this in ["r","restart"]:
+							print("Canceling search.")
+							return
 
-	start_similarity = encoder.model.similarity(left_query,right_query)
+		if start_key==None: 
+			print("Canceling search, could not locate "+start_query)
+			return -1
+
+		try:
+			end_key = next(key for key,value in dictionary.items() if value==end_query)
+		except:
+			try:
+				end_key = next(key for key,value in dictionary.items() if value.lower()==end_query.lower())
+			except:
+				print("Could not find dictionary id for "+end_query)
+				for key,value in dictionary.items():
+					if value.lower()[:9]!=start_query.lower()[:9]: continue
+					#if abs(len(value)-len(saved_end_query))>2: continue
+					if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.7:
+						wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
+						if wants_this in ["y","Y","yes","Yes",""]:
+							end_key = key 
+							saved_end_query = value 
+							break
+						if wants_this in ["r","restart"]:
+							print("Canceling search.")
+							return
+
+		if start_key==None or end_key==None: return -1
+
+		start_query = start_key 
+		end_query = end_key
+
+	start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
+	end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
+
+	if start_vector==None:  print("Could not find relation vector for "+start_query)
+	if end_vector==None:    print("Could not find relation vector for "+end_query)
+	if start_vector==None or end_vector==None: return -1
+
+	start_similarity = encoder.model.similarity(start_query,end_query)
 	print("\nQuery meaning similarity: "+str(start_similarity)[:6])
 
-	left_frontier = PriorityQueue()
-	right_frontier = PriorityQueue()
+	start_elem = elem_t(start_query,parent=None,cost=0)
+	
+	frontier = PriorityQueue()
+	start_elem_cost = get_transition_cost(start_query,end_query,encoder)
+	start_elem.cost = start_elem_cost
+	frontier.push(start_elem)
 
-	left_to_right_cost = get_transition_cost(left_query,right_query,encoder)
+	cost_list = {}
+	cost_list[start_query] = 0
 
-	left_start_elem = elem_t(left_query,parent=None,cost=0)
-	right_start_elem = elem_t(right_query,parent=None,cost=0)
-
-	left_start_elem.cost = left_to_right_cost
-	right_start_elem.cost = left_to_right_cost
-
-	left_frontier.push(left_start_elem)
-	right_frontier.push(right_start_elem)
-
-	left_cost_list = {}
-	right_cost_list = {}
-
-	left_cost_list[left_query] = 0
-	right_cost_list[right_query] = 0
-
-	path_end = left_start_elem
-	left_base_cost = 0
-
-	left_explored = []
-	right_explored = []
-
+	path_end = start_elem 
+	base_cost = 0
+	explored = []
 	search_start = time()
 	return_code = "NONE"
 
-	base_cost = 0
+	middle_word = "NONE"
+	dist_middle_start = 1000
+	dist_middle_end = 1000
 
 	while True:
-		print("explored: "+str(len(left_explored)+len(right_explored))+", frontier: "+str(left_frontier.length()+right_frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
+		print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
 		sys.stdout.flush()
 
-		if left_frontier.length()==0 or right_frontier.length()==0:
-			print("\nC* Search failed to find a connecting path.")
+		if frontier.length()==0:
+			print("\nA* Convene failed.")
 			return_code = "NOT FOUND"
 			break
 
+		cur_node = frontier.pop()
+		cur_word = cur_node.value
+		explored.append(cur_word)
 
-		if left_frontier.top().cost < right_frontier.top().cost: 
-			cur_position = "left"
-			cur_frontier = left_frontier
-			cur_explored = left_explored 
-			cur_cost_list = left_cost_list 
-			base_cost = left_cost_list[cur_word]
-			if cur_word in right_explored:
-				print("Found word: "+cur_word)
-		#cur_node = left_frontier.pop()
-		else: 
-			cur_position = "right"
-			cur_frontier = right_frontier
-			cur_explored 
+		if cur_word not in [start_query,end_query]:
+			dist_to_start = get_transition_cost(cur_word,start_query,encoder)
+			dist_to_end = get_transition_cost(cur_word,end_query,encoder)
+			if dist_to_end<dist_middle_start and dist_to_start<dist_middle_start:
+				middle_word = cur_word 
+				dist_middle_start = dist_to_start
+				dist_middle_end = dist_to_end
 
-		#cur_node = right_frontier.pop()
-
-		cur_node = cur_frontier.pop()
-
-		#cheapest_left_node = left_frontier.pop()
-		#cheapest_right_node = right_frontier.pop()
-
-		cur_word = cur_node.value 
-		#cur_left_word = cheapest_left_node.value 
-		#cur_right_word = cheapest_right_node.value 
-
-		if cur_position == "left":
-			left_explored.append(cur_word)
-			cur_explored = left_explored
-			cur_cost_list = left_cost_list
-			base_cost = left_cost_list[cur_word]
-			if cur_word in right_explored:
-				print("Found word: "+cur_word)
-		if cur_position == "right":
-			right_explored.append(cur_word)
-			cur_explored = right_explored
-			cur_cost_list = right_cost_list
-			base_cost = right_cost_list[cur_word]
-			if cur_word in left_explored:
-				print("Found word: "+cur_word)
-
-		if cur_left_word==cur_right_word:
-			print("Found result: "+cur_left_word)
-			return
-
-		#left_explored.append(cur_left_word)
-		#right_explored.append(cur_right_word)
-
-		#left_neighbors 	= encoder.get_nearest_word(cur_left_word,topn=branching_factor)
-		#right_neighbors = encoder.get_nearest_word(cur_right_word,topn=branching_factor)
-
-		#if left_neighbors==None and right_neighbors==None: continue
-
-		#left_base_cost	= left_cost_list[cur_left_word]
-		#base_cost = right_cost_list[cur_right_word]
-
+		if cur_word==end_query:
+			print("\nFound connection.")
+			path_end = cur_node 
+			break
 
 		neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
-		#if neighbors==None: continue
-		#base_cost = cost_list[cur_word]
+		if neighbors==None: continue
+		base_cost = cost_list[cur_word]
 
-		i=-1
-		for neighbor in neighbors:
-			if neighbor==cur_word: continue
-			i+=1
+		for neighbor_word in neighbors:
+			if cur_word==neighbor_word: continue
+			cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
 
-			cost = base_cost + get_transition_cost(cur_word,neighbor,encoder)
+			new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
+			new_elem.column_offset = neighbors.index(neighbor_word)
 
-			new_elem = elem_t(cur_word,neighbor,encoder)
-			new_elem.column_offset = i 
-
-			if (neighbor not in cur_cost_list or cost<cur_cost_list[neighbor]) and neighbor not in cur_explored:
-				cur_cost_list[neighbor] = cost 
-				new_elem.cost = cost + float(weight)*get_transition_cost(neighbor,left_query if cur_position=="left" else right_query,encoder)
-				cur_frontier.push(new_elem)
-
-
-		i=-1
-		for left_neighbor,right_neighbor in zip(left_neighbors,right_neighbors):
-			i+=1
-			if left_neighbor==cur_left_word and right_neighbor==cur_right_word: continue
-
-			left_cost 	= left_base_cost + get_transition_cost(cur_left_word,left_neighbor,encoder)
-			right_cost 	= right_base_cost + get_transition_cost(cur_right_word,right_neighbor,encoder)
-
-			new_left_elem 	= elem_t(cur_left_word,left_neighbor,encoder)
-			new_right_elem 	= elem_t(cur_right_word,right_neighbor,encoder)
-
-			new_left_elem.column_offset 	= i 
-			new_right_elem.column_offset 	= i 
-
-			if (left_neighbor not in left_cost_list or left_cost<left_cost_list[left_neighbor]) and left_neighbor not in left_explored:
-				left_cost_list[left_neighbor] = left_cost 
-				new_left_elem.cost = left_cost + (float(weight)*get_transition_cost(left_neighbor,right_neighbor,encoder))
-				left_frontier.push(new_left_elem)
-
-			if (right_neighbor not in right_cost_list or right_cost<right_cost_list[right_neighbor]) and right_neighbor not in right_explored:
-				right_cost_list[right_neighbor] = right_cost 
-				new_right_elem.cost = right_cost + (float(weight)*get_transition_cost(left_neighbor,right_neighbor,encoder))
-				right_frontier.push(new_right_elem)
+			if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
+				cost_list[neighbor_word] = cost 
+				new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
+				frontier.push(new_elem)
 
 	print("                                                                \r",end="\r")
 	print("\n=========================================")
-	print("Reconstructing path...\n")
-	solution_path,offsets = rectify_path(path_end,dictionary)
-	for item,offset in zip(reversed(solution_path),reversed(offsets)):
-		#indent = ''.join("=" for _ in range(offset))
-		#if len(indent)==0: indent = ""
-		#print(indent+item)
-		if solution_path.index(item) in [0,len(solution_path)-1]:
-			print("\""+item+"\"")
-		else:
-			print("-->\t\""+item+"\"  ("+str(offset)+") \t")
+	print(start_query+" + "+end_query+" = "+middle_word)
 	print("=========================================")
-
-'''
 
 def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
 	
