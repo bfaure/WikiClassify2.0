@@ -239,7 +239,7 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 	if c>a and c>b:
 		temp = start_query
 		start_query = middle_query
-		middle_query = start_query
+		middle_query = temp
 
 	start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
 	end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
