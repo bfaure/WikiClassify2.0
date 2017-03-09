@@ -228,6 +228,15 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 		end_query = end_key
 	'''
 
+	start_vector = encoder.get_nearest_word(start_query,topn=5)
+	end_vector = encoder.get_nearest_word(end_query,topn=5)
+	middle_vector = encoder.get_nearest_word(middle_query,topn=5)
+
+	if start_vector==None:  print("Could not find relation vector for "+start_query)
+	if end_vector==None:    print("Could not find relation vector for "+end_query)
+	if middle_vector==None: print("Could not find relation vector for "+middle_vector)
+	if start_vector==None or end_vector==None or middle_vector==None: return -1
+
 	a = get_transition_cost(start_query,end_query,encoder)
 	b = get_transition_cost(start_query,middle_query,encoder)
 	c = get_transition_cost(middle_query,end_query,encoder)
@@ -240,13 +249,6 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 		temp = start_query
 		start_query = middle_query
 		middle_query = temp
-
-	start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
-	end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
-
-	if start_vector==None:  print("Could not find relation vector for "+start_query)
-	if end_vector==None:    print("Could not find relation vector for "+end_query)
-	if start_vector==None or end_vector==None: return -1
 
 	start_elem = elem_t(start_query,parent=None,cost=0)
 	
