@@ -134,7 +134,7 @@ class PriorityQueue:
 
 	def update(self,new_elem):
 		i=0
-		for cost,_,_queued_elem in self._queue:
+		for cost,_,queued_elem in self._queue:
 			if queued_elem.value==new_elem.value:
 				del self._queue[i]
 				break
@@ -291,8 +291,8 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
 				frontier.push(new_elem)
 
 	print("                                                                \r",end="\r")
-	print("\nReconstructing path...\n")
-
+	print("\n=========================================")
+	print("Reconstructing path...\n")
 	solution_path,offsets = rectify_path(path_end,dictionary)
 	for item,offset in zip(reversed(solution_path),reversed(offsets)):
 		#indent = ''.join("=" for _ in range(offset))
@@ -302,6 +302,7 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
 			print("\""+item+"\"")
 		else:
 			print("-->\t\""+item+"\"  ("+str(offset)+") \t")
+	print("=========================================")
 
 def ucs_algo(start_query,end_query,encoder,dictionary=None):
 	start_vector = encoder.get_nearest_word(start_query)
@@ -358,13 +359,14 @@ def ucs_algo(start_query,end_query,encoder,dictionary=None):
 			elif frontier.has(neighbor) and frontier.get_cost(neighbor)>base_cost:  frontier.update(new_elem)
 
 	print("                                                                \r",end="\r")
-	print("\nReconstructing path...\n")
-
+	print("\n=========================================")
+	print("Reconstructing path...\n")
 	solution_path,offsets = rectify_path(path_end)
 	for item,offset in zip(reversed(solution_path),reversed(offsets)):
 		indent = ''.join("=" for _ in range(offset))
 		if len(indent)==0: indent = ""
 		print(indent+item)
+	print("=========================================")
 
 def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
 	default_b_factor = 100
@@ -376,8 +378,8 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
 		return ucs_algo(start_query,end_query,encoder,dictionary=dictionary)
 	elif algo == "A*":  
 		sys.stdout.write(" using A*\n\n")
-		print("Note: high branching factor = more creative but slower")
-		print("Note: low weight = low cost but slower")
+		print("Note: high branching factor 	- less depth in final path")
+		print("Note: high A* weight 		- low cost but slower")
 		while True:
 			b_factor = raw_input("Enter branching factor (5-1000) ["+str(default_b_factor)+"]: ")
 			if b_factor == "":
@@ -417,13 +419,10 @@ def path_search_interface():
 
 	while True:
 		algo = raw_input("\nWhich algorithm (UCS or [A*]): ")
-		if algo == "":
-			algo = "A*"
-			break
 		if algo in ["ucs","UCS"]: 
 			algo = "UCS"
 			break
-		if algo in ["a*","A*","astar","AStar","a_star","A_star"]:
+		if algo in ["a*","A*","astar","AStar","a_star","A_star",""]:
 			algo = "A*"
 			break
 		if algo in ["exit","Exit"]:
@@ -442,13 +441,7 @@ def path_search_interface():
 
 		while True:
 			source = raw_input("\n[\"text\"], \"cat\", or \"link\" based? ")
-			if source == "":
-				query1 = query1.lower()
-				query2 = query2.lower()
-				source = text_encoder
-				dictionary = None
-				break
-			if source in ["text","TEXT","Text","t"]:
+			if source in ["text","TEXT","Text","t",""]:
 				query1 = query1.lower()
 				query2 = query2.lower()
 				source = text_encoder
@@ -461,11 +454,11 @@ def path_search_interface():
 				dictionary = doc_ids
 				break
 			if source in ["link","LINK","Link","l"]:
-				print("Link-based WIP")
-				continue
-				#source = link_encoder
-				#dictionary = doc_ids
-				#break
+				#print("Link-based WIP")
+				#continue
+				source = link_encoder
+				dictionary = doc_ids
+				break
 			if source in ["exit","Exit"]:
 				return
 
