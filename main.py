@@ -173,7 +173,12 @@ def rectify_path(path_end,dictionary=None):
 def string_compare(str1,str2):
 	return SequenceMatcher(None,str1,str2).ratio()
 
-def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
+def astar_convene(left_query,right_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
+	if dictionary is not None: return -1
+
+	left_vector = encoder.get_nearest_word(start_query)
+
+def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
 	
 	if dictionary is not None:
 		saved_start_query = start_query 
@@ -191,7 +196,7 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
 				for key,value in dictionary.items():
 					#if abs(len(value)-len(saved_start_query))>2: continue
 					if value.lower()[:9]!=start_query.lower()[:9]: continue
-					if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.80:
+					if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
 						wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
 						if wants_this in ["y","Y","yes","Yes",""]:
 							start_key = key 
@@ -215,7 +220,7 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
 				for key,value in dictionary.items():
 					if value.lower()[:9]!=start_query.lower()[:9]: continue
 					#if abs(len(value)-len(saved_end_query))>2: continue
-					if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.8:
+					if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.7:
 						wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
 						if wants_this in ["y","Y","yes","Yes",""]:
 							end_key = key 
@@ -230,8 +235,8 @@ def astar_algo(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
 		start_query = start_key 
 		end_query = end_key
 
-	start_vector = encoder.get_nearest_word(start_query)
-	end_vector = encoder.get_nearest_word(end_query)
+	start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
+	end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
 
 	if start_vector==None:  print("Could not find relation vector for "+start_query)
 	if end_vector==None:    print("Could not find relation vector for "+end_query)
@@ -403,7 +408,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
 				break
 			except: continue
 		print("\n")
-		return astar_algo(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
+		return astar_path(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
 	else: print("ERROR: algo input not recognized")
 
 def path_search_interface():
@@ -433,11 +438,11 @@ def path_search_interface():
 		if query1 in ["exit","Exit"]: break
 		query2 = raw_input("Second query: ")
 		if query2 in ["exit","Exit"]: break
+		if query1==" " or query2==" ": continue
 		query1 = query1.replace(" ","_")
 		#query1 = query1.lower()
 		query2 = query2.replace(" ","_")
 		#query2 = query2.lower()
-		if " " in [query1,query2]: continue
 
 		while True:
 			source = raw_input("\n[\"text\"], \"cat\", or \"link\" based? ")
@@ -454,11 +459,11 @@ def path_search_interface():
 				dictionary = doc_ids
 				break
 			if source in ["link","LINK","Link","l"]:
-				#print("Link-based WIP")
-				#continue
-				source = link_encoder
-				dictionary = doc_ids
-				break
+				print("Link-based WIP")
+				continue
+				#source = link_encoder
+				#dictionary = doc_ids
+				#break
 			if source in ["exit","Exit"]:
 				return
 
