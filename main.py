@@ -298,9 +298,15 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
 				new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
 				frontier.push(new_elem)
 
+	if middle_word=="None":
+		print("Words are too similar to be compared, try lower weight & higher branching factor.")
+		return
+
 	print("                                                                \r",end="\r")
 	print("\n=========================================")
 	print(start_query+" + "+end_query+" = "+middle_word)
+	print(middle_word+" --> "+start_query+" similarity = "+str(1-dist_middle_start)[:3])
+	print(middle_word+" --> "+end_query+" similarity = "+str(1-dist_middle_end)[:3])
 	print("=========================================")
 
 def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
