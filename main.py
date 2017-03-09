@@ -305,7 +305,7 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 
 		for neighbor_word in neighbors:
 			if cur_word==neighbor_word: continue
-			cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder) + get_transition_cost(neighbor_word,middle_query,encoder)
+			cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder) #+ get_transition_cost(neighbor_word,middle_query,encoder)
 
 			new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
 			new_elem.column_offset = neighbors.index(neighbor_word)
