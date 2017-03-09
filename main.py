@@ -272,7 +272,7 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
 		if cur_word not in [start_query,end_query]:
 			dist_to_start = get_transition_cost(cur_word,start_query,encoder)
 			dist_to_end = get_transition_cost(cur_word,end_query,encoder)
-			if dist_to_end<dist_middle_start and dist_to_start<dist_middle_start:
+			if dist_to_end<dist_middle_start and dist_to_start<dist_middle_end:
 				middle_word = cur_word 
 				dist_middle_start = dist_to_start
 				dist_middle_end = dist_to_end
