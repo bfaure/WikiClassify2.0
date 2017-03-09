@@ -536,7 +536,7 @@ def ucs_algo(start_query,end_query,encoder,dictionary=None):
 	print("=========================================")
 
 def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
-	default_b_factor = 100
+	default_b_factor = 15
 	default_weight = 4
 	sys.stdout.write("\nCalculating shortest vector from \""+str(start_query)+"\" to \""+str(end_query)+"\"...")
 
@@ -548,7 +548,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
 		print("Note: high branching factor 	- less depth in final path")
 		print("Note: high A* weight 		- low cost but slower")
 		while True:
-			b_factor = raw_input("Enter branching factor (5-1000) ["+str(default_b_factor)+"]: ")
+			b_factor = raw_input("Enter branching factor (5-100) ["+str(default_b_factor)+"]: ")
 			if b_factor == "":
 				b_factor = default_b_factor
 
@@ -559,7 +559,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
 				break
 			except: continue
 		while True:
-			weight = raw_input("Enter A* weight (1-1000) ["+str(default_weight)+"]: ")
+			weight = raw_input("Enter A* weight (1-100) ["+str(default_weight)+"]: ")
 			if weight=="":
 				weight = default_weight
 
