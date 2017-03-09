@@ -304,7 +304,7 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
 
 	print("                                                                \r",end="\r")
 	print("\n=========================================")
-	print(start_query+" + "+end_query+" = "+middle_word)
+	print(start_query+" + "+end_query+" = "+middle_word+"\n")
 	print(middle_word+" --> "+start_query+" similarity = "+str(1-dist_middle_start)[:3])
 	print(middle_word+" --> "+end_query+" similarity = "+str(1-dist_middle_end)[:3])
 	print("=========================================")
