@@ -12,10 +12,8 @@ import heapq, codecs
 from difflib import SequenceMatcher
 #                            Local imports
 #-----------------------------------------------------------------------------#
-
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
 from WikiLearn.code.vectorize import LDA, doc2vec
-
 #                            Main function
 #-----------------------------------------------------------------------------#
 
@@ -78,8 +76,8 @@ def save_doc_strings(doc_ids, old_tsv_path, new_tsv_path):
 				g.write('\n')
 
 def get_encoder(tsv_path, make_phrases, directory, features, context_window, min_count, negative, epochs):
-	documents = gensim_corpus(tsv_path,directory,make_phrases)
-	encoder = doc2vec(documents, directory)
+	documents  = gensim_corpus(tsv_path,directory,make_phrases)
+	encoder    = doc2vec(documents, directory)
 	if not os.path.isfile(os.path.join(directory,'word2vec.d2v')):
 		encoder.build(features, context_window, min_count, negative)
 		encoder.train(epochs)
@@ -131,7 +129,6 @@ class PriorityQueue:
 			if queued_elem.value==value: return True
 		return False
 		
-
 	def update(self,new_elem):
 		i=0
 		for cost,_,queued_elem in self._queue:
@@ -172,11 +169,176 @@ def rectify_path(path_end,dictionary=None):
 
 def string_compare(str1,str2):
 	return SequenceMatcher(None,str1,str2).ratio()
-
+'''
 def astar_convene(left_query,right_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
 	if dictionary is not None: return -1
 
-	left_vector = encoder.get_nearest_word(start_query)
+	left_vector = encoder.get_nearest_word(left_query,branching_factor)
+	right_vector = encoder.get_nearest_word(right_query,branching_factor)
+
+	if left_vector==None: print("Could not find relation vector for "+left_query)
+	if right_vector==None: print("Could not find relation vector for "+right_query)
+	if left_vector==None or right_vector==None: return -1
+
+	start_similarity = encoder.model.similarity(left_query,right_query)
+	print("\nQuery meaning similarity: "+str(start_similarity)[:6])
+
+	left_frontier = PriorityQueue()
+	right_frontier = PriorityQueue()
+
+	left_to_right_cost = get_transition_cost(left_query,right_query,encoder)
+
+	left_start_elem = elem_t(left_query,parent=None,cost=0)
+	right_start_elem = elem_t(right_query,parent=None,cost=0)
+
+	left_start_elem.cost = left_to_right_cost
+	right_start_elem.cost = left_to_right_cost
+
+	left_frontier.push(left_start_elem)
+	right_frontier.push(right_start_elem)
+
+	left_cost_list = {}
+	right_cost_list = {}
+
+	left_cost_list[left_query] = 0
+	right_cost_list[right_query] = 0
+
+	path_end = left_start_elem
+	left_base_cost = 0
+
+	left_explored = []
+	right_explored = []
+
+	search_start = time()
+	return_code = "NONE"
+
+	base_cost = 0
+
+	while True:
+		print("explored: "+str(len(left_explored)+len(right_explored))+", frontier: "+str(left_frontier.length()+right_frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
+		sys.stdout.flush()
+
+		if left_frontier.length()==0 or right_frontier.length()==0:
+			print("\nC* Search failed to find a connecting path.")
+			return_code = "NOT FOUND"
+			break
+
+
+		if left_frontier.top().cost < right_frontier.top().cost: 
+			cur_position = "left"
+			cur_frontier = left_frontier
+			cur_explored = left_explored 
+			cur_cost_list = left_cost_list 
+			base_cost = left_cost_list[cur_word]
+			if cur_word in right_explored:
+				print("Found word: "+cur_word)
+		#cur_node = left_frontier.pop()
+		else: 
+			cur_position = "right"
+			cur_frontier = right_frontier
+			cur_explored 
+
+		#cur_node = right_frontier.pop()
+
+		cur_node = cur_frontier.pop()
+
+		#cheapest_left_node = left_frontier.pop()
+		#cheapest_right_node = right_frontier.pop()
+
+		cur_word = cur_node.value 
+		#cur_left_word = cheapest_left_node.value 
+		#cur_right_word = cheapest_right_node.value 
+
+		if cur_position == "left":
+			left_explored.append(cur_word)
+			cur_explored = left_explored
+			cur_cost_list = left_cost_list
+			base_cost = left_cost_list[cur_word]
+			if cur_word in right_explored:
+				print("Found word: "+cur_word)
+		if cur_position == "right":
+			right_explored.append(cur_word)
+			cur_explored = right_explored
+			cur_cost_list = right_cost_list
+			base_cost = right_cost_list[cur_word]
+			if cur_word in left_explored:
+				print("Found word: "+cur_word)
+
+		if cur_left_word==cur_right_word:
+			print("Found result: "+cur_left_word)
+			return
+
+		#left_explored.append(cur_left_word)
+		#right_explored.append(cur_right_word)
+
+		#left_neighbors 	= encoder.get_nearest_word(cur_left_word,topn=branching_factor)
+		#right_neighbors = encoder.get_nearest_word(cur_right_word,topn=branching_factor)
+
+		#if left_neighbors==None and right_neighbors==None: continue
+
+		#left_base_cost	= left_cost_list[cur_left_word]
+		#base_cost = right_cost_list[cur_right_word]
+
+
+		neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
+		#if neighbors==None: continue
+		#base_cost = cost_list[cur_word]
+
+		i=-1
+		for neighbor in neighbors:
+			if neighbor==cur_word: continue
+			i+=1
+
+			cost = base_cost + get_transition_cost(cur_word,neighbor,encoder)
+
+			new_elem = elem_t(cur_word,neighbor,encoder)
+			new_elem.column_offset = i 
+
+			if (neighbor not in cur_cost_list or cost<cur_cost_list[neighbor]) and neighbor not in cur_explored:
+				cur_cost_list[neighbor] = cost 
+				new_elem.cost = cost + float(weight)*get_transition_cost(neighbor,left_query if cur_position=="left" else right_query,encoder)
+				cur_frontier.push(new_elem)
+
+
+		i=-1
+		for left_neighbor,right_neighbor in zip(left_neighbors,right_neighbors):
+			i+=1
+			if left_neighbor==cur_left_word and right_neighbor==cur_right_word: continue
+
+			left_cost 	= left_base_cost + get_transition_cost(cur_left_word,left_neighbor,encoder)
+			right_cost 	= right_base_cost + get_transition_cost(cur_right_word,right_neighbor,encoder)
+
+			new_left_elem 	= elem_t(cur_left_word,left_neighbor,encoder)
+			new_right_elem 	= elem_t(cur_right_word,right_neighbor,encoder)
+
+			new_left_elem.column_offset 	= i 
+			new_right_elem.column_offset 	= i 
+
+			if (left_neighbor not in left_cost_list or left_cost<left_cost_list[left_neighbor]) and left_neighbor not in left_explored:
+				left_cost_list[left_neighbor] = left_cost 
+				new_left_elem.cost = left_cost + (float(weight)*get_transition_cost(left_neighbor,right_neighbor,encoder))
+				left_frontier.push(new_left_elem)
+
+			if (right_neighbor not in right_cost_list or right_cost<right_cost_list[right_neighbor]) and right_neighbor not in right_explored:
+				right_cost_list[right_neighbor] = right_cost 
+				new_right_elem.cost = right_cost + (float(weight)*get_transition_cost(left_neighbor,right_neighbor,encoder))
+				right_frontier.push(new_right_elem)
+
+	print("                                                                \r",end="\r")
+	print("\n=========================================")
+	print("Reconstructing path...\n")
+	solution_path,offsets = rectify_path(path_end,dictionary)
+	for item,offset in zip(reversed(solution_path),reversed(offsets)):
+		#indent = ''.join("=" for _ in range(offset))
+		#if len(indent)==0: indent = ""
+		#print(indent+item)
+		if solution_path.index(item) in [0,len(solution_path)-1]:
+			print("\""+item+"\"")
+		else:
+			print("-->\t\""+item+"\"  ("+str(offset)+") \t")
+	print("=========================================")
+
+'''
 
 def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
 	
@@ -377,12 +539,12 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
 	default_b_factor = 100
 	default_weight = 4
 	sys.stdout.write("\nCalculating shortest vector from \""+str(start_query)+"\" to \""+str(end_query)+"\"...")
-	
+
 	if algo == "UCS":
 		sys.stdout.write(" using UCS\n\n")
 		return ucs_algo(start_query,end_query,encoder,dictionary=dictionary)
-	elif algo == "A*":  
-		sys.stdout.write(" using A*\n\n")
+	elif algo in ["A*","C*"]:  
+		sys.stdout.write(" using "+algo+"\n\n")
 		print("Note: high branching factor 	- less depth in final path")
 		print("Note: high A* weight 		- low cost but slower")
 		while True:
@@ -408,7 +570,8 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None):
 				break
 			except: continue
 		print("\n")
-		return astar_path(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
+		if algo=="A*": return astar_path(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
+		if algo=="C*": return astar_convene(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
 	else: print("ERROR: algo input not recognized")
 
 def path_search_interface():
@@ -423,13 +586,17 @@ def path_search_interface():
 	link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
 
 	while True:
-		algo = raw_input("\nWhich algorithm (UCS or [A*]): ")
+		algo = raw_input("\nWhich algorithm (UCS, [A*], or C*): ")
 		if algo in ["ucs","UCS"]: 
 			algo = "UCS"
 			break
 		if algo in ["a*","A*","astar","AStar","a_star","A_star",""]:
 			algo = "A*"
 			break
+		if algo in ["convene","c","c*","C*"]:
+			algo = "C*"
+			break
+
 		if algo in ["exit","Exit"]:
 			return
 
@@ -444,28 +611,34 @@ def path_search_interface():
 		query2 = query2.replace(" ","_")
 		#query2 = query2.lower()
 
-		while True:
-			source = raw_input("\n[\"text\"], \"cat\", or \"link\" based? ")
-			if source in ["text","TEXT","Text","t",""]:
-				query1 = query1.lower()
-				query2 = query2.lower()
-				source = text_encoder
-				dictionary = None
-				break
-			if source in ["cat","CAT","Cat","c"]:
-				source = cat_encoder 
-				query1 = "Category:"+query1
-				query2 = "Category:"+query2
-				dictionary = doc_ids
-				break
-			if source in ["link","LINK","Link","l"]:
-				print("Link-based WIP")
-				continue
-				#source = link_encoder
-				#dictionary = doc_ids
-				#break
-			if source in ["exit","Exit"]:
-				return
+		if algo != "C*":
+			while True:
+				source = raw_input("\n[\"text\"], \"cat\", or \"link\" based? ")
+				if source in ["text","TEXT","Text","t",""]:
+					query1 = query1.lower()
+					query2 = query2.lower()
+					source = text_encoder
+					dictionary = None
+					break
+				if source in ["cat","CAT","Cat","c"]:
+					source = cat_encoder 
+					query1 = "Category:"+query1
+					query2 = "Category:"+query2
+					dictionary = doc_ids
+					break
+				if source in ["link","LINK","Link","l"]:
+					print("Link-based WIP")
+					continue
+					#source = link_encoder
+					#dictionary = doc_ids
+					#break
+				if source in ["exit","Exit"]:
+					return
+		else:
+			query1 = query1.lower()
+			query2 = query2.lower()
+			dictionary = None 
+			source = text_encoder
 
 		get_shortest_path(query1,query2,source,algo=algo,dictionary=dictionary)
 		print("\n")
