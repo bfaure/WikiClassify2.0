@@ -171,6 +171,7 @@ def string_compare(str1,str2):
 	return SequenceMatcher(None,str1,str2).ratio()
 
 def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branching_factor=10.0,dictionary=None):
+	'''
 	if dictionary is not None:
 		saved_start_query = start_query 
 		saved_end_query = end_query 
@@ -225,6 +226,20 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 
 		start_query = start_key 
 		end_query = end_key
+	'''
+
+	a = get_transition_cost(start_query,end_query,encoder)
+	b = get_transition_cost(start_query,middle_query,encoder)
+	c = get_transition_cost(middle_query,end_query,encoder)
+
+	if b>a and b>c:
+		temp = end_query
+		end_query = middle_query
+		middle_query = temp
+	if c>a and c>b:
+		temp = start_query
+		start_query = middle_query
+		middle_query = start_query
 
 	start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
 	end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
@@ -288,7 +303,7 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 
 		for neighbor_word in neighbors:
 			if cur_word==neighbor_word: continue
-			cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
+			cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder) + get_transition_cost(neighbor_word,middle_query,encoder)
 
 			new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
 			new_elem.column_offset = neighbors.index(neighbor_word)
@@ -298,7 +313,7 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 				new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder))) + (float(weight))*get_transition_cost(neighbor_word,middle_query,encoder)
 				frontier.push(new_elem)
 
-	if middle_word=="None":
+	if middle_word=="NONE":
 		print("Words are too similar to be compared, try lower weight & higher branching factor.")
 		return
 
@@ -647,13 +662,13 @@ def ucs_algo(start_query,end_query,encoder,dictionary=None):
 def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None,middle_query=None):
 	default_b_factor = 15
 	default_weight = 4
-	sys.stdout.write("\nCalculating shortest vector from \""+str(start_query)+"\" to \""+str(end_query)+"\"...")
+	#sys.stdout.write("\nCalculating shortest vector from \""+str(start_query)+"\" to \""+str(end_query)+"\"...")
 
 	if algo == "UCS":
-		sys.stdout.write(" using UCS\n\n")
+		#sys.stdout.write(" using UCS\n\n")
 		return ucs_algo(start_query,end_query,encoder,dictionary=dictionary)
 	elif algo in ["A*","C*","3C*"]:  
-		sys.stdout.write(" using "+algo+"\n\n")
+		#sys.stdout.write(" using "+algo+"\n\n")
 		print("Note: high branching factor 	- less depth in final path")
 		print("Note: high A* weight 		- low cost but slower")
 		while True:
