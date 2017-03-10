@@ -486,7 +486,7 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
                     if value.lower()[:9]!=start_query.lower()[:9]: continue
                     if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
                         wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
-                        if wants_this in ["y","Y","yes","Yes",""]:
+                        if wants_this.lower() in ["y","yes",""]:
                             start_key = key 
                             saved_start_query = value 
                             break
@@ -678,7 +678,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None,m
             if b_factor == "":
                 b_factor = default_b_factor
 
-            if b_factor in ["exit","Exit"]:
+            if b_factor.lower() in ["exit"]:
                 return
             try:
                 b_factor = int(b_factor)
@@ -689,7 +689,7 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None,m
             if weight=="":
                 weight = default_weight
 
-            if weight in ["exit","Exit"]:
+            if weight.lower() in ["exit"]:
                 return
             try:
                 weight = float(weight)
@@ -704,11 +704,11 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None,m
 def prep_3cstar(encoder):
     while True:
         query1 = raw_input("\nFirst query: ")
-        if query1 in ["exit","Exit"]: break
+        if query1.lower() in ["exit"]: break
         query2 = raw_input("Second query: ")
-        if query2 in ["exit","Exit"]: break
+        if query2.lower() in ["exit"]: break
         query3 = raw_input("Third query: ")
-        if query3 in ["exit","Exit"]: break
+        if query3.lower() in ["exit"]: break
         if query1==" " or query2==" " or query3==" ": continue
         query1 = query1.replace(" ","_")
         query1 = query1.lower()
@@ -733,26 +733,26 @@ def path_search_interface():
 
     while True:
         algo = raw_input("\nWhich algorithm (UCS, [A*], C*, or 3C*): ")
-        if algo in ["ucs","UCS"]: 
+        if algo.lower() in ["ucs"]: 
             algo = "UCS"
             break
-        if algo in ["a*","A*","astar","AStar","a_star","A_star",""]:
+        if algo.lower() in ["a*","astar","a_star",""]:
             algo = "A*"
             break
-        if algo in ["convene","c","c*","C*"]:
+        if algo.lower() in ["convene","c","c*"]:
             algo = "C*"
             break
-        if algo in ["3c","3C","3C*","3c*","3"]:
+        if algo.lower() in ["3c","3c*","3"]:
             return prep_3cstar(text_encoder)
 
-        if algo in ["exit","Exit"]:
+        if algo.lower() in ["exit"]:
             return
 
     while True:
         query1 = raw_input("\nFirst query: ")
-        if query1 in ["exit","Exit"]: break
+        if query1.lower() in ["exit"]: break
         query2 = raw_input("Second query: ")
-        if query2 in ["exit","Exit"]: break
+        if query2.lower() in ["exit"]: break
         if query1==" " or query2==" ": continue
         query1 = query1.replace(" ","_")
         #query1 = query1.lower()
@@ -762,25 +762,25 @@ def path_search_interface():
         if algo != "C*":
             while True:
                 source = raw_input("\n[\"text\"], \"cat\", or \"link\" based? ")
-                if source in ["text","TEXT","Text","t",""]:
+                if source.lower() in ["text","t",""]:
                     query1 = query1.lower()
                     query2 = query2.lower()
                     source = text_encoder
                     dictionary = None
                     break
-                if source in ["cat","CAT","Cat","c"]:
+                if source.lower() in ["cat","c"]:
                     source = cat_encoder 
                     query1 = "Category:"+query1
                     query2 = "Category:"+query2
                     dictionary = doc_ids
                     break
-                if source in ["link","LINK","Link","l"]:
+                if source.lower() in ["link","l"]:
                     print("Link-based WIP")
                     continue
                     #source = link_encoder
                     #dictionary = doc_ids
                     #break
-                if source in ["exit","Exit"]:
+                if source.lower() in ["exit"]:
                     return
         else:
             query1 = query1.lower()
