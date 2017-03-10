@@ -13,7 +13,7 @@ from difflib import SequenceMatcher
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
-from WikiLearn.code.vectorize import LDA, doc2vec
+from WikiLearn.code.vectorize import doc2vec
 #                            Main function
 #-----------------------------------------------------------------------------#
 
