@@ -5,15 +5,18 @@ from __future__ import print_function
 #                          Standard imports
 #-----------------------------------------------------------------------------#
 import os, sys, time
+
 #                          Search Related imports
 #-----------------------------------------------------------------------------#
 from time import time
 import heapq, codecs
 from difflib import SequenceMatcher
+
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
 from WikiLearn.code.vectorize import doc2vec
+
 #                            Main function
 #-----------------------------------------------------------------------------#
 
@@ -65,8 +68,7 @@ def get_encoder(tsv_path, make_phrases, directory, features, context_window, min
 
 class elem_t:
     def __init__(self,value,parent=None,cost=None):
-        self.value = value 
-        self.parent = parent 
+        self.value = value
         self.cost = cost
         self.column_offset = 0
 
@@ -79,19 +81,12 @@ class PriorityQueue:
         heapq.heappush(self._queue, (item.cost,self._index,item) )
         self._index +=1
 
-    def top(self):
-        return self._queue[0][-1]
-
     def pop(self):
         index,item = heapq.heappop(self._queue)[1:]
         return item 
 
     def length(self):
         return len(self._queue)
-
-    def clear(self):
-        self._queue = []
-        self._index = []
 
     def has(self,value):
         for item in self._queue:
@@ -121,20 +116,16 @@ def get_transition_cost(word1,word2,encoder):
 def rectify_path(path_end):
     path = []
     offsets = []
-
     cur = path_end
     path.append(path_end.value)
     offsets.append(path_end.column_offset)
-
     while True:
         cur = cur.parent
         if cur==None:
             break
         path.append(cur.value)
         offsets.append(cur.column_offset)
-
     return path,offsets 
-    
 
 def string_compare(str1,str2):
     return SequenceMatcher(None,str1,str2).ratio()
@@ -144,7 +135,6 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
     start_vector = encoder.get_nearest_word(start_query,topn=5)
     end_vector = encoder.get_nearest_word(end_query,topn=5)
     middle_vector = encoder.get_nearest_word(middle_query,topn=5)
-
     if start_vector==None:
         print("Could not find relation vector for "+start_query)
     if end_vector==None:
@@ -153,11 +143,9 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
         print("Could not find relation vector for "+middle_vector)
     if start_vector==None or end_vector==None or middle_vector==None:
         return -1
-
     a = get_transition_cost(start_query,end_query,encoder)
     b = get_transition_cost(start_query,middle_query,encoder)
     c = get_transition_cost(middle_query,end_query,encoder)
-
     if b>a and b>c:
         temp = end_query
         end_query = middle_query
@@ -166,79 +154,62 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
         temp = start_query
         start_query = middle_query
         middle_query = temp
-
     start_elem = elem_t(start_query,parent=None,cost=0)
-    
     frontier = PriorityQueue()
     start_elem_cost = get_transition_cost(start_query,end_query,encoder)
     start_elem.cost = start_elem_cost
     frontier.push(start_elem)
-
     cost_list = {}
     cost_list[start_query] = 0
-
     path_end = start_elem 
     base_cost = 0
     explored = []
     search_start = time()
     return_code = "NONE"
-
     middle_word = "NONE"
     middle_start_similarity = -1
     middle_end_similarity = -1
     middle_middle_similarity = -1
-
     while True:
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
         sys.stdout.flush()
-
         if frontier.length()==0:
             print("\nA* Convene failed.")
             return_code = "NOT FOUND"
             break
-
         cur_node = frontier.pop()
         cur_word = cur_node.value
         explored.append(cur_word)
-
         if cur_word not in [start_query,end_query,middle_query]:
             middle_sim = encoder.model.similarity(cur_word,middle_query)
             start_sim = encoder.model.similarity(cur_word,start_query)
             end_sim = encoder.model.similarity(cur_word,end_query)
-
             if start_sim>middle_start_similarity and middle_sim>middle_middle_similarity and end_sim>middle_end_similarity:
                 middle_word = cur_word 
                 middle_start_similarity = start_sim
                 middle_end_similarity = end_sim
                 middle_middle_similarity = middle_sim
-
         if cur_word==end_query:
             print("\nFound connection.")
             path_end = cur_node 
             break
-
         neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
         if neighbors==None:
             continue
         base_cost = cost_list[cur_word]
-
         for neighbor_word in neighbors:
             if cur_word==neighbor_word:
                 continue
             cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
-
             new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
             new_elem.column_offset = neighbors.index(neighbor_word)
-
             if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
                 cost_list[neighbor_word] = cost 
                 new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder))) + (float(weight))*get_transition_cost(neighbor_word,middle_query,encoder)
                 frontier.push(new_elem)
-
     if middle_word=="NONE":
         print("Words are too similar to be compared, try lower weight & higher branching factor.")
         return
-
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
     print(start_query+" + "+middle_query+" + "+end_query+" = "+middle_word+"\n")
@@ -248,90 +219,69 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
     print('='*41)
 
 def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
-
     start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
     end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
-
     if start_vector==None:
         print("Could not find relation vector for "+start_query)
     if end_vector==None:
         print("Could not find relation vector for "+end_query)
     if start_vector==None or end_vector==None:
         return -1
-
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-
     start_elem = elem_t(start_query,parent=None,cost=0)
-    
     frontier = PriorityQueue()
     start_elem_cost = get_transition_cost(start_query,end_query,encoder)
     start_elem.cost = start_elem_cost
     frontier.push(start_elem)
-
     cost_list = {}
     cost_list[start_query] = 0
-
     path_end = start_elem 
     base_cost = 0
     explored = []
     search_start = time()
     return_code = "NONE"
-
     middle_word = "NONE"
-
     start_middle_similarity = -1
     end_middle_similarity = -1
-
     while True:
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
         sys.stdout.flush()
-
         if frontier.length()==0:
             print("\nA* Convene failed.")
             return_code = "NOT FOUND"
             break
-
         cur_node = frontier.pop()
         cur_word = cur_node.value
         explored.append(cur_word)
-
         if cur_word not in [start_query,end_query]:
             cur_start_middle_similarity = encoder.model.similarity(start_query,cur_word)
             cur_end_middle_similarity = encoder.model.similarity(end_query,cur_word)
-
             if cur_end_middle_similarity>end_middle_similarity and cur_start_middle_similarity>start_middle_similarity:
                 middle_word = cur_word 
                 start_middle_similarity = cur_start_middle_similarity
                 end_middle_similarity = cur_end_middle_similarity
-
         if cur_word==end_query:
             print("\nFound connection.")
             path_end = cur_node 
             break
-
         neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
         if neighbors==None:
             continue
         base_cost = cost_list[cur_word]
-
         for neighbor_word in neighbors:
             if cur_word==neighbor_word:
                 continue
             cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
-
             new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
             new_elem.column_offset = neighbors.index(neighbor_word)
-
             if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
                 cost_list[neighbor_word] = cost 
                 new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
                 frontier.push(new_elem)
-
     if middle_word=="None":
         print("Words are too similar to be compared, try lower weight & higher branching factor.")
         return
-
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
     print(start_query+" + "+end_query+" = "+middle_word+"\n")
@@ -340,72 +290,56 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
     print('='*41)
 
 def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10):
-
     start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
     end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
-
     if start_vector==None:
         print("Could not find relation vector for "+start_query)
     if end_vector==None:
         print("Could not find relation vector for "+end_query)
     if start_vector==None or end_vector==None:
         return -1
-
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-
     start_elem = elem_t(start_query,parent=None,cost=0)
-    
     frontier = PriorityQueue()
     start_elem_cost = get_transition_cost(start_query,end_query,encoder)
     start_elem.cost = start_elem_cost
     frontier.push(start_elem)
-
     cost_list = {}
     cost_list[start_query] = 0
-
     path_end = start_elem 
     base_cost = 0
     explored = []
     search_start = time()
     return_code = "NONE"
-
     while True:
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
         sys.stdout.flush()
-
         if frontier.length()==0:
             print("\nA* Search failed to find a connecting path.")
             return_code = "NOT FOUND"
             break
-
         cur_node = frontier.pop()
         cur_word = cur_node.value
         explored.append(cur_word)
-
         if cur_word==end_query:
             print("\nFound connection.")
             path_end = cur_node 
             break
-
         neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
         if neighbors==None:
             continue
         base_cost = cost_list[cur_word]
-
         for neighbor_word in neighbors:
             if cur_word==neighbor_word:
                 continue
             cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
-
             new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
             new_elem.column_offset = neighbors.index(neighbor_word)
-
             if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
                 cost_list[neighbor_word] = cost 
                 new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
                 frontier.push(new_elem)
-
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
     print("Reconstructing path...\n")
@@ -420,64 +354,48 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10):
 def ucs_algo(start_query,end_query,encoder):
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
-
     if start_vector==None:
         print("Could not find relation vector for "+start_query)
     if end_vector==None:
         print("Could not find relation vector for "+end_query)
     if start_vector==None or end_vector==None:
         return -1
-
     start_elem = elem_t(start_query,parent=None,cost=0)
-    
     frontier = PriorityQueue()
     frontier.push(start_elem)
-
     path_end = start_elem 
     path_cost = 0
     explored = []
     search_start = time()
     return_code = "NONE"
-
     while True:
-
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(path_cost)[:5],end="\r")
         sys.stdout.flush()
-
         if frontier.length()==0:
             print("\nUniform-Cost Search failed to find a connecting path.")
             return_code = "NOT FOUND"
             break
-
         cur_node = frontier.pop()
         path_cost = cur_node.cost 
-
         if cur_node.value == end_query:
             print("\nFound connection.")
             path_end = cur_node
             break
-
         explored.append(cur_node.value)
         neighbors = encoder.get_nearest_word(cur_node.value)
         if neighbors==None:
             continue
-        
         base_cost = path_cost
-
         for neighbor in neighbors:
             if neighbor==cur_node.value:
                 continue
-
             cost = base_cost+get_transition_cost(cur_node.value,neighbor,encoder)
-
             new_elem = elem_t(neighbor,parent=cur_node,cost=cost)
             new_elem.column_offset = neighbors.index(neighbor)
-
             if neighbor not in explored and not frontier.has(neighbor):
                 frontier.push(new_elem)
             elif frontier.has(neighbor) and frontier.get_cost(neighbor)>base_cost:
                 frontier.update(new_elem)
-
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
     print("Reconstructing path...\n")
@@ -492,20 +410,15 @@ def ucs_algo(start_query,end_query,encoder):
 def word_algebra(encoder):
     print("\n")
     print("Deliminate words with \"+\" and \"-\", spaces trimmed (use \"_\"), type \"exit\" to exit...\n")
-
     while True:
         input_str = raw_input("> ")
         if input_str in ["exit","Exit"]:
             break
-
         pos = []
         neg = []
-
         cur_sign = "+"
         cur_buf = None
-
         for char in input_str:
-
             if char==" ":
                 if cur_buf!=None and cur_sign!=None:
                     if cur_sign=="+":
@@ -514,7 +427,6 @@ def word_algebra(encoder):
                         neg.append(cur_buf)
                 cur_buf = None
                 continue
-
             if char=="+":
                 if cur_buf!=None and cur_sign!=None:
                     if cur_sign=="+":
@@ -524,7 +436,6 @@ def word_algebra(encoder):
                     cur_buf = None 
                 cur_sign = "+"
                 continue
-
             if char=="-":
                 if cur_buf!=None and cur_sign!=None:
                     if cur_sign=="-":
@@ -534,24 +445,19 @@ def word_algebra(encoder):
                     cur_buf = None 
                 cur_sign = "-"
                 continue
-
             if cur_buf is None:
                 cur_buf = char 
             else:
                 cur_buf += char
-
         if cur_buf!=None:
             if cur_sign=="+":
                 pos.append(cur_buf)
             if cur_sign=="-":
                 neg.append(cur_buf)
-
         if len(pos)==0 and len(neg)==0:
             print("Didn't catch that...")
             continue
-
         output = None 
-
         if len(pos)!=0 and len(neg)!=0:
             try:
                 output = encoder.model.most_similar_cosmul(positive=pos,negative=neg)
@@ -568,11 +474,9 @@ def word_algebra(encoder):
             try:
                 if len(neg)!=0:
                     output = encoder.model.most_similar(negative=neg)
-                
             except KeyError:
                 print("One of the words was not in the model (mispelling?)")
                 continue
-
         if output is not None:
             print(output[0][0])
         else:
@@ -626,7 +530,6 @@ def get_source():
         #    return 'cat'
 
 def get_queries(n=None, prefix='', dictionary=None):
-
 #    if dictionary is not None:
 #        saved_start_query = start_query
 #        saved_end_query = end_query
@@ -682,7 +585,6 @@ def get_queries(n=None, prefix='', dictionary=None):
 #
 #        start_query = start_key 
 #        end_query = end_key
-
     if n == None:
         queries = []
         query = True
@@ -694,18 +596,14 @@ def get_queries(n=None, prefix='', dictionary=None):
         return [raw_input('Query %d: ' % (q+1)).replace(" ","_") for q in xrange(n)]
 
 def path_search_interface(text_encoder, cat_encoder, doc_ids):
-
     algo = get_algorithm()
-
     if algo == "3C*":
         while True:
             query1, query2, query3 = [q.lower() for q in get_queries(3)]
             weigth, b_factor = get_constants()
             astar_convene_3(query1,query2,query_3,text_encoder,weight,b_factor)
-
-    if algo == ["W"]:
+    if algo == "W":
         return word_algebra(text_encoder)
-
     if algo == "UCS":
         while True:
             query1, query2 = get_queries(2)
@@ -717,7 +615,6 @@ def path_search_interface(text_encoder, cat_encoder, doc_ids):
             #    query1, query2 = "Category:"+query1, "Category:"+query2
             #    ucs_algo(query1,query2,cat_encoder)
             #    #dictionary=doc_ids
-
     if algo == "A*":
         while True:
             query1, query2 = get_queries(2)
@@ -731,7 +628,6 @@ def path_search_interface(text_encoder, cat_encoder, doc_ids):
             #    weight, b_factor = get_constants()
             #    astar_path(query1,query2,cat_encoder,weight=weight,branching_factor=b_factor)
             #    #dictionary=doc_ids
-
     if algo == "C*":
         while True:
             query1, query2 = [q.lower() for q in get_queries(2)]
