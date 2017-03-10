@@ -54,107 +54,14 @@ class epoch_timer(object):
     def get_elapsed(self):
         return sum(self.times)/3600.0
 
-#                             LDA encoder
-#-----------------------------------------------------------------------------#
-
-class LDA(object):
-
-    def __init__(self, corpus, directory):
-        print("Initializing LDA model...")
-
-        self.corpus    = corpus
-        self.directory = directory
-
-        if not os.path.exists(self.directory):
-
-            # Create main model
-            self.build(features=5000)
-            self.train(epochs=1)
-            self.save()
-
-            # Create classifier
-            self.train_classifier()
-            self.save_classifier()
-
-        else:
-            self.load()
-            self.accuracy, self.precision = self.train_classifier()
-            #self.load_classifier()
-
-    # Model I/O
-
-    def build(self, features=5000):
-        print("\tBuilding LDA model...")
-        self.features = features
-
-    def train(self, epochs=1):
-        '''For Wikipedia, use at least 5k-10k topics
-        Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
-        print("\tTraining LDA model...")
-        self.model = LdaModel(corpus=self.corpus.bags, num_topics=self.features, id2word=self.corpus.get_word_map(), passes=epochs)
-
-    def save(self):
-        print("\tSaving LDA model...")
-        if not os.path.exists(self.directory):
-            os.makedirs(self.directory)
-        self.model.save(self.directory+'/LDA.model')
-
-    def load(self):
-        print("\tLoading LDA model...")
-        self.model = LdaModel.load(self.directory+'/LDA.model')
-        self.features = self.model.num_topics
-
-    def get_topics(self, words=20):
-        '''Returns all topics'''
-        topics = self.model.show_topics(num_topics=-1,num_words=words,formatted=False)
-        terms  = [y[0] for x in topics for y in x[1]]
-        return [terms[i:i+words] for i in xrange(0,len(terms),words)]
-
-    def train_classifier(self):
-        X = self.encode_docs(100000)
-        #y = self.corpus.get_doc_categories(100000)
-        self.classifier = vector_classifier(self.directory)
-        return self.classifier.train(X, y)
-
-    def save_classifier(self):
-        self.classifier.save()
-
-    def load_classifier(self):
-        self.classifier = vector_classifier(self.directory).load()
-
-    # Model methods
-
-    def encode_doc(self, doc):
-        return np.array([x[1] for x in self.model.get_document_topics(doc, minimum_probability=0.0)])
-
-    def encode_docs(self, limit=-1):
-        print("\tEncoding documents...")
-        vecs = []
-        times = []
-        for i, doc in enumerate(self.corpus.bags):
-            start = time.time()
-            vecs.append(self.encode_doc(doc))
-            if i == limit:
-                break
-
-            # Progress
-            times.append(time.time()-start)
-            if not i % (self.corpus.instances()//100):
-                remaining = sum(times)*(self.corpus.instances()-i-1)/len(times)/3600
-                print('\t\t%0.2f hours remaining...\n' % remaining)
-                times = times[-10000:]
-
-        return np.array(vecs)
-
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
 class doc2vec(object):
 
-    def __init__(self, corpus, directory):
+    def __init__(self):
         print('Initializing doc2vec encoder...')
-        self.corpus    = corpus
-        self.directory = directory
+        pass
 
     def get_nearest_doc(self, doc_id):
         return [x[0] for x in self.model.docvecs.most_similar(doc_id,topn=20)]
@@ -179,10 +86,11 @@ class doc2vec(object):
         self.features = features
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=7)
 
-        print("\t\tBuilding vocab...")
-        self.model.build_vocab(self.corpus)
+    def train(self, corpus, epochs=10):
 
-    def train(self, epochs=10):
+        print("\t\tBuilding vocab...")
+        self.model.build_vocab(corpus)
+
         print("\tTraining doc2vec model...")
 
         t = epoch_timer(epochs)
@@ -190,7 +98,7 @@ class doc2vec(object):
             
             t.start()
             print("\t\tEpoch %s..." % (i+1))
-            self.model.train(self.corpus)
+            self.model.train(corpus)
             t.stop()
 
         elapsed  = t.get_elapsed()
@@ -205,18 +113,6 @@ class doc2vec(object):
         print("\tLoading doc2vec model...")
         self.model = Doc2Vec.load(directory+'/word2vec.d2v')
         self.features = self.model.docvecs[0].shape[0]
-    
-    def train_classifier(self):
-        X = self.encode_docs(100000)
-        #y = self.corpus.get_doc_categories(100000)
-        self.classifier = vector_classifier(self.directory)
-        return self.classifier.train(X, y)
-
-    def save_classifier(self):
-        self.classifier.save()
-
-    def load_classifier(self):
-        self.classifier = vector_classifier(self.directory).load()
     
     # Encode/decode at word, words, and doc level
 
@@ -239,7 +135,7 @@ class doc2vec(object):
         return ' '.join([self.decode_word(x) for x in vecs])
 
     def encode_doc(self, text):
-        return np.expand_dims(self.model.infer_vector(self.corpus.process(text)), axis=0)
+        return np.expand_dims(self.model.infer_vector(text.split(' ')), axis=0)
 
     def encode_docs(self, limit=-1):
         if limit > 0:

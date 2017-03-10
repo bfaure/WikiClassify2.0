@@ -76,11 +76,11 @@ def save_doc_strings(doc_ids, old_tsv_path, new_tsv_path):
 				g.write('\n')
 
 def get_encoder(tsv_path, make_phrases, directory, features, context_window, min_count, negative, epochs):
-	documents  = gensim_corpus(tsv_path,directory,make_phrases)
-	encoder    = doc2vec(documents, directory)
+	encoder = doc2vec()
 	if not os.path.isfile(os.path.join(directory,'word2vec.d2v')):
 		encoder.build(features, context_window, min_count, negative)
-		encoder.train(epochs)
+        documents  = gensim_corpus(tsv_path,directory,make_phrases)
+		encoder.train(documents, epochs)
 		encoder.save(directory)
 	else:
 		encoder.load(directory)
@@ -796,16 +796,12 @@ def path_search_interface():
 
 
 def main():
-	path_interactive = True
-	if path_interactive:
-		path_search_interface()
-		return
-
-	if not os.path.isfile('text.tsv'):
+	if not os.path.isfile('titles.tsv'):
 		dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
 		parse_wikidump(dump_path)
-	if os.path.isfile('text.tsv'):
 		save_related()
+    else:
+        path_search_interface()
 
 if __name__ == "__main__":
 	main()
