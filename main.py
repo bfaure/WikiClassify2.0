@@ -300,7 +300,9 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
         return -1
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-    path_end = encoder.decode_word(np.add(start_vector,end_vector)/2.0)
+    middle_word = encoder.decode_word(np.add(start_vector,end_vector)/2.0)
+    start_middle_similarity = encoder.model.similarity(start_query,middle_word)
+    end_middle_similarity = encoder.model.similarity(end_query,middle_word)
 
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
