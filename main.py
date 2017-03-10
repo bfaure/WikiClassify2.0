@@ -12,7 +12,7 @@ from time import time
 import heapq, codecs
 from difflib import SequenceMatcher
 import numpy as np
-from scipy.stats.mstats import gmean
+import math
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
@@ -290,6 +290,48 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 #    print(middle_word+" --> "+end_query+" similarity = "+str(end_middle_similarity)[:3])
 #    print('='*41)
 
+def normalize(v):
+    norm=np.linalg.norm(v)
+    if norm==0: 
+       return v
+    return v/norm
+
+def spherical_linear_interpolation(v0, v1, t=0.5):
+'''Source: https://en.wikipedia.org/wiki/Slerp'''
+
+
+    # Only unit quaternions are valid rotations.
+    # Normalize to avoid undefined behavior.
+    v0 = normalize(v0)
+    v1 = normalize(v1)
+
+    # Compute the cosine of the angle between the two vectors.
+    dot = np.dot(v0,v1)
+
+    dot_threshold = 0.9995
+    if dot > dot_threshold:
+        # If the inputs are too close for comfort, linearly interpolate
+        # and normalize the result.
+        result = v0+t*(v1-v0)
+        normalize(result)
+        return result
+
+    # If the dot product is negative, the quaternions
+    # have opposite handed-ness and slerp won't take
+    # the shorter path. Fix by reversing one quaternion.
+    if dot < 0.0:
+        v1 = -v1
+        dot = -dot
+
+    np.clip(dot, -1, 1)      # Robustness: Stay within domain of acos()
+    theta_0 = math.acos(dot) # theta_0 = angle between input vectors
+    theta = theta_0*t        # theta = angle between v0 and result 
+
+    v2 = v1 – v0*dot
+    v2 = normalize(v2)       # { v0, v2 } is now an orthonormal basis
+
+    return v0*math.cos(theta)+v2*math.sin(theta)
+
 def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
     start_vector = encoder.encode_word(start_query)
     end_vector   = encoder.encode_word(end_query)
@@ -301,7 +343,7 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
         return -1
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-    middle_word = encoder.decode_word(gmean(np.vstack((start_vector,end_vector)),axis=0))
+    middle_word = encoder.decode_word(spherical_linear_interpolation(start_vector,end_vector))
     start_middle_similarity = encoder.model.similarity(start_query,middle_word)
     end_middle_similarity = encoder.model.similarity(end_query,middle_word)
 
