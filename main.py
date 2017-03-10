@@ -749,7 +749,7 @@ def get_queries(n=None):
             queries.append(query)
         return queries
     else:
-        return [raw_input('Query %d: ' % q).replace(" ","_") for q in xrange(n)]
+        return [raw_input('Query %d: ' % (q+1)).replace(" ","_") for q in xrange(n)]
 
 def path_search_interface(text_encoder, cat_encoder, doc_ids):
 
