@@ -721,7 +721,7 @@ def prep_3cstar(encoder):
 
 def word_algebra(encoder):
     print("\n")
-    print("Deliminate words with \"+\" and \"-\", replace space with \"_\", type \"exit\" to exit...\n")
+    print("Deliminate words with \"+\" and \"-\", spaces trimmed (use \"_\"), type \"exit\" to exit...\n")
 
     while True:
         input_str = raw_input("> ")
@@ -735,7 +735,12 @@ def word_algebra(encoder):
 
         for char in input_str:
 
-            if char==" ": continue
+            if char==" ":
+                if cur_buf!=None and cur_sign!=None:
+                    if cur_sign=="+": pos.append(cur_buf)
+                    if cur_sign=="-": neg.append(cur_buf)
+                cur_buf = None
+                continue
 
             if char=="+":
                 if cur_buf!=None and cur_sign!=None:
@@ -766,14 +771,25 @@ def word_algebra(encoder):
 
         output = None 
 
-        try:
-            if len(pos)!=0 and len(neg)!=0: output = encoder.model.most_similar_cosmul(positive=pos,negative=neg)
-            elif len(pos)!=0: output = encoder.model.most_similar_cosmul(positive=pos)
-            elif len(neg)!=0: output = encoder.model.most_similar_cosmul(negative=neg)
-        except KeyError:
-            print("One of the words was not in the model (mispelling?).")
-            continue
-        
+        if len(pos)!=0 and len(neg)!=0:
+            try:
+                output = encoder.model.most_similar_cosmul(positive=pos,negative=neg)
+            except KeyError:
+                print("One of the words was not in the model (mispelling?)")
+                continue
+        elif len(pos)!=0:
+            try:
+                output = encoder.model.most_similar_cosmul(positive=pos)
+            except KeyError:
+                print("One of the words was not in the model (mispelling?)")
+                continue
+        elif len(neg)!=0:
+            try:
+                if len(neg)!=0: output = encoder.model.most_similar_cosmul(negative=neg)
+            except KeyError:
+                print("One of the words was not in the model (mispelling?)")
+                continue
+                
         if output is not None: print(output[0][0])
         else: print("Could not calculate result.")
 
