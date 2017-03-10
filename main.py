@@ -785,11 +785,12 @@ def word_algebra(encoder):
                 continue
         elif len(neg)!=0:
             try:
-                if len(neg)!=0: output = encoder.model.most_similar_cosmul(negative=neg)
+                if len(neg)!=0: output = encoder.model.most_similar(negative=neg)
+                
             except KeyError:
                 print("One of the words was not in the model (mispelling?)")
                 continue
-                
+
         if output is not None: print(output[0][0])
         else: print("Could not calculate result.")
 
