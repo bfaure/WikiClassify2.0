@@ -17,29 +17,6 @@ from WikiLearn.code.vectorize import doc2vec
 #                            Main function
 #-----------------------------------------------------------------------------#
 
-def save_related():
-
-    encoder_directory = 'WikiLearn/data/models/tokenizer'
-    doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
-
-    encoder = get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
-    #save_related_tokens(encoder, 'output/related_tokens/words.tsv')
-    #save_related_docs(encoder, 'output/related_docs/by_words.tsv')
-    #save_doc_strings(doc_ids, 'output/related_docs/by_words.tsv', 'output/related_docs_(readable)/by_words.tsv')
-
-    encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-    #save_related_tokens(encoder, 'output/related_tokens/categories.tsv')
-    #save_doc_strings(doc_ids, 'output/related_tokens/categories.tsv', 'output/related_tokens_(readable)/categories.tsv')
-    #save_related_docs(encoder, 'output/related_docs/by_categories.tsv')
-    #save_doc_strings(doc_ids, 'output/related_docs/by_categories.tsv', 'output/related_docs_(readable)/by_categories.tsv')
-
-    encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
-    #save_related_tokens(encoder, 'output/related_tokens/links.tsv')
-    #save_doc_strings(doc_ids, 'output/related_tokens/links.tsv', 'output/related_tokens_(readable)/links.tsv')
-    #save_related_docs(encoder, 'output/related_docs/by_links.tsv')
-    #save_doc_strings(doc_ids, 'output/related_docs/by_links.tsv', 'output/related_docs_(readable)/by_links.tsv')
-
-
 def save_related_tokens(encoder, path):
     print('Saving related tokens...')
     directory = os.path.dirname(path)
@@ -97,10 +74,8 @@ class PriorityQueue:
     def __init__(self):
         self._queue = []
         self._index = 0
-        #self._contents = {}
 
     def push(self,item):
-        #self._contents[item.value] = True
         heapq.heappush(self._queue, (item.cost,self._index,item) )
         self._index +=1
 
@@ -109,7 +84,6 @@ class PriorityQueue:
 
     def pop(self):
         index,item = heapq.heappop(self._queue)[1:]
-        #self._contents[item.value] = False
         return item 
 
     def length(self):
@@ -120,13 +94,10 @@ class PriorityQueue:
         self._index = []
 
     def has(self,value):
-        '''
-        if value in self._contents: return True
-        else: return False
-        '''
         for item in self._queue:
             queued_elem = item[-1]
-            if queued_elem.value==value: return True
+            if queued_elem.value==value:
+                return True
         return False
         
     def update(self,new_elem):
@@ -140,7 +111,8 @@ class PriorityQueue:
 
     def get_cost(self,value):
         for cost,_,item in self._queue:
-            if item.value==value: return cost 
+            if item.value==value:
+                return cost 
         return -1
 
 def get_transition_cost(word1,word2,encoder):
@@ -156,7 +128,8 @@ def rectify_path(path_end,dictionary=None):
 
     while True:
         cur = cur.parent
-        if cur==None: break
+        if cur==None:
+            break
         path.append(cur.value)
         offsets.append(cur.column_offset)
 
@@ -171,72 +144,19 @@ def string_compare(str1,str2):
     return SequenceMatcher(None,str1,str2).ratio()
 
 def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branching_factor=10.0,dictionary=None):
-    '''
-    if dictionary is not None:
-        saved_start_query = start_query 
-        saved_end_query = end_query 
-        start_key = None 
-        end_key = None
-
-        try:
-            start_key = next(key for key,value in dictionary.items() if value==start_query)
-        except:
-            try:
-                start_key = next(key for key,value in dictionary.items() if value.lower()==start_query.lower())
-            except:
-                print("Could not find dictionary id for "+start_query)
-                for key,value in dictionary.items():
-                    #if abs(len(value)-len(saved_start_query))>2: continue
-                    if value.lower()[:9]!=start_query.lower()[:9]: continue
-                    if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
-                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
-                        if wants_this in ["y","Y","yes","Yes",""]:
-                            start_key = key 
-                            saved_start_query = value 
-                            break
-                        if wants_this in ["r","restart"]:
-                            print("Canceling search.")
-                            return
-
-        if start_key==None: 
-            print("Canceling search, could not locate "+start_query)
-            return -1
-
-        try:
-            end_key = next(key for key,value in dictionary.items() if value==end_query)
-        except:
-            try:
-                end_key = next(key for key,value in dictionary.items() if value.lower()==end_query.lower())
-            except:
-                print("Could not find dictionary id for "+end_query)
-                for key,value in dictionary.items():
-                    if value.lower()[:9]!=start_query.lower()[:9]: continue
-                    #if abs(len(value)-len(saved_end_query))>2: continue
-                    if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.7:
-                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
-                        if wants_this in ["y","Y","yes","Yes",""]:
-                            end_key = key 
-                            saved_end_query = value 
-                            break
-                        if wants_this in ["r","restart"]:
-                            print("Canceling search.")
-                            return
-
-        if start_key==None or end_key==None: return -1
-
-        start_query = start_key 
-        end_query = end_key
-    '''
 
     start_vector = encoder.get_nearest_word(start_query,topn=5)
     end_vector = encoder.get_nearest_word(end_query,topn=5)
     middle_vector = encoder.get_nearest_word(middle_query,topn=5)
 
-    if start_vector==None:  print("Could not find relation vector for "+start_query)
-    if end_vector==None:    print("Could not find relation vector for "+end_query)
-    if middle_vector==None: print("Could not find relation vector for "+middle_vector)
-    if start_vector==None or end_vector==None or middle_vector==None: return -1
-
+    if start_vector==None:
+        print("Could not find relation vector for "+start_query)
+    if end_vector==None:
+        print("Could not find relation vector for "+end_query)
+    if middle_vector==None:
+        print("Could not find relation vector for "+middle_vector)
+    if start_vector==None or end_vector==None or middle_vector==None:
+        return -1
 
     a = get_transition_cost(start_query,end_query,encoder)
     b = get_transition_cost(start_query,middle_query,encoder)
@@ -302,12 +222,14 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
             break
 
         neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
-        if neighbors==None: continue
+        if neighbors==None:
+            continue
         base_cost = cost_list[cur_word]
 
         for neighbor_word in neighbors:
-            if cur_word==neighbor_word: continue
-            cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder) #+ get_transition_cost(neighbor_word,middle_query,encoder)
+            if cur_word==neighbor_word:
+                continue
+            cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
 
             new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
             new_elem.column_offset = neighbors.index(neighbor_word)
@@ -321,13 +243,13 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
         print("Words are too similar to be compared, try lower weight & higher branching factor.")
         return
 
-    print("                                                                \r",end="\r")
-    print("\n=========================================")
+    print((' '*64)+'\r',end="\r")
+    print('\n'+('='*41))
     print(start_query+" + "+middle_query+" + "+end_query+" = "+middle_word+"\n")
     print(middle_word+" --> "+start_query+" similarity = "+str(middle_start_similarity)[:3])
     print(middle_word+" --> "+middle_query+" similarity = "+str(middle_middle_similarity)[:3])
     print(middle_word+" --> "+end_query+" similarity = "+str(middle_end_similarity)[:3])
-    print("=========================================")
+    print('='*41)
 
 def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
     if dictionary is not None:
@@ -344,8 +266,8 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
             except:
                 print("Could not find dictionary id for "+start_query)
                 for key,value in dictionary.items():
-                    #if abs(len(value)-len(saved_start_query))>2: continue
-                    if value.lower()[:9]!=start_query.lower()[:9]: continue
+                    if value.lower()[:9]!=start_query.lower()[:9]:
+                        continue
                     if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
                         wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
                         if wants_this in ["y","Y","yes","Yes",""]:
@@ -356,7 +278,7 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
                             print("Canceling search.")
                             return
 
-        if start_key==None: 
+        if start_key==None:
             print("Canceling search, could not locate "+start_query)
             return -1
 
@@ -368,8 +290,8 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
             except:
                 print("Could not find dictionary id for "+end_query)
                 for key,value in dictionary.items():
-                    if value.lower()[:9]!=start_query.lower()[:9]: continue
-                    #if abs(len(value)-len(saved_end_query))>2: continue
+                    if value.lower()[:9]!=start_query.lower()[:9]:
+                        continue
                     if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.7:
                         wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
                         if wants_this in ["y","Y","yes","Yes",""]:
@@ -380,7 +302,8 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
                             print("Canceling search.")
                             return
 
-        if start_key==None or end_key==None: return -1
+        if start_key==None or end_key==None:
+            return -1
 
         start_query = start_key 
         end_query = end_key
@@ -388,9 +311,12 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
     start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
     end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
 
-    if start_vector==None:  print("Could not find relation vector for "+start_query)
-    if end_vector==None:    print("Could not find relation vector for "+end_query)
-    if start_vector==None or end_vector==None: return -1
+    if start_vector==None:
+        print("Could not find relation vector for "+start_query)
+    if end_vector==None:
+        print("Could not find relation vector for "+end_query)
+    if start_vector==None or end_vector==None:
+        return -1
 
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
@@ -444,11 +370,13 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
             break
 
         neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
-        if neighbors==None: continue
+        if neighbors==None:
+            continue
         base_cost = cost_list[cur_word]
 
         for neighbor_word in neighbors:
-            if cur_word==neighbor_word: continue
+            if cur_word==neighbor_word:
+                continue
             cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
 
             new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
@@ -459,17 +387,16 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
                 new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
                 frontier.push(new_elem)
 
-
     if middle_word=="None":
         print("Words are too similar to be compared, try lower weight & higher branching factor.")
         return
 
-    print("                                                                \r",end="\r")
-    print("\n=========================================")
+    print((' '*64)+'\r',end="\r")
+    print('\n'+('='*41))
     print(start_query+" + "+end_query+" = "+middle_word+"\n")
     print(middle_word+" --> "+start_query+" similarity = "+str(start_middle_similarity)[:3])
     print(middle_word+" --> "+end_query+" similarity = "+str(end_middle_similarity)[:3])
-    print("=========================================")
+    print('='*41)
 
 def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
     
@@ -487,8 +414,8 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
             except:
                 print("Could not find dictionary id for "+start_query)
                 for key,value in dictionary.items():
-                    #if abs(len(value)-len(saved_start_query))>2: continue
-                    if value.lower()[:9]!=start_query.lower()[:9]: continue
+                    if value.lower()[:9]!=start_query.lower()[:9]:
+                        continue
                     if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
                         wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
                         if wants_this.lower() in ["y","yes",""]:
@@ -511,8 +438,8 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
             except:
                 print("Could not find dictionary id for "+end_query)
                 for key,value in dictionary.items():
-                    if value.lower()[:9]!=start_query.lower()[:9]: continue
-                    #if abs(len(value)-len(saved_end_query))>2: continue
+                    if value.lower()[:9]!=start_query.lower()[:9]:
+                        continue
                     if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.7:
                         wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
                         if wants_this in ["y","Y","yes","Yes",""]:
@@ -523,7 +450,8 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
                             print("Canceling search.")
                             return
 
-        if start_key==None or end_key==None: return -1
+        if start_key==None or end_key==None:
+            return -1
 
         start_query = start_key 
         end_query = end_key
@@ -531,9 +459,12 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
     start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
     end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
 
-    if start_vector==None:  print("Could not find relation vector for "+start_query)
-    if end_vector==None:    print("Could not find relation vector for "+end_query)
-    if start_vector==None or end_vector==None: return -1
+    if start_vector==None:
+        print("Could not find relation vector for "+start_query)
+    if end_vector==None:
+        print("Could not find relation vector for "+end_query)
+    if start_vector==None or end_vector==None:
+        return -1
 
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
@@ -573,11 +504,13 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
             break
 
         neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
-        if neighbors==None: continue
+        if neighbors==None:
+            continue
         base_cost = cost_list[cur_word]
 
         for neighbor_word in neighbors:
-            if cur_word==neighbor_word: continue
+            if cur_word==neighbor_word:
+                continue
             cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
 
             new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
@@ -588,27 +521,27 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
                 new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
                 frontier.push(new_elem)
 
-    print("                                                                \r",end="\r")
-    print("\n=========================================")
+    print((' '*64)+'\r',end="\r")
+    print('\n'+('='*41))
     print("Reconstructing path...\n")
     solution_path,offsets = rectify_path(path_end,dictionary)
     for item,offset in zip(reversed(solution_path),reversed(offsets)):
-        #indent = ''.join("=" for _ in range(offset))
-        #if len(indent)==0: indent = ""
-        #print(indent+item)
         if solution_path.index(item) in [0,len(solution_path)-1]:
             print("\""+item+"\"")
         else:
             print("-->\t\""+item+"\"  ("+str(offset)+") \t")
-    print("=========================================")
+    print('='*41)
 
 def ucs_algo(start_query,end_query,encoder,dictionary=None):
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
 
-    if start_vector==None: print("Could not find relation vector for "+start_query)
-    if end_vector==None: print("Could not find relation vector for "+end_query)
-    if start_vector==None or end_vector==None: return -1
+    if start_vector==None:
+        print("Could not find relation vector for "+start_query)
+    if end_vector==None:
+        print("Could not find relation vector for "+end_query)
+    if start_vector==None or end_vector==None:
+        return -1
 
     start_elem = elem_t(start_query,parent=None,cost=0)
     
@@ -641,83 +574,35 @@ def ucs_algo(start_query,end_query,encoder,dictionary=None):
 
         explored.append(cur_node.value)
         neighbors = encoder.get_nearest_word(cur_node.value)
-        if neighbors==None: continue
+        if neighbors==None:
+            continue
         
         base_cost = path_cost
 
         for neighbor in neighbors:
-            if neighbor==cur_node.value: continue
-            #transition_cost = encoder.model.similarity()
+            if neighbor==cur_node.value:
+                continue
+
             cost = base_cost+get_transition_cost(cur_node.value,neighbor,encoder)
-            #base_cost+=0.1
+
             new_elem = elem_t(neighbor,parent=cur_node,cost=cost)
             new_elem.column_offset = neighbors.index(neighbor)
 
-            if neighbor not in explored and not frontier.has(neighbor): frontier.push(new_elem)
-            elif frontier.has(neighbor) and frontier.get_cost(neighbor)>base_cost:  frontier.update(new_elem)
+            if neighbor not in explored and not frontier.has(neighbor):
+                frontier.push(new_elem)
+            elif frontier.has(neighbor) and frontier.get_cost(neighbor)>base_cost:
+                frontier.update(new_elem)
 
-    print("                                                                \r",end="\r")
-    print("\n=========================================")
+    print((' '*64)+'\r',end="\r")
+    print('\n'+('='*41))
     print("Reconstructing path...\n")
     solution_path,offsets = rectify_path(path_end)
     for item,offset in zip(reversed(solution_path),reversed(offsets)):
         indent = ''.join("=" for _ in range(offset))
-        if len(indent)==0: indent = ""
+        if len(indent)==0:
+            indent = ""
         print(indent+item)
-    print("=========================================")
-
-def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None,middle_query=None):
-    default_b_factor = 15
-    default_weight = 4
-    #sys.stdout.write("\nCalculating shortest vector from \""+str(start_query)+"\" to \""+str(end_query)+"\"...")
-
-    if algo == "UCS":
-        #sys.stdout.write(" using UCS\n\n")
-        return ucs_algo(start_query,end_query,encoder,dictionary=dictionary)
-    elif algo in ["A*","C*","3C*"]:  
-        #sys.stdout.write(" using "+algo+"\n\n")
-        print("Note: high branching factor     - less depth in final path")
-        print("Note: high A* weight         - low cost but slower")
-        while True:
-            b_factor = raw_input("Enter branching factor (5-100) ["+str(default_b_factor)+"]: ")
-            if b_factor == "":
-                b_factor = default_b_factor
-            try:
-                b_factor = int(b_factor)
-                break
-            except: continue
-        while True:
-            weight = raw_input("Enter A* weight (1-100) ["+str(default_weight)+"]: ")
-            if weight=="":
-                weight = default_weight
-            try:
-                weight = float(weight)
-                break
-            except: continue
-        print("\n")
-        if algo=="3C*": return astar_convene_3(start_query,middle_query,end_query,encoder,weight,b_factor)
-        if algo=="A*": return astar_path(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
-        if algo=="C*": return astar_convene(start_query,end_query,encoder,weight=weight,branching_factor=b_factor,dictionary=dictionary)
-    else: print("ERROR: algo input not recognized")
-
-def prep_3cstar(encoder):
-    while True:
-        query1 = raw_input("\nFirst query: ")
-        if query1.lower() in ["exit"]: break
-        query2 = raw_input("Second query: ")
-        if query2.lower() in ["exit"]: break
-        query3 = raw_input("Third query: ")
-        if query3.lower() in ["exit"]: break
-        if query1==" " or query2==" " or query3==" ": continue
-        query1 = query1.replace(" ","_")
-        query1 = query1.lower()
-        query2 = query2.replace(" ","_")
-        query2 = query2.lower()
-        query3 = query3.replace(" ","_")
-        query3 = query3.lower()
-        dictionary = None 
-        get_shortest_path(query1,query2,encoder,algo="3C*",middle_query=query3)
-        print("\n")
+    print('='*41)
 
 def word_algebra(encoder):
     print("\n")
@@ -725,7 +610,8 @@ def word_algebra(encoder):
 
     while True:
         input_str = raw_input("> ")
-        if input_str in ["exit","Exit"]: break
+        if input_str in ["exit","Exit"]:
+            break
 
         pos = []
         neg = []
@@ -737,33 +623,43 @@ def word_algebra(encoder):
 
             if char==" ":
                 if cur_buf!=None and cur_sign!=None:
-                    if cur_sign=="+": pos.append(cur_buf)
-                    if cur_sign=="-": neg.append(cur_buf)
+                    if cur_sign=="+":
+                        pos.append(cur_buf)
+                    if cur_sign=="-":
+                        neg.append(cur_buf)
                 cur_buf = None
                 continue
 
             if char=="+":
                 if cur_buf!=None and cur_sign!=None:
-                    if cur_sign=="+": pos.append(cur_buf)
-                    if cur_sign=="-": neg.append(cur_buf)
+                    if cur_sign=="+":
+                        pos.append(cur_buf)
+                    if cur_sign=="-":
+                        neg.append(cur_buf)
                     cur_buf = None 
                 cur_sign = "+"
                 continue
 
             if char=="-":
                 if cur_buf!=None and cur_sign!=None:
-                    if cur_sign=="-": neg.append(cur_buf)
-                    if cur_sign=="+": pos.append(cur_buf)
+                    if cur_sign=="-":
+                        neg.append(cur_buf)
+                    if cur_sign=="+":
+                        pos.append(cur_buf)
                     cur_buf = None 
                 cur_sign = "-"
                 continue
 
-            if cur_buf is None: cur_buf = char 
-            else:               cur_buf += char
+            if cur_buf is None:
+                cur_buf = char 
+            else:
+                cur_buf += char
 
         if cur_buf!=None:
-            if cur_sign=="+": pos.append(cur_buf)
-            if cur_sign=="-": neg.append(cur_buf)
+            if cur_sign=="+":
+                pos.append(cur_buf)
+            if cur_sign=="-":
+                neg.append(cur_buf)
 
         if len(pos)==0 and len(neg)==0:
             print("Didn't catch that...")
@@ -785,101 +681,134 @@ def word_algebra(encoder):
                 continue
         elif len(neg)!=0:
             try:
-                if len(neg)!=0: output = encoder.model.most_similar(negative=neg)
+                if len(neg)!=0:
+                    output = encoder.model.most_similar(negative=neg)
                 
             except KeyError:
                 print("One of the words was not in the model (mispelling?)")
                 continue
 
-        if output is not None: print(output[0][0])
-        else: print("Could not calculate result.")
+        if output is not None:
+            print(output[0][0])
+        else:
+            print("Could not calculate result.")
 
-    print("\nDone.")
+def get_constants():
+    print("Note: high branching factor - less depth in final path")
+    print("Note: high A* weight - low cost but slower")
+    default_b_factor = 15
+    default_weight = 4
+    while True:
+        b_factor = raw_input("Enter branching factor (5-100) ["+str(default_b_factor)+"]: ")
+        if b_factor == "":
+            b_factor = default_b_factor
+        try:
+            b_factor = int(b_factor)
+            break
+        except:
+            continue
+    while True:
+        weight = raw_input("Enter A* weight (1-100) ["+str(default_weight)+"]: ")
+        if weight=="":
+            weight = default_weight
+        try:
+            weight = float(weight)
+            break
+        except:
+            continue
+    return weight, b_factor
 
-def path_search_interface():
-    encoder_directory = "WikiLearn/data/models/tokenizer"
-    
-    doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
-
-    print("Loading encoders...")
-    text_encoder = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
-    cat_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-    #link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
-
+def get_algorithm():
     while True:
         algo = raw_input("\nWhich algorithm (UCS, [A*], C*, or 3C*, word_algebra): ")
-        if algo.lower() in ["ucs"]: 
-            algo = "UCS"
-            break
-        if algo.lower() in ["a*","astar","a_star",""]:
-            algo = "A*"
-            break
-        if algo.lower() in ["convene","c","c*"]:
-            algo = "C*"
-            break
-        if algo.lower() in ["3c","3c*","3"]:
-            return prep_3cstar(text_encoder)
+        if algo.lower() in ["ucs"]:
+            return "UCS"
+        elif algo.lower() in ["a*","astar","a_star",""]:
+            return "A*"
+        elif algo.lower() in ["convene","c","c*"]:
+            return "C*"
+        elif algo.lower() in ["3c","3c*","3"]:
+            return "3C*"
+        elif algo.lower() in ["word_algebra","word","w"]:
+            return "W"
 
-        if algo.lower() in ["word_algebra","word","w"]:
-            return word_algebra(text_encoder)
-
-        if algo.lower() in ["exit"]:
-            return
-
+def get_source():
     while True:
-        query1 = raw_input("\nFirst query: ")
-        if query1.lower() in ["exit"]: break
-        query2 = raw_input("Second query: ")
-        if query2.lower() in ["exit"]: break
-        if query1==" " or query2==" ": continue
-        query1 = query1.replace(" ","_")
-        #query1 = query1.lower()
-        query2 = query2.replace(" ","_")
-        #query2 = query2.lower()
+        source = raw_input("\n[\"text\"], or \"cat\" based? ")
+        if source.lower() in ['text','t','']:
+            return 'text'
+        elif source.lower() in ['cat','c']:
+            return 'cat'
 
-        if algo != "C*":
-            while True:
-                source = raw_input("\n[\"text\"], \"cat\", or \"link\" based? ")
-                if source.lower() in ["text","t",""]:
-                    query1 = query1.lower()
-                    query2 = query2.lower()
-                    source = text_encoder
-                    dictionary = None
-                    break
-                if source.lower() in ["cat","c"]:
-                    source = cat_encoder 
-                    query1 = "Category:"+query1
-                    query2 = "Category:"+query2
-                    dictionary = doc_ids
-                    break
-                if source.lower() in ["link","l"]:
-                    print("Link-based WIP")
-                    continue
-                    #source = link_encoder
-                    #dictionary = doc_ids
-                    #break
-                if source.lower() in ["exit"]:
-                    return
-        else:
-            query1 = query1.lower()
-            query2 = query2.lower()
-            dictionary = None 
-            source = text_encoder
+def get_queries(n=None):
+    if n == None:
+        queries = []
+        query = True
+        while query:
+            query = raw_input('Query %d: ' % (len(queries)+1))
+            queries.append(query)
+        return queries
+    else:
+        return [raw_input('Query %d: ' % q).replace(" ","_") for q in xrange(n)]
 
-        get_shortest_path(query1,query2,source,algo=algo,dictionary=dictionary)
-        print("\n")
-    print("Done")
+def path_search_interface(text_encoder, cat_encoder, doc_ids):
 
+    algo = get_algorithm()
 
+    if algo == "3C*":
+        while True:
+            query1, query2, query3 = [q.lower() for q in get_queries(3)]
+            weigth, b_factor = get_constants()
+            astar_convene_3(query1,query2,query_3,text_encoder,weight,b_factor)
 
+    if algo == ["W"]:
+        return word_algebra(text_encoder)
+
+    if algo == "UCS":
+        while True:
+            query1, query2 = get_queries(2)
+            source = get_source()
+            if source == "text":
+                query1, query2 = query1.lower(), query2.lower()
+                ucs_algo(query1,query2,text_encoder,dictionary=None)
+            if source == "cat":
+                query1, query2 = "Category:"+query1, "Category:"+query2
+                ucs_algo(query1,query2,cat_encoder,dictionary=doc_ids)
+
+    if algo == "A*":
+        while True:
+            query1, query2 = get_queries(2)
+            source = get_source()
+            if source == "text":
+                query1, query2 = query1.lower(), query2.lower()
+                weight, b_factor = get_constants()
+                astar_path(query1,query2,text_encoder,weight=weight,branching_factor=b_factor,dictionary=None)
+            if source == "cat":
+                query1, query2 = "Category:"+query1, "Category:"+query2
+                weight, b_factor = get_constants()
+                astar_path(query1,query2,cat_encoder,weight=weight,branching_factor=b_factor,dictionary=doc_ids)
+
+    if algo == "C*":
+        while True:
+            query1, query2 = [q.lower() for q in get_queries(2)]
+            weight, b_factor = get_constants()
+            astar_convene(query1,query2,text_encoder,weight=weight,branching_factor=b_factor,dictionary=None)
 
 def main():
+    encoder_directory = 'WikiLearn/data/models/tokenizer'
     if not os.path.isfile('titles.tsv'):
         dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
         parse_wikidump(dump_path)
-        save_related()
+        get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
+        get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+        get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+
     else:
-        path_search_interface()
+        doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
+        print("Loading encoders...")
+        text_encoder = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
+        cat_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+        path_search_interface(text_encoder, cat_encoder, doc_ids)
 
 if __name__ == "__main__":
     main()
