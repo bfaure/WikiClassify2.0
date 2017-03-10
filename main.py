@@ -11,6 +11,7 @@ import os, sys, time
 from time import time
 import heapq, codecs
 from difflib import SequenceMatcher
+import numpy as np
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
