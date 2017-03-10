@@ -12,6 +12,7 @@ from time import time
 import heapq, codecs
 from difflib import SequenceMatcher
 import numpy as np
+from scipy.stats.mstats import gmean
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
@@ -300,7 +301,7 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
         return -1
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-    middle_word = encoder.decode_word(np.add(start_vector,end_vector)/2.0)
+    middle_word = encoder.decode_word(gmean(np.vstack(start_vector,end_vector),axis=1))
     start_middle_similarity = encoder.model.similarity(start_query,middle_word)
     end_middle_similarity = encoder.model.similarity(end_query,middle_word)
 
