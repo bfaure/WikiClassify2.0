@@ -131,7 +131,6 @@ def string_compare(str1,str2):
     return SequenceMatcher(None,str1,str2).ratio()
 
 def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branching_factor=10.0):
-
     start_vector = encoder.get_nearest_word(start_query,topn=5)
     end_vector = encoder.get_nearest_word(end_query,topn=5)
     middle_vector = encoder.get_nearest_word(middle_query,topn=5)
@@ -218,9 +217,80 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
     print(middle_word+" --> "+end_query+" similarity = "+str(middle_end_similarity)[:3])
     print('='*41)
 
+#def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
+#    start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
+#    end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
+#    if start_vector==None:
+#        print("Could not find relation vector for "+start_query)
+#    if end_vector==None:
+#        print("Could not find relation vector for "+end_query)
+#    if start_vector==None or end_vector==None:
+#        return -1
+#    start_similarity = encoder.model.similarity(start_query,end_query)
+#    print("\nQuery meaning similarity: "+str(start_similarity)[:6])
+#    start_elem = elem_t(start_query,parent=None,cost=0)
+#    frontier = PriorityQueue()
+#    start_elem_cost = get_transition_cost(start_query,end_query,encoder)
+#    start_elem.cost = start_elem_cost
+#    frontier.push(start_elem)
+#    cost_list = {}
+#    cost_list[start_query] = 0
+#    path_end = start_elem
+#    base_cost = 0
+#    explored = []
+#    search_start = time()
+#    return_code = "NONE"
+#    middle_word = "NONE"
+#    start_middle_similarity = -1
+#    end_middle_similarity = -1
+#    while True:
+#        print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
+#        sys.stdout.flush()
+#        if frontier.length()==0:
+#            print("\nA* Convene failed.")
+#            return_code = "NOT FOUND"
+#            break
+#        cur_node = frontier.pop()
+#        cur_word = cur_node.value
+#        explored.append(cur_word)
+#        if cur_word not in [start_query,end_query]:
+#            cur_start_middle_similarity = encoder.model.similarity(start_query,cur_word)
+#            cur_end_middle_similarity = encoder.model.similarity(end_query,cur_word)
+#            if cur_end_middle_similarity>end_middle_similarity and cur_start_middle_similarity>start_middle_similarity:
+#                middle_word = cur_word
+#                start_middle_similarity = cur_start_middle_similarity
+#                end_middle_similarity = cur_end_middle_similarity
+#        if cur_word==end_query:
+#            print("\nFound connection.")
+#            path_end = cur_node
+#            break
+#        neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
+#        if neighbors==None:
+#            continue
+#        base_cost = cost_list[cur_word]
+#        for neighbor_word in neighbors:
+#            if cur_word==neighbor_word:
+#                continue
+#            cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
+#            new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
+#            new_elem.column_offset = neighbors.index(neighbor_word)
+#            if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
+#                cost_list[neighbor_word] = cost
+#                new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
+#                frontier.push(new_elem)
+#    if middle_word=="None":
+#        print("Words are too similar to be compared, try lower weight & higher branching factor.")
+#        return
+#    print((' '*64)+'\r',end="\r")
+#    print('\n'+('='*41))
+#    print(start_query+" + "+end_query+" = "+middle_word+"\n")
+#    print(middle_word+" --> "+start_query+" similarity = "+str(start_middle_similarity)[:3])
+#    print(middle_word+" --> "+end_query+" similarity = "+str(end_middle_similarity)[:3])
+#    print('='*41)
+
 def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
     start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
-    end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
+    end_vector   = encoder.get_nearest_word(end_query,topn=branching_factor)
     if start_vector==None:
         print("Could not find relation vector for "+start_query)
     if end_vector==None:
@@ -229,59 +299,8 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
         return -1
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-    start_elem = elem_t(start_query,parent=None,cost=0)
-    frontier = PriorityQueue()
-    start_elem_cost = get_transition_cost(start_query,end_query,encoder)
-    start_elem.cost = start_elem_cost
-    frontier.push(start_elem)
-    cost_list = {}
-    cost_list[start_query] = 0
-    path_end = start_elem
-    base_cost = 0
-    explored = []
-    search_start = time()
-    return_code = "NONE"
-    middle_word = "NONE"
-    start_middle_similarity = -1
-    end_middle_similarity = -1
-    while True:
-        print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
-        sys.stdout.flush()
-        if frontier.length()==0:
-            print("\nA* Convene failed.")
-            return_code = "NOT FOUND"
-            break
-        cur_node = frontier.pop()
-        cur_word = cur_node.value
-        explored.append(cur_word)
-        if cur_word not in [start_query,end_query]:
-            cur_start_middle_similarity = encoder.model.similarity(start_query,cur_word)
-            cur_end_middle_similarity = encoder.model.similarity(end_query,cur_word)
-            if cur_end_middle_similarity>end_middle_similarity and cur_start_middle_similarity>start_middle_similarity:
-                middle_word = cur_word
-                start_middle_similarity = cur_start_middle_similarity
-                end_middle_similarity = cur_end_middle_similarity
-        if cur_word==end_query:
-            print("\nFound connection.")
-            path_end = cur_node
-            break
-        neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
-        if neighbors==None:
-            continue
-        base_cost = cost_list[cur_word]
-        for neighbor_word in neighbors:
-            if cur_word==neighbor_word:
-                continue
-            cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
-            new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
-            new_elem.column_offset = neighbors.index(neighbor_word)
-            if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
-                cost_list[neighbor_word] = cost
-                new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
-                frontier.push(new_elem)
-    if middle_word=="None":
-        print("Words are too similar to be compared, try lower weight & higher branching factor.")
-        return
+    path_end = encoder.decode_word(np.add(start_vector,end_vector)/2.0)
+
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
     print(start_query+" + "+end_query+" = "+middle_word+"\n")
