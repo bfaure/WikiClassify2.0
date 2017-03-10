@@ -677,9 +677,6 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None,m
             b_factor = raw_input("Enter branching factor (5-100) ["+str(default_b_factor)+"]: ")
             if b_factor == "":
                 b_factor = default_b_factor
-
-            if b_factor.lower() in ["exit"]:
-                return
             try:
                 b_factor = int(b_factor)
                 break
