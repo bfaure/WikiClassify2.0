@@ -118,7 +118,7 @@ class PriorityQueue:
 def get_transition_cost(word1,word2,encoder):
     return 1.0-float(encoder.model.similarity(word1,word2)) 
 
-def rectify_path(path_end,dictionary=None):
+def rectify_path(path_end):
     path = []
     offsets = []
 
@@ -133,17 +133,13 @@ def rectify_path(path_end,dictionary=None):
         path.append(cur.value)
         offsets.append(cur.column_offset)
 
-    if dictionary is not None:
-        for i in range(len(path)):
-            path[i] = dictionary[path[i]]
-
     return path,offsets 
     
 
 def string_compare(str1,str2):
     return SequenceMatcher(None,str1,str2).ratio()
 
-def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branching_factor=10.0,dictionary=None):
+def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branching_factor=10.0):
 
     start_vector = encoder.get_nearest_word(start_query,topn=5)
     end_vector = encoder.get_nearest_word(end_query,topn=5)
@@ -251,62 +247,7 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
     print(middle_word+" --> "+end_query+" similarity = "+str(middle_end_similarity)[:3])
     print('='*41)
 
-def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
-    if dictionary is not None:
-        saved_start_query = start_query 
-        saved_end_query = end_query 
-        start_key = None 
-        end_key = None
-
-        try:
-            start_key = next(key for key,value in dictionary.items() if value==start_query)
-        except:
-            try:
-                start_key = next(key for key,value in dictionary.items() if value.lower()==start_query.lower())
-            except:
-                print("Could not find dictionary id for "+start_query)
-                for key,value in dictionary.items():
-                    if value.lower()[:9]!=start_query.lower()[:9]:
-                        continue
-                    if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
-                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
-                        if wants_this in ["y","Y","yes","Yes",""]:
-                            start_key = key 
-                            saved_start_query = value 
-                            break
-                        if wants_this in ["r","restart"]:
-                            print("Canceling search.")
-                            return
-
-        if start_key==None:
-            print("Canceling search, could not locate "+start_query)
-            return -1
-
-        try:
-            end_key = next(key for key,value in dictionary.items() if value==end_query)
-        except:
-            try:
-                end_key = next(key for key,value in dictionary.items() if value.lower()==end_query.lower())
-            except:
-                print("Could not find dictionary id for "+end_query)
-                for key,value in dictionary.items():
-                    if value.lower()[:9]!=start_query.lower()[:9]:
-                        continue
-                    if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.7:
-                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
-                        if wants_this in ["y","Y","yes","Yes",""]:
-                            end_key = key 
-                            saved_end_query = value 
-                            break
-                        if wants_this in ["r","restart"]:
-                            print("Canceling search.")
-                            return
-
-        if start_key==None or end_key==None:
-            return -1
-
-        start_query = start_key 
-        end_query = end_key
+def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
 
     start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
     end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
@@ -398,63 +339,7 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
     print(middle_word+" --> "+end_query+" similarity = "+str(end_middle_similarity)[:3])
     print('='*41)
 
-def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
-    
-    if dictionary is not None:
-        saved_start_query = start_query 
-        saved_end_query = end_query 
-        start_key = None 
-        end_key = None
-
-        try:
-            start_key = next(key for key,value in dictionary.items() if value==start_query)
-        except:
-            try:
-                start_key = next(key for key,value in dictionary.items() if value.lower()==start_query.lower())
-            except:
-                print("Could not find dictionary id for "+start_query)
-                for key,value in dictionary.items():
-                    if value.lower()[:9]!=start_query.lower()[:9]:
-                        continue
-                    if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
-                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
-                        if wants_this.lower() in ["y","yes",""]:
-                            start_key = key 
-                            saved_start_query = value 
-                            break
-                        if wants_this in ["r","restart"]:
-                            print("Canceling search.")
-                            return
-
-        if start_key==None: 
-            print("Canceling search, could not locate "+start_query)
-            return -1
-
-        try:
-            end_key = next(key for key,value in dictionary.items() if value==end_query)
-        except:
-            try:
-                end_key = next(key for key,value in dictionary.items() if value.lower()==end_query.lower())
-            except:
-                print("Could not find dictionary id for "+end_query)
-                for key,value in dictionary.items():
-                    if value.lower()[:9]!=start_query.lower()[:9]:
-                        continue
-                    if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.7:
-                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
-                        if wants_this in ["y","Y","yes","Yes",""]:
-                            end_key = key 
-                            saved_end_query = value 
-                            break
-                        if wants_this in ["r","restart"]:
-                            print("Canceling search.")
-                            return
-
-        if start_key==None or end_key==None:
-            return -1
-
-        start_query = start_key 
-        end_query = end_key
+def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10):
 
     start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
     end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
@@ -524,7 +409,7 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
     print("Reconstructing path...\n")
-    solution_path,offsets = rectify_path(path_end,dictionary)
+    solution_path,offsets = rectify_path(path_end)
     for item,offset in zip(reversed(solution_path),reversed(offsets)):
         if solution_path.index(item) in [0,len(solution_path)-1]:
             print("\""+item+"\"")
@@ -532,7 +417,7 @@ def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dict
             print("-->\t\""+item+"\"  ("+str(offset)+") \t")
     print('='*41)
 
-def ucs_algo(start_query,end_query,encoder,dictionary=None):
+def ucs_algo(start_query,end_query,encoder):
     start_vector = encoder.get_nearest_word(start_query)
     end_vector = encoder.get_nearest_word(end_query)
 
@@ -737,10 +622,67 @@ def get_source():
         source = raw_input("\n[\"text\"], or \"cat\" based? ")
         if source.lower() in ['text','t','']:
             return 'text'
-        elif source.lower() in ['cat','c']:
-            return 'cat'
+        #elif source.lower() in ['cat','c']:
+        #    return 'cat'
 
-def get_queries(n=None):
+def get_queries(n=None, prefix='', dictionary=None):
+
+#    if dictionary is not None:
+#        saved_start_query = start_query
+#        saved_end_query = end_query
+#        start_key = None 
+#        end_key = None
+#
+#        try:
+#            start_key = next(key for key,value in dictionary.items() if value==start_query)
+#        except:
+#            try:
+#                start_key = next(key for key,value in dictionary.items() if value.lower()==start_query.lower())
+#            except:
+#                print("Could not find dictionary id for "+start_query)
+#                for key,value in dictionary.items():
+#                    if value.lower()[:9]!=start_query.lower()[:9]:
+#                        continue
+#                    if string_compare(value.lower()[9:],start_query.lower()[9:])>=0.7:
+#                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
+#                        if wants_this.lower() in ["y","yes",""]:
+#                            start_key = key 
+#                            saved_start_query = value 
+#                            break
+#                        if wants_this in ["r","restart"]:
+#                            print("Canceling search.")
+#                            return
+#
+#        if start_key==None: 
+#            print("Canceling search, could not locate "+start_query)
+#            return -1
+#
+#        try:
+#            end_key = next(key for key,value in dictionary.items() if value==end_query)
+#        except:
+#            try:
+#                end_key = next(key for key,value in dictionary.items() if value.lower()==end_query.lower())
+#            except:
+#                print("Could not find dictionary id for "+end_query)
+#                for key,value in dictionary.items():
+#                    if value.lower()[:9]!=start_query.lower()[:9]:
+#                        continue
+#                    if string_compare(value.lower()[9:],end_query.lower()[9:])>=0.7:
+#                        wants_this = raw_input("Did you mean \""+value+"\"? [Y,n,restart]: ")
+#                        if wants_this in ["y","Y","yes","Yes",""]:
+#                            end_key = key 
+#                            saved_end_query = value 
+#                            break
+#                        if wants_this in ["r","restart"]:
+#                            print("Canceling search.")
+#                            return
+#
+#        if start_key==None or end_key==None:
+#            return -1
+#
+#        start_query = start_key 
+#        end_query = end_key
+
     if n == None:
         queries = []
         query = True
@@ -770,10 +712,11 @@ def path_search_interface(text_encoder, cat_encoder, doc_ids):
             source = get_source()
             if source == "text":
                 query1, query2 = query1.lower(), query2.lower()
-                ucs_algo(query1,query2,text_encoder,dictionary=None)
-            if source == "cat":
-                query1, query2 = "Category:"+query1, "Category:"+query2
-                ucs_algo(query1,query2,cat_encoder,dictionary=doc_ids)
+                ucs_algo(query1,query2,text_encoder)
+            #if source == "cat":
+            #    query1, query2 = "Category:"+query1, "Category:"+query2
+            #    ucs_algo(query1,query2,cat_encoder)
+            #    #dictionary=doc_ids
 
     if algo == "A*":
         while True:
@@ -782,17 +725,18 @@ def path_search_interface(text_encoder, cat_encoder, doc_ids):
             if source == "text":
                 query1, query2 = query1.lower(), query2.lower()
                 weight, b_factor = get_constants()
-                astar_path(query1,query2,text_encoder,weight=weight,branching_factor=b_factor,dictionary=None)
-            if source == "cat":
-                query1, query2 = "Category:"+query1, "Category:"+query2
-                weight, b_factor = get_constants()
-                astar_path(query1,query2,cat_encoder,weight=weight,branching_factor=b_factor,dictionary=doc_ids)
+                astar_path(query1,query2,text_encoder,weight=weight,branching_factor=b_factor)
+            #if source == "cat":
+            #    query1, query2 = "Category:"+query1, "Category:"+query2
+            #    weight, b_factor = get_constants()
+            #    astar_path(query1,query2,cat_encoder,weight=weight,branching_factor=b_factor)
+            #    #dictionary=doc_ids
 
     if algo == "C*":
         while True:
             query1, query2 = [q.lower() for q in get_queries(2)]
             weight, b_factor = get_constants()
-            astar_convene(query1,query2,text_encoder,weight=weight,branching_factor=b_factor,dictionary=None)
+            astar_convene(query1,query2,text_encoder,weight=weight,branching_factor=b_factor)
 
 def main():
     encoder_directory = 'WikiLearn/data/models/tokenizer'
