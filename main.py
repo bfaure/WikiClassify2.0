@@ -297,7 +297,7 @@ def normalize(v):
     return v/norm
 
 def spherical_linear_interpolation(v0, v1, t=0.5):
-'''Source: https://en.wikipedia.org/wiki/Slerp'''
+    '''Source: https://en.wikipedia.org/wiki/Slerp'''
 
 
     # Only unit quaternions are valid rotations.
