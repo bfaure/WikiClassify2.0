@@ -327,7 +327,7 @@ def spherical_linear_interpolation(v0, v1, t=0.5):
     theta_0 = math.acos(dot) # theta_0 = angle between input vectors
     theta = theta_0*t        # theta = angle between v0 and result 
 
-    v2 = v1 – v0*dot
+    v2 = v1-v0*dot
     v2 = normalize(v2)       # { v0, v2 } is now an orthonormal basis
 
     return v0*math.cos(theta)+v2*math.sin(theta)
