@@ -237,6 +237,7 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
     if middle_vector==None: print("Could not find relation vector for "+middle_vector)
     if start_vector==None or end_vector==None or middle_vector==None: return -1
 
+
     a = get_transition_cost(start_query,end_query,encoder)
     b = get_transition_cost(start_query,middle_query,encoder)
     c = get_transition_cost(middle_query,end_query,encoder)
@@ -267,9 +268,9 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
     return_code = "NONE"
 
     middle_word = "NONE"
-    dist_middle_start = 1000
-    dist_middle_end = 1000
-    dist_middle_middle = 1000
+    middle_start_similarity = -1
+    middle_end_similarity = -1
+    middle_middle_similarity = -1
 
     while True:
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
@@ -285,14 +286,15 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
         explored.append(cur_word)
 
         if cur_word not in [start_query,end_query,middle_query]:
-            dist_to_middle = get_transition_cost(cur_word,middle_query,encoder)
-            dist_to_start = get_transition_cost(cur_word,start_query,encoder)
-            dist_to_end = get_transition_cost(cur_word,end_query,encoder)
-            if dist_to_end<dist_middle_start and dist_to_start<dist_middle_end and dist_to_middle<dist_middle_middle:
+            middle_sim = encoder.model.similarity(cur_word,middle_query)
+            start_sim = encoder.model.similarity(cur_word,start_query)
+            end_sim = encoder.model.similarity(cur_word,end_query)
+
+            if start_sim>middle_start_similarity and middle_sim>middle_middle_similarity and end_sim>middle_end_similarity:
                 middle_word = cur_word 
-                dist_middle_start = dist_to_start
-                dist_middle_end = dist_to_end
-                dist_middle_middle = dist_to_middle
+                middle_start_similarity = start_sim
+                middle_end_similarity = end_sim
+                middle_middle_similarity = middle_sim
 
         if cur_word==end_query:
             print("\nFound connection.")
@@ -322,9 +324,9 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
     print("                                                                \r",end="\r")
     print("\n=========================================")
     print(start_query+" + "+middle_query+" + "+end_query+" = "+middle_word+"\n")
-    print(middle_word+" --> "+start_query+" similarity = "+str(1-dist_middle_start)[:3])
-    print(middle_word+" --> "+middle_query+" similarity = "+str(1-dist_middle_middle)[:3])
-    print(middle_word+" --> "+end_query+" similarity = "+str(1-dist_middle_end)[:3])
+    print(middle_word+" --> "+start_query+" similarity = "+str(middle_start_similarity)[:3])
+    print(middle_word+" --> "+middle_query+" similarity = "+str(middle_middle_similarity)[:3])
+    print(middle_word+" --> "+end_query+" similarity = "+str(middle_end_similarity)[:3])
     print("=========================================")
 
 def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
@@ -410,8 +412,9 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
     return_code = "NONE"
 
     middle_word = "NONE"
-    dist_middle_start = 1000
-    dist_middle_end = 1000
+
+    start_middle_similarity = -1
+    end_middle_similarity = -1
 
     while True:
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
@@ -427,12 +430,13 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
         explored.append(cur_word)
 
         if cur_word not in [start_query,end_query]:
-            dist_to_start = get_transition_cost(cur_word,start_query,encoder)
-            dist_to_end = get_transition_cost(cur_word,end_query,encoder)
-            if dist_to_end<dist_middle_start and dist_to_start<dist_middle_end:
+            cur_start_middle_similarity = encoder.model.similarity(start_query,cur_word)
+            cur_end_middle_similarity = encoder.model.similarity(end_query,cur_word)
+
+            if cur_end_middle_similarity>end_middle_similarity and cur_start_middle_similarity>start_middle_similarity:
                 middle_word = cur_word 
-                dist_middle_start = dist_to_start
-                dist_middle_end = dist_to_end
+                start_middle_similarity = cur_start_middle_similarity
+                end_middle_similarity = cur_end_middle_similarity
 
         if cur_word==end_query:
             print("\nFound connection.")
@@ -455,6 +459,7 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
                 new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
                 frontier.push(new_elem)
 
+
     if middle_word=="None":
         print("Words are too similar to be compared, try lower weight & higher branching factor.")
         return
@@ -462,8 +467,8 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10,d
     print("                                                                \r",end="\r")
     print("\n=========================================")
     print(start_query+" + "+end_query+" = "+middle_word+"\n")
-    print(middle_word+" --> "+start_query+" similarity = "+str(1-dist_middle_start)[:3])
-    print(middle_word+" --> "+end_query+" similarity = "+str(1-dist_middle_end)[:3])
+    print(middle_word+" --> "+start_query+" similarity = "+str(start_middle_similarity)[:3])
+    print(middle_word+" --> "+end_query+" similarity = "+str(end_middle_similarity)[:3])
     print("=========================================")
 
 def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10,dictionary=None):
@@ -714,8 +719,67 @@ def prep_3cstar(encoder):
         get_shortest_path(query1,query2,encoder,algo="3C*",middle_query=query3)
         print("\n")
 
-def path_search_interface():
+def word_algebra(encoder):
+    print("\n")
+    print("Deliminate words with \"+\" and \"-\", replace space with \"_\", type \"exit\" to exit...\n")
 
+    while True:
+        input_str = raw_input("> ")
+        if input_str in ["exit","Exit"]: break
+
+        pos = []
+        neg = []
+
+        cur_sign = "+"
+        cur_buf = None
+
+        for char in input_str:
+
+            if char==" ": continue
+
+            if char=="+":
+                if cur_buf!=None and cur_sign!=None:
+                    if cur_sign=="+": pos.append(cur_buf)
+                    if cur_sign=="-": neg.append(cur_buf)
+                    cur_buf = None 
+                cur_sign = "+"
+                continue
+
+            if char=="-":
+                if cur_buf!=None and cur_sign!=None:
+                    if cur_sign=="-": neg.append(cur_buf)
+                    if cur_sign=="+": pos.append(cur_buf)
+                    cur_buf = None 
+                cur_sign = "-"
+                continue
+
+            if cur_buf is None: cur_buf = char 
+            else:               cur_buf += char
+
+        if cur_buf!=None:
+            if cur_sign=="+": pos.append(cur_buf)
+            if cur_sign=="-": neg.append(cur_buf)
+
+        if len(pos)==0 and len(neg)==0:
+            print("Didn't catch that...")
+            continue
+
+        output = None 
+
+        try:
+            if len(pos)!=0 and len(neg)!=0: output = encoder.model.most_similar_cosmul(positive=pos,negative=neg)
+            elif len(pos)!=0: output = encoder.model.most_similar_cosmul(positive=pos)
+            elif len(neg)!=0: output = encoder.model.most_similar_cosmul(negative=neg)
+        except KeyError:
+            print("One of the words was not in the model (mispelling?).")
+            continue
+        
+        if output is not None: print(output[0][0])
+        else: print("Could not calculate result.")
+
+    print("\nDone.")
+
+def path_search_interface():
     encoder_directory = "WikiLearn/data/models/tokenizer"
     
     doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
@@ -723,10 +787,10 @@ def path_search_interface():
     print("Loading encoders...")
     text_encoder = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
     cat_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-    link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+    #link_encoder = get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
 
     while True:
-        algo = raw_input("\nWhich algorithm (UCS, [A*], C*, or 3C*): ")
+        algo = raw_input("\nWhich algorithm (UCS, [A*], C*, or 3C*, word_algebra): ")
         if algo.lower() in ["ucs"]: 
             algo = "UCS"
             break
@@ -738,6 +802,9 @@ def path_search_interface():
             break
         if algo.lower() in ["3c","3c*","3"]:
             return prep_3cstar(text_encoder)
+
+        if algo.lower() in ["word_algebra","word","w"]:
+            return word_algebra(text_encoder)
 
         if algo.lower() in ["exit"]:
             return
