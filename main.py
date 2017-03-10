@@ -290,8 +290,8 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
 #    print('='*41)
 
 def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
-    start_vector = encoder.encode_word(start_query,topn=branching_factor)
-    end_vector   = encoder.encode_word(end_query,topn=branching_factor)
+    start_vector = encoder.encode_word(start_query)
+    end_vector   = encoder.encode_word(end_query)
     if start_vector==None:
         print("Could not find relation vector for "+start_query)
     if end_vector==None:
