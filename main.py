@@ -685,9 +685,6 @@ def get_shortest_path(start_query,end_query,encoder,algo="UCS",dictionary=None,m
             weight = raw_input("Enter A* weight (1-100) ["+str(default_weight)+"]: ")
             if weight=="":
                 weight = default_weight
-
-            if weight.lower() in ["exit"]:
-                return
             try:
                 weight = float(weight)
                 break
