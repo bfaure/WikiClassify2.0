@@ -133,11 +133,14 @@ def string_compare(str1,str2):
     return SequenceMatcher(None,str1,str2).ratio()
 
 def astar_convene(queries,encoder):
-    middle_word = encoder.model.most_similar(queries,topn=1)[0][0]
-    print((' '*64)+'\r',end="\r")
-    print('\n'+('='*41))
-    print(" + ".join(queries)+" = "+middle_word+"\n")
-    print('='*41)
+    try:
+        middle_word = encoder.model.most_similar(queries,topn=1)[0][0]
+        print((' '*64)+'\r',end="\r")
+        print('\n'+('='*41))
+        print(" + ".join(queries)+" = "+middle_word+"\n")
+        print('='*41)
+    except:
+        print('One of the words does not occur!')
 
 def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10):
     start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
