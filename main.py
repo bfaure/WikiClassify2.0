@@ -219,139 +219,13 @@ def astar_convene_3(start_query,middle_query,end_query,encoder,weight=4.0,branch
     print(middle_word+" --> "+end_query+" similarity = "+str(middle_end_similarity)[:3])
     print('='*41)
 
-#def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
-#    start_vector = encoder.get_nearest_word(start_query,topn=branching_factor)
-#    end_vector = encoder.get_nearest_word(end_query,topn=branching_factor)
-#    if start_vector==None:
-#        print("Could not find relation vector for "+start_query)
-#    if end_vector==None:
-#        print("Could not find relation vector for "+end_query)
-#    if start_vector==None or end_vector==None:
-#        return -1
-#    start_similarity = encoder.model.similarity(start_query,end_query)
-#    print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-#    start_elem = elem_t(start_query,parent=None,cost=0)
-#    frontier = PriorityQueue()
-#    start_elem_cost = get_transition_cost(start_query,end_query,encoder)
-#    start_elem.cost = start_elem_cost
-#    frontier.push(start_elem)
-#    cost_list = {}
-#    cost_list[start_query] = 0
-#    path_end = start_elem
-#    base_cost = 0
-#    explored = []
-#    search_start = time()
-#    return_code = "NONE"
-#    middle_word = "NONE"
-#    start_middle_similarity = -1
-#    end_middle_similarity = -1
-#    while True:
-#        print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end="\r")
-#        sys.stdout.flush()
-#        if frontier.length()==0:
-#            print("\nA* Convene failed.")
-#            return_code = "NOT FOUND"
-#            break
-#        cur_node = frontier.pop()
-#        cur_word = cur_node.value
-#        explored.append(cur_word)
-#        if cur_word not in [start_query,end_query]:
-#            cur_start_middle_similarity = encoder.model.similarity(start_query,cur_word)
-#            cur_end_middle_similarity = encoder.model.similarity(end_query,cur_word)
-#            if cur_end_middle_similarity>end_middle_similarity and cur_start_middle_similarity>start_middle_similarity:
-#                middle_word = cur_word
-#                start_middle_similarity = cur_start_middle_similarity
-#                end_middle_similarity = cur_end_middle_similarity
-#        if cur_word==end_query:
-#            print("\nFound connection.")
-#            path_end = cur_node
-#            break
-#        neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
-#        if neighbors==None:
-#            continue
-#        base_cost = cost_list[cur_word]
-#        for neighbor_word in neighbors:
-#            if cur_word==neighbor_word:
-#                continue
-#            cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
-#            new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
-#            new_elem.column_offset = neighbors.index(neighbor_word)
-#            if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
-#                cost_list[neighbor_word] = cost
-#                new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
-#                frontier.push(new_elem)
-#    if middle_word=="None":
-#        print("Words are too similar to be compared, try lower weight & higher branching factor.")
-#        return
-#    print((' '*64)+'\r',end="\r")
-#    print('\n'+('='*41))
-#    print(start_query+" + "+end_query+" = "+middle_word+"\n")
-#    print(middle_word+" --> "+start_query+" similarity = "+str(start_middle_similarity)[:3])
-#    print(middle_word+" --> "+end_query+" similarity = "+str(end_middle_similarity)[:3])
-#    print('='*41)
-
-def normalize(v):
-    norm=np.linalg.norm(v)
-    if norm==0: 
-       return v
-    return v/norm
-
-def spherical_linear_interpolation(v0, v1, t=0.5):
-    '''Source: https://en.wikipedia.org/wiki/Slerp'''
-
-
-    # Only unit quaternions are valid rotations.
-    # Normalize to avoid undefined behavior.
-    v0 = normalize(v0)
-    v1 = normalize(v1)
-
-    # Compute the cosine of the angle between the two vectors.
-    dot = np.dot(v0,v1)
-
-    dot_threshold = 0.9995
-    if dot > dot_threshold:
-        # If the inputs are too close for comfort, linearly interpolate
-        # and normalize the result.
-        result = v0+t*(v1-v0)
-        normalize(result)
-        return result
-
-    # If the dot product is negative, the quaternions
-    # have opposite handed-ness and slerp won't take
-    # the shorter path. Fix by reversing one quaternion.
-    if dot < 0.0:
-        v1 = -v1
-        dot = -dot
-
-    np.clip(dot, -1, 1)      # Robustness: Stay within domain of acos()
-    theta_0 = math.acos(dot) # theta_0 = angle between input vectors
-    theta = theta_0*t        # theta = angle between v0 and result 
-
-    v2 = v1-v0*dot
-    v2 = normalize(v2)       # { v0, v2 } is now an orthonormal basis
-
-    return v0*math.cos(theta)+v2*math.sin(theta)
-
-def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
-    start_vector = encoder.encode_word(start_query)
-    end_vector   = encoder.encode_word(end_query)
-    if start_vector==None:
-        print("Could not find relation vector for "+start_query)
-    if end_vector==None:
-        print("Could not find relation vector for "+end_query)
-    if start_vector==None or end_vector==None:
-        return -1
+def astar_convene(queries,encoder):
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-    middle_word = encoder.model.most_similar([start_query,end_query],topn=1)[0][0]
-    start_middle_similarity = encoder.model.similarity(start_query,middle_word)
-    end_middle_similarity = encoder.model.similarity(end_query,middle_word)
-
+    middle_word = encoder.model.most_similar(encoder.encode_words(' '.join(queries)),topn=1)[0][0]
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
-    print(start_query+" + "+end_query+" = "+middle_word+"\n")
-    print(middle_word+" --> "+start_query+" similarity = "+str(start_middle_similarity)[:3])
-    print(middle_word+" --> "+end_query+" similarity = "+str(end_middle_similarity)[:3])
+    print(" + ".join(queries)+" = "+middle_word+"\n")
     print('='*41)
 
 def astar_path(start_query,end_query,encoder,weight=4.0,branching_factor=10):
@@ -662,11 +536,9 @@ def get_queries(n=None, prefix='', dictionary=None):
 
 def path_search_interface(text_encoder, cat_encoder, doc_ids):
     algo = get_algorithm()
-    if algo == "3C*":
+    if algo == "C*":
         while True:
-            query1, query2, query3 = [q.lower() for q in get_queries(3)]
-            weigth, b_factor = get_constants()
-            astar_convene_3(query1,query2,query_3,text_encoder,weight,b_factor)
+            astar_convene([q.lower() for q in get_queries()],text_encoder)
     if algo == "W":
         return word_algebra(text_encoder)
     if algo == "UCS":
@@ -693,11 +565,6 @@ def path_search_interface(text_encoder, cat_encoder, doc_ids):
             #    weight, b_factor = get_constants()
             #    astar_path(query1,query2,cat_encoder,weight=weight,branching_factor=b_factor)
             #    #dictionary=doc_ids
-    if algo == "C*":
-        while True:
-            query1, query2 = [q.lower() for q in get_queries(2)]
-            weight, b_factor = get_constants()
-            astar_convene(query1,query2,text_encoder,weight=weight,branching_factor=b_factor)
 
 def main():
     encoder_directory = 'WikiLearn/data/models/tokenizer'
