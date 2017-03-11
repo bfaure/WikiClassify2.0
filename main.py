@@ -343,7 +343,7 @@ def astar_convene(start_query,end_query,encoder,weight=4.0,branching_factor=10):
         return -1
     start_similarity = encoder.model.similarity(start_query,end_query)
     print("\nQuery meaning similarity: "+str(start_similarity)[:6])
-    middle_word = self.model.most_similar([start_query,end_query],topn=1)[0][0]
+    middle_word = encoder.model.most_similar([start_query,end_query],topn=1)[0][0]
     start_middle_similarity = encoder.model.similarity(start_query,middle_word)
     end_middle_similarity = encoder.model.similarity(end_query,middle_word)
 
