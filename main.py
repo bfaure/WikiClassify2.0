@@ -73,6 +73,7 @@ class elem_t:
         self.value = value
         self.cost = cost
         self.column_offset = 0
+        self.parent=parent
 
 class PriorityQueue:
     def __init__(self):
