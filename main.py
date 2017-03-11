@@ -438,7 +438,8 @@ def get_queries(n=None, prefix='', dictionary=None):
         query = True
         while query:
             query = raw_input('Query %d: ' % (len(queries)+1))
-            queries.append(query)
+            if query:
+                queries.append(query)
         return queries
     else:
         return [raw_input('Query %d: ' % (q+1)).replace(" ","_") for q in xrange(n)]
