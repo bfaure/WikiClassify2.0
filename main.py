@@ -133,7 +133,6 @@ def string_compare(str1,str2):
     return SequenceMatcher(None,str1,str2).ratio()
 
 def astar_convene(queries,encoder):
-    print("\nQuery meaning similarity: "+str(start_similarity)[:6])
     middle_word = encoder.model.most_similar(encoder.encode_words(' '.join(queries)),topn=1)[0][0]
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
@@ -360,15 +359,13 @@ def get_constants():
 
 def get_algorithm():
     while True:
-        algo = raw_input("\nWhich algorithm (UCS, [A*], C*, or 3C*, word_algebra): ")
+        algo = raw_input("\nWhich algorithm (UCS, [A*], C*, or word_algebra): ")
         if algo.lower() in ["ucs"]:
             return "UCS"
         elif algo.lower() in ["a*","astar","a_star",""]:
             return "A*"
         elif algo.lower() in ["convene","c","c*"]:
             return "C*"
-        elif algo.lower() in ["3c","3c*","3"]:
-            return "3C*"
         elif algo.lower() in ["word_algebra","word","w"]:
             return "W"
 
