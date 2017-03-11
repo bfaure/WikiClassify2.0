@@ -133,8 +133,7 @@ def string_compare(str1,str2):
     return SequenceMatcher(None,str1,str2).ratio()
 
 def astar_convene(queries,encoder):
-    vecs = [encoder.encode_word(q) for q in queries]
-    middle_word = encoder.model.most_similar(vecs,topn=1)[0][0]
+    middle_word = encoder.model.most_similar(queries,topn=1)[0][0]
     print((' '*64)+'\r',end="\r")
     print('\n'+('='*41))
     print(" + ".join(queries)+" = "+middle_word+"\n")
