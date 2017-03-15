@@ -161,12 +161,7 @@ def astar_path(start_query,end_query,encoder):
     print('\n'+('='*41))
     print("Reconstructing path...\n")
     solution_path,offsets = rectify_path(path_end)
-    for item,offset in zip(reversed(solution_path),reversed(offsets)):
-        if solution_path.index(item) in [0,len(solution_path)-1]:
-            print("\""+item+"\"")
-        else:
-            print("-->\t\""+item+"\"  ("+str(offset)+") \t")
-    print('='*41)
+    return reversed(solution_path)
 
 def ucs_algo(start_query,end_query,encoder):
     start_vector = encoder.get_nearest_word(start_query)
@@ -217,12 +212,7 @@ def ucs_algo(start_query,end_query,encoder):
     print('\n'+('='*41))
     print("Reconstructing path...\n")
     solution_path,offsets = rectify_path(path_end)
-    for item,offset in zip(reversed(solution_path),reversed(offsets)):
-        indent = ''.join("=" for _ in range(offset))
-        if len(indent) == 0:
-            indent = ""
-        print(indent+item)
-    print('='*41)
+    return reversed(solution_path)
 
 #def word_algebra(encoder):
 #    print("\n")
@@ -312,7 +302,7 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
         queries = [raw_input('Query %d: ' % (q+1)) for q in xrange(n)]
     queries = [q.replace(" ","_") for q in queries]
     while True:
-        source = raw_input("\nSelect a type:\nW: word\nt: title\nc: category\n> ")
+        source = raw_input("\nSelect a type:\nWord [W]\nTitle [t]\nCategory [c]\n> ")
         if source.lower() in ['w','']:
             queries = [q.lower() for q in queries]
             for q in queries:
@@ -341,6 +331,7 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
 
 def main():
 
+    doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
     encoder_directory = 'WikiLearn/data/models/tokenizer'
     if not os.path.isfile('titles.tsv'):
         dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
@@ -354,12 +345,19 @@ def main():
         text_encoder     = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
         category_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
         link_encoder     = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-        algo = raw_input("\nSelect an activity:\nP: path\nj: join\n> ")#\na: add\n> ")
+        algo = raw_input("\nSelect an activity:\nPath [P]\nJoin [j]\n> ")#\na: add\n> ")
         if algo.lower() in ["p",""]:
             while True:
                 queries, encoder = get_queries(text_encoder, category_encoder, link_encoder, n=2)
                 if queries:
-                    astar_path(queries[0],queries[1],encoder)
+                    path = astar_path(queries[0],queries[1],encoder)
+                    if all([i.isdigit() for i in path]):
+                        for item in path:
+                            print(doc_ids[item])
+                    else:
+                        for item in path:
+                            print(item)
+                    print('='*41)
         elif algo.lower() in ["j"]:
             while True:
                 queries, encoder = get_queries(text_encoder, category_encoder, link_encoder)
