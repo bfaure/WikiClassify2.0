@@ -161,7 +161,7 @@ def astar_path(start_query,end_query,encoder):
     print('\n'+('='*41))
     print("Reconstructing path...\n")
     solution_path,offsets = rectify_path(path_end)
-    return solution_path
+    return solution_path[::-1]
 
 def ucs_algo(start_query,end_query,encoder):
     start_vector = encoder.get_nearest_word(start_query)
@@ -211,7 +211,7 @@ def ucs_algo(start_query,end_query,encoder):
     print((' '*64)+'\r',end='\r')
     print('\n'+('='*41))
     solution_path,offsets = rectify_path(path_end)
-    return solution_path
+    return solution_path[::-1]
 
 #def word_algebra(encoder):
 #    print("\n")
