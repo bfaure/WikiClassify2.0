@@ -374,7 +374,7 @@ def main():
                     middle_word = encoder.model.most_similar(queries,topn=1)[0][0]
                     print((' '*64)+'\r',end='\r')
                     print('\n'+('='*41))
-                    print(" + ".join(queries)+" = "+middle_word+"\n")
+                    print(" + ".join([doc_ids[q] for q in queries])+" = "+doc_ids[middle_word]+"\n")
                     print('='*41)
                 except:
                     print('One of the words does not occur!')
