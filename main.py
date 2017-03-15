@@ -344,8 +344,14 @@ def main():
         text_encoder     = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
         category_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
         link_encoder     = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-        algo = raw_input("\nSelect an activity:\nPath [P]\nJoin [j]\n> ")#\na: add\n> ")
-        if algo.lower() in ["p",""]:
+        while True:
+            algo = raw_input("\nSelect an activity:\nPath [P]\nJoin [j]\n> ")#\na: add\n> ")
+            if algo.lower() in ["p",""]:
+                algo = 'p'
+                break
+            elif algo.lower() in ["j"]:
+                break
+        if algo == 'p':
             while True:
                 queries, encoder = get_queries(text_encoder, category_encoder, link_encoder, n=2)
                 if queries:
@@ -357,7 +363,7 @@ def main():
                         for item in path:
                             print(item)
                     print('='*41)
-        elif algo.lower() in ["j"]:
+        elif algo == 'j':
             while True:
                 queries, encoder = get_queries(text_encoder, category_encoder, link_encoder)
                 try:
