@@ -171,7 +171,7 @@ def ucs_algo(start_query,end_query,encoder):
     if end_vector == None:
         print("Could not find relation vector for "+end_query)
     if start_vector==None or end_vector==None:
-        return -1
+        return []
     start_elem = elem_t(start_query,parent=None,cost=0)
     frontier = PriorityQueue()
     frontier.push(start_elem)
