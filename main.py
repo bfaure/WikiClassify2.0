@@ -130,6 +130,8 @@ def astar_path(start_query,end_query,encoder):
     search_start = time()
     return_code = "NONE"
     while True:
+        if (time()-search_start)>5:
+            print('Timed out!')
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end='\r')
         sys.stdout.flush()
         if frontier.length() == 0:
@@ -181,6 +183,8 @@ def ucs_algo(start_query,end_query,encoder):
     search_start = time()
     return_code = "NONE"
     while True:
+        if (time()-search_start)>5:
+            print('Timed out!')
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(path_cost)[:5],end='\r')
         sys.stdout.flush()
         if frontier.length() == 0:
