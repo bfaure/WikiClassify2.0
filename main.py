@@ -117,7 +117,7 @@ def astar_path(start_query,end_query,encoder):
     if end_vector == None:
         print("Could not find relation vector for "+end_query)
     if start_vector==None or end_vector==None:
-        return -1
+        return []
     
     frontier = PriorityQueue()
     start_elem = elem_t(start_query,parent=None,cost=get_transition_cost(start_query,end_query,encoder))
