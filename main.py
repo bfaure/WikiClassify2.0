@@ -311,7 +311,7 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
         queries = [raw_input('Query %d: ' % (q+1)) for q in xrange(n)]
     queries = [q.replace(" ","_") for q in queries]
     while True:
-        source = raw_input("\nSelect a type:\nW: word\nt: title\nc: category")
+        source = raw_input("\nSelect a type:\nW: word\nt: title\nc: category\n> ")
         if source.lower() in ['w','']:
             queries = [q.lower() for q in queries]
             for q in queries:
@@ -349,7 +349,7 @@ def main():
         text_encoder     = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
         category_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
         link_encoder     = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-        algo = raw_input("\nSelect an activity:\nP: path\nj: join")#\na: add")
+        algo = raw_input("\nSelect an activity:\nP: path\nj: join\n> ")#\na: add\n> ")
         if algo.lower() in ["p",""]:
             while True:
                 queries, encoder = get_queries(text_encoder, category_encoder, link_encoder, n=2)
