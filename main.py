@@ -347,7 +347,7 @@ def main():
         print("Loading encoders...")
         text_encoder     = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
         category_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-        link_encoder     = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+        link_encoder     = get_encoder('links.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
         while True:
             algo = raw_input("\nSelect an activity:\nPath [P]\nJoin [j]\n> ")#\na: add\n> ")
             if algo.lower() in ["p",""]:
