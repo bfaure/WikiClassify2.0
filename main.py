@@ -299,7 +299,7 @@ def ucs_algo(start_query,end_query,encoder):
 #        else:
 #            print("Could not calculate result.")
 
-def get_queries(n=None, text_encoder, category_encoder, link_encoder):
+def get_queries(text_encoder, category_encoder, link_encoder, n=None):
     if n == None:
         queries = []
         query = True
@@ -352,12 +352,12 @@ def main():
         algo = raw_input("\nSelect an activity:\nP: path\nj: join")#\na: add")
         if algo.lower() in ["p",""]:
             while True:
-                queries, encoder = get_queries(2)
+                queries, encoder = get_queries(text_encoder, category_encoder, link_encoder, n=2)
                 if queries:
                     astar_path(queries[0],queries[1],encoder)
         elif algo.lower() in ["j"]:
             while True:
-                queries, encoder = get_queries()
+                queries, encoder = get_queries(text_encoder, category_encoder, link_encoder)
                 try:
                     middle_word = encoder.model.most_similar(queries,topn=1)[0][0]
                     print((' '*64)+'\r',end='\r')
