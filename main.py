@@ -300,7 +300,7 @@ def ucs_algo(start_query,end_query,encoder):
 #            print("Could not calculate result.")
 
 def get_queries(text_encoder, category_encoder, link_encoder, n=None):
-    doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
+    doc_ids = dict([(x.strip().split('\t')[1],x.strip().split('\t')[0]) for x in open('titles.tsv')])
     if n == None:
         queries = []
         query = True
@@ -322,16 +322,20 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
             return queries, text_encoder
         elif source.lower() in ['t']:
             queries = [q[0].upper()+q[1:] for q in queries]
-            for q in queries:
-                if q not in doc_ids.values():
-                    print('%s not found!' % q)
+            for i in xrange(len(queries)):
+                try:
+                    queries[i] = doc_ids[queries[i]]
+                except:
+                    print('%s not found!' % queries[i])
                     return None, None
             return queries, link_encoder
         elif source.lower() in ['c']:
             queries = ['Category:'+q[0].upper()+q[1:] for q in queries]
-            for q in queries:
-                if q not in doc_ids.values():
-                    print('%s not found!' % q)
+            for i in xrange(len(queries)):
+                try:
+                    queries[i] = doc_ids[queries[i]]
+                except:
+                    print('%s not found!' % queries[i])
                     return None, None
             return queries, category_encoder
 
