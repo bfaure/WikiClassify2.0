@@ -316,21 +316,21 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
             queries = [q.lower() for q in queries]
             for q in queries:
                 if q not in text_encoder.model.index2word:
-                    print('%s not found! %' % q)
+                    print('%s not found!' % q)
                     return None, None
             return queries, text_encoder
         elif source.lower() in ['t']:
             queries = [q[0].upper()+q[1:] for q in queries]
             for q in queries:
                 if q not in text_encoder.model.index2word:
-                    print('%s not found! %' % q)
+                    print('%s not found!' % q)
                     return None, None
             return queries, link_encoder
         elif source.lower() in ['c']:
             queries = ['Category:'+q[0].upper()+q[1:] for q in queries]
             for q in queries:
                 if q not in text_encoder.model.index2word:
-                    print('%s not found! %' % q)
+                    print('%s not found!' % q)
                     return None, None
             return queries, category_encoder
 
