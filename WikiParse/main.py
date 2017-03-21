@@ -42,7 +42,7 @@ def download(url, directory):
         os.makedirs(directory)
     file_name = os.path.basename(urlparse(url)[2])
     file_path = os.path.join(directory, file_name)
-    print("\t\tDownloading '%s'..." % file_name)
+    print("\tDownloading '%s'..." % file_name)
     if not os.path.isfile(file_path):
         try:
             with open(file_path, "wb") as f:
@@ -51,10 +51,17 @@ def download(url, directory):
                 if total_length is not None:
                     dl = 0
                     total_length = int(total_length)
+
                     for data in response.iter_content(chunk_size=4096):
                         dl += len(data)
                         f.write(data)
-                        sys.stdout.write("\r\t\t\t%0.1f%% done" % (100.0*dl/total_length))    
+                        num_items = int( float(dl)/float(total_length)*float(progress_bar_length) )
+                        progress_string = ""
+                        for prog_index in range(25):
+                            if prog_index<=num_items: progress_string+="-"
+                            else: progress_string += " "
+                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)+" done")
+                        #sys.stdout.write("\r\t\t\t%0.1f%% done" % (100.0*dl/total_length))    
                         sys.stdout.flush()
                     print('')
                 else:
