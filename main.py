@@ -105,10 +105,10 @@ def rectify_path(path_end):
         offsets.append(cur.column_offset)
     return path,offsets
 
-def astar_path(start_query,end_query,encoder):
+def astar_path(start_query,end_query,encoder,branching_factor=50):
 
-    branching_factor = 15 # Note: high branching factor - less depth in final path
-    weight           = 4  # Note: high A* weight - low cost but slower
+    #branching_factor = 75  # Note: high branching factor - less depth in final path
+    weight           = 4   # Note: high A* weight - low cost but slower
     
     start_vector = encoder.get_nearest_word(start_query,topn = branching_factor)
     end_vector   = encoder.get_nearest_word(end_query,topn = branching_factor)
@@ -131,7 +131,8 @@ def astar_path(start_query,end_query,encoder):
     return_code = "NONE"
     while True:
         if (time()-search_start)>5:
-            print('Timed out!')
+            print('\nTimed out, trying with higher branching factor ('+str(branching_factor+10)+').')
+            return astar_path(start_query,end_query,encoder,branching_factor=branching_factor+10)
             return []
         print("explored: "+str(len(explored))+", frontier: "+str(frontier.length())+", time: "+str(time()-search_start)[:6]+", cost: "+str(base_cost)[:5],end='\r')
         sys.stdout.flush()
@@ -311,7 +312,10 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
         if source.lower() in ['w','']:
             queries = [q.lower() for q in queries]
             for q in queries:
-                if q not in text_encoder.model.index2word:
+                try:
+                    temp = text_encoder.model.most_similar(q,topn=1)
+                except:
+                #if q not in text_encoder.model.index2word:
                     print('%s not found!' % q)
                     return None, None
             return queries, text_encoder
