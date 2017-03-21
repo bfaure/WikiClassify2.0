@@ -341,17 +341,18 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
 
 def main():
 
-    doc_ids = dict([x.strip().split('\t') for x in open('titles.tsv')])
     encoder_directory = 'WikiLearn/data/models/tokenizer'
     if not os.path.isfile('titles.tsv'):
+        print("\nModel not present...")
         dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
         parse_wikidump(dump_path)
         get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
         get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
         get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
-
+        
     else:
-        print("Loading encoders...")
+        print("\nFound prior model, loading encoders...")
+        doc_ids          = dict([x.strip().split('\t') for x in open('titles.tsv')])
         text_encoder     = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
         category_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
         link_encoder     = get_encoder('links.tsv',False,encoder_directory+'/links',200,300,1,5,20)
