@@ -16,12 +16,16 @@ When first cloning the repo, run the init.py file to create the directory struct
 ### Model
 
 ## Dependencies
-
+### Python
 * `python 2.7`
 * `numpy`
 * `g++` (for parser)
 * `gensim` (for feature extraction)
 * `sklearn` (for classification)
+### C++
+Both of the following packages can be install via the command line using package manager such as `apt-get` on Ubuntu.<br>
+* `libpq-dev`
+* `libpqxx-4.0`
 
 ## Related Repositories
 
