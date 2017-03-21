@@ -26,6 +26,9 @@ using std::map;
 #include "wikipage.h"
 #include "string_utils.h"
 
+// For accessing database
+#include <pqxx/pqxx>
+
 class wikidump {
     private:
 
@@ -51,8 +54,15 @@ class wikidump {
         map<string, unsigned> title_map;
         map<string, string> redirect_map;
 
+        pqxx::connection *conn;
+        string server_password;
+        bool connected_to_server;
+        int num_sent_to_server;
+
     public:
-        wikidump(string &path, string &cutoff_date);
+        wikidump(string &path, string &cutoff_date, string password);
+        void connect_to_server();
+
         void read(bool build_keys=true);
         unsigned save_buffer(const string &str,bool build_keys);
         void tokenize_page(wikipage& wp);

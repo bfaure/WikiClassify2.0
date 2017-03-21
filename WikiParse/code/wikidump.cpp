@@ -2,7 +2,40 @@
 #include "wikipage.h"
 #include "string_utils.h"
 
-wikidump::wikidump(string &path, string &cutoff_date) {
+void wikidump::connect_to_server()
+{
+    cout<<"Connecting to server... ";
+
+    num_sent_to_server = 0;
+
+    string username = "waynesun95";
+    string host = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com";
+    string port = "5432";
+    string password = server_password;
+    string dbname = "ebdb";
+
+    try
+    {
+        conn = new pqxx::connection(
+            "user="+username+" "
+            "host="+host+" "
+            "port="+port+" "
+            "password="+password+" "
+            "dbname="+dbname);
+        connected_to_server = true;
+        cout<<"success\n";
+    }
+    catch (const std::exception &e)
+    {
+        cout<<"failure!\n";
+        connected_to_server = false;
+    }
+}
+
+wikidump::wikidump(string &path, string &cutoff_date, string password) {
+    server_password = password;
+    connect_to_server();
+
     dump_input = ifstream(path,ifstream::binary);
     if (dump_input.is_open()) {
         dump_size = ifstream(path,ifstream::ate|ifstream::binary).tellg();
@@ -126,6 +159,50 @@ void wikidump::save_page(wikipage &wp) {
         }
         links<<'\n';
 
+        if ( connected_to_server )
+        {
+            if ( num_sent_to_server>100 )
+            {
+                cout<<"\rSent first 100 articles to server, disconnecting... ";
+                conn->disconnect();
+                connected_to_server = false;
+                cout<<"done.          \n";
+                return;
+            }
+
+            string index = std::to_string((int)wp.id);
+            string title = wp.title;
+            string categories = "";
+            for (int i=0; i<wp.categories.size(); i++)
+            {
+                categories += wp.categories[i];
+                if ( i != wp.categories.size()-1 )
+                {
+                    categories += " | ";
+                }
+            }
+
+            if ( wp.categories.size()==0 )
+            {
+                categories = "NONE";
+            }
+
+            string created_at = "2017-03-06 20:13:56.603726";
+            string updated_at = "2017-03-06 20:13:56.603726";
+            string command = "insert into articles values ("+index+", \'"+title+"\', \'"+categories+"\', \'"+created_at+"\', \'"+updated_at+"\');";
+
+            try
+            {
+                pqxx::work w(*conn);
+                pqxx::result r = w.exec(command);
+                w.commit();        
+                num_sent_to_server++;        
+            }
+            catch (const std::exception &e)
+            {
+                cout<<"\rWARNING: Could not push article with id "<<index<<" (likely duplicate key)                    \n";
+            }
+        }
 //        authors<<wp.id<<'\t';;
 //        for (int i=0; i<wp.authors.size(); i++) {
 //            authors<<wp.authors[i]<<' ';

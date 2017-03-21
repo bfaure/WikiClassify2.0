@@ -94,22 +94,24 @@ def expand_bz2(file_path):
     return file_path[:-4]
 
 def parse_wikidump(dump_path, cutoff_date='20010115'):
+
+    password = raw_input("Database password: ")
     dump_path = 'WikiParse/data/corpora/simplewiki/data/simplewiki-latest-pages-meta-current.xml'
     compiled = True
     if compiled:
         try:
             print("\tCompiling parser...")
             scripts = ["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]
-            call(["g++","--std=c++11","-O3"]+scripts+["-o","wikiparse.out"])
+            call(["g++","--std=c++11","-O3"]+scripts+["-lpqxx","-lpq","-o","wikiparse.out"])
         except:
             return False
     if os.path.isfile('wikiparse.out'):
         print("\tCalling ./wikiparse.out...")
         if os.name == "nt":
             print("\tDetected Windows, altering command...")
-            call(["wikiparse.out",dump_path,cutoff_date])
+            call(["wikiparse.out",dump_path,cutoff_date,password])
         else:
-            call(["./wikiparse.out", dump_path, cutoff_date])
+            call(["./wikiparse.out", dump_path, cutoff_date,password])
     else:
         print("\tERROR: Could not find wikiparse.out")
 
