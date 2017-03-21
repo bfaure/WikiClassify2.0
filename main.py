@@ -220,80 +220,80 @@ def ucs_algo(start_query,end_query,encoder):
     solution_path,offsets = rectify_path(path_end)
     return solution_path[::-1]
 
-#def word_algebra(encoder):
-#    print("\n")
-#    print("Deliminate words with \"+\" and \"-\", spaces trimmed (use \"_\"), type \"exit\" to exit...\n")
-#    while True:
-#        input_str = raw_input("> ")
-#        if input_str in ["exit","Exit"]:
-#            break
-#        pos = []
-#        neg = []
-#        cur_sign = "+"
-#        cur_buf = None
-#        for char in input_str:
-#            if char == " ":
-#                if cur_buf!=None and cur_sign!=None:
-#                    if cur_sign == "+":
-#                        pos.append(cur_buf)
-#                    if cur_sign == "-":
-#                        neg.append(cur_buf)
-#                cur_buf = None
-#                continue
-#            if char == "+":
-#                if cur_buf!=None and cur_sign!=None:
-#                    if cur_sign == "+":
-#                        pos.append(cur_buf)
-#                    if cur_sign == "-":
-#                        neg.append(cur_buf)
-#                    cur_buf = None
-#                cur_sign = "+"
-#                continue
-#            if char == "-":
-#                if cur_buf!=None and cur_sign!=None:
-#                    if cur_sign == "-":
-#                        neg.append(cur_buf)
-#                    if cur_sign == "+":
-#                        pos.append(cur_buf)
-#                    cur_buf = None
-#                cur_sign = "-"
-#                continue
-#            if cur_buf is None:
-#                cur_buf = char
-#            else:
-#                cur_buf +=  char
-#        if cur_buf!=None:
-#            if cur_sign == "+":
-#                pos.append(cur_buf)
-#            if cur_sign == "-":
-#                neg.append(cur_buf)
-#        if len(pos)==0 and len(neg)==0:
-#            print("Didn't catch that...")
-#            continue
-#        output = None
-#        if len(pos)!=0 and len(neg)!=0:
-#            try:
-#                output = encoder.model.most_similar_cosmul(positive=pos,negative=neg)
-#            except KeyError:
-#                print("One of the words was not in the model (mispelling?)")
-#                continue
-#        elif len(pos)!=0:
-#            try:
-#                output = encoder.model.most_similar_cosmul(positive=pos)
-#            except KeyError:
-#                print("One of the words was not in the model (mispelling?)")
-#                continue
-#        elif len(neg)!=0:
-#            try:
-#                if len(neg)!=0:
-#                    output = encoder.model.most_similar(negative=neg)
-#            except KeyError:
-#                print("One of the words was not in the model (mispelling?)")
-#                continue
-#        if output is not None:
-#            print(output[0][0])
-#        else:
-#            print("Could not calculate result.")
+def word_algebra(encoder):
+    print("\n")
+    print("Deliminate words with \"+\" and \"-\", spaces trimmed (use \"_\"), type \"exit\" to exit...\n")
+    while True:
+        input_str = raw_input("> ")
+        if input_str in ["exit","Exit"]:
+            break
+        pos = []
+        neg = []
+        cur_sign = "+"
+        cur_buf = None
+        for char in input_str:
+            if char == " ":
+                if cur_buf!=None and cur_sign!=None:
+                    if cur_sign == "+":
+                        pos.append(cur_buf)
+                    if cur_sign == "-":
+                        neg.append(cur_buf)
+                cur_buf = None
+                continue
+            if char == "+":
+                if cur_buf!=None and cur_sign!=None:
+                    if cur_sign == "+":
+                        pos.append(cur_buf)
+                    if cur_sign == "-":
+                        neg.append(cur_buf)
+                    cur_buf = None
+                cur_sign = "+"
+                continue
+            if char == "-":
+                if cur_buf!=None and cur_sign!=None:
+                    if cur_sign == "-":
+                        neg.append(cur_buf)
+                    if cur_sign == "+":
+                        pos.append(cur_buf)
+                    cur_buf = None
+                cur_sign = "-"
+                continue
+            if cur_buf is None:
+                cur_buf = char
+            else:
+                cur_buf +=  char
+        if cur_buf!=None:
+            if cur_sign == "+":
+                pos.append(cur_buf)
+            if cur_sign == "-":
+                neg.append(cur_buf)
+        if len(pos)==0 and len(neg)==0:
+            print("Didn't catch that...")
+            continue
+        output = None
+        if len(pos)!=0 and len(neg)!=0:
+            try:
+                output = encoder.model.most_similar_cosmul(positive=pos,negative=neg)
+            except KeyError:
+                print("One of the words was not in the model (mispelling?)")
+                continue
+        elif len(pos)!=0:
+            try:
+                output = encoder.model.most_similar_cosmul(positive=pos)
+            except KeyError:
+                print("One of the words was not in the model (mispelling?)")
+                continue
+        elif len(neg)!=0:
+            try:
+                if len(neg)!=0:
+                    output = encoder.model.most_similar(negative=neg)
+            except KeyError:
+                print("One of the words was not in the model (mispelling?)")
+                continue
+        if output is not None:
+            print(output[0][0])
+        else:
+            print("Could not calculate result.")
 
 def get_queries(text_encoder, category_encoder, link_encoder, n=None):
     doc_ids = dict([(x.strip().split('\t')[1],x.strip().split('\t')[0]) for x in open('titles.tsv')])
