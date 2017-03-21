@@ -105,7 +105,7 @@ def rectify_path(path_end):
         offsets.append(cur.column_offset)
     return path,offsets
 
-def astar_path(start_query,end_query,encoder,branching_factor=50):
+def astar_path(start_query,end_query,encoder,branching_factor=60):
 
     #branching_factor = 75  # Note: high branching factor - less depth in final path
     weight           = 4   # Note: high A* weight - low cost but slower
@@ -302,8 +302,9 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
         query = True
         while query:
             query = raw_input('Query %d: ' % (len(queries)+1))
-            if query:
+            if query and query!="":
                 queries.append(query)
+        print("Using ",queries)
     else:
         queries = [raw_input('Query %d: ' % (q+1)) for q in xrange(n)]
     queries = [q.replace(" ","_") for q in queries]
@@ -380,7 +381,8 @@ def main():
                     middle_word = encoder.model.most_similar(queries,topn=1)[0][0]
                     print((' '*64)+'\r',end='\r')
                     print('\n'+('='*41))
-                    print(" + ".join([doc_ids[q] for q in queries])+" = "+doc_ids[middle_word]+"\n")
+                    #print(" + ".join([doc_ids[q] for q in queries])+" = "+doc_ids[middle_word]+"\n")
+                    print(" + ".join(q for q in queries)+" = "+middle_word)
                     print('='*41)
                 except:
                     print('One of the words does not occur!')
