@@ -60,33 +60,39 @@ def download(url, directory):
                         for prog_index in range(25):
                             if prog_index<=num_items: progress_string+="-"
                             else: progress_string += " "
-                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done")
-                        #sys.stdout.write("\r\t\t\t%0.1f%% done" % (100.0*dl/total_length))    
+                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done") 
                         sys.stdout.flush()
-                    print('')
+                    sys.stdout.write("\n")
                 else:
                     f.write(response.content)
         except:
-            print("\t\t\tCould not download '%s'." % file_name)
+            print("\t\tCould not download '%s'." % file_name)
     else:
-        print("\t\t\t'%s' already exists." % file_name)
+        print("\t\t'%s' already exists." % file_name)
     return file_path
 
 def expand_bz2(file_path):
-    print("\t\tExpanding bz2...")
+    print("\tExpanding bz2...")
     if not os.path.isfile(file_path[:-4]):
         file_size = os.path.getsize(file_path)
         try:
             with open(file_path[:-4], 'wb') as new_file, bz2.BZ2File(file_path, 'rb') as file:
                 for data in iter(lambda : file.read(100 * 1024), b''):
                     new_file.write(data)
-                    sys.stdout.write("\r\t\t\t%0.1f%% done" % (100.0*file.tell()/file_size))    
+
+                    num_items = int( float(file.tell())/float(file_size)*float(5) )
+                    progress_string = ""
+                    for prog_index in range(25):
+                        if prog_index <= num_items: progress_string+="-"
+                        else: progress_string += " "
+                    sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*file.tell()/file_size)[:5]+" % done")
+                    #sys.stdout.write("\r\t\t%0.1f%% done" % (100.0*file.tell()/file_size))    
                     sys.stdout.flush()
-            sys.stdout.write("\n")
+                sys.stdout.write("\n")
         except:
-            print("\t\t\tCould not expand file.")
+            print("\t\tCould not expand file.")
     else:
-        print("\t\t\tFile already expanded.")
+        print("\t\tFile already expanded.")
     return file_path[:-4]
 
 def parse_wikidump(dump_path, cutoff_date='20010115'):
