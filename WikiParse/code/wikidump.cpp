@@ -30,6 +30,7 @@ void wikidump::connect_to_server()
         cout<<"failure!\n";
         connected_to_server = false;
     }
+    cout.flush();
 }
 
 wikidump::wikidump(string &path, string &cutoff_date, string password) {
@@ -167,6 +168,7 @@ void wikidump::save_page(wikipage &wp) {
                 conn->disconnect();
                 connected_to_server = false;
                 cout<<"done.          \n";
+                cout.flush();
                 return;
             }
 
@@ -196,12 +198,20 @@ void wikidump::save_page(wikipage &wp) {
                 pqxx::work w(*conn);
                 pqxx::result r = w.exec(command);
                 w.commit();        
-                num_sent_to_server++;        
             }
             catch (const std::exception &e)
             {
-                cout<<"\rWARNING: Could not push article with id "<<index<<" (likely duplicate key)                    \n";
+                //cout<<"\rWARNING: Could not push article with id "<<index<<" (likely duplicate key)                    \n";
+                string remove_command = "delete from articles where id = \'"+index+"\';";
+                pqxx::work w(*conn);
+                pqxx::result r = w.exec(remove_command);
+                w.commit();
+
+                pqxx::work w2(*conn);
+                pqxx::result r2 = w2.exec(command);
+                w2.commit();
             }
+            num_sent_to_server++; 
         }
 //        authors<<wp.id<<'\t';;
 //        for (int i=0; i<wp.authors.size(); i++) {
