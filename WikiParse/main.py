@@ -55,12 +55,12 @@ def download(url, directory):
                     for data in response.iter_content(chunk_size=4096):
                         dl += len(data)
                         f.write(data)
-                        num_items = int( float(dl)/float(total_length)*float(progress_bar_length) )
+                        num_items = int( float(dl)/float(total_length)*float(25) )
                         progress_string = ""
                         for prog_index in range(25):
                             if prog_index<=num_items: progress_string+="-"
                             else: progress_string += " "
-                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)+" done")
+                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done")
                         #sys.stdout.write("\r\t\t\t%0.1f%% done" % (100.0*dl/total_length))    
                         sys.stdout.flush()
                     print('')

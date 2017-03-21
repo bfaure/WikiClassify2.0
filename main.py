@@ -5,6 +5,7 @@ from __future__ import print_function
 #                          Standard imports
 #-----------------------------------------------------------------------------#
 import os, sys, time
+from shutil import rmtree
 
 #                          Search Related imports
 #-----------------------------------------------------------------------------#
@@ -339,8 +340,30 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
                     return None, None
             return queries, category_encoder
 
+
+# Deletes all models and downloaded data
+def clean_repo():
+    while True:
+        resp = raw_input("Are you sure [Y/n]: ")
+        if resp in ["Y","y"," ",""]: break
+        if resp in ["N","n"]: return
+
+    print("Removing model|compiled|data files...")
+    base_model_files = ["authors","categories","category_parents","domains","links","redirects","text","titles","related_text","related_authors"]
+    for f in base_model_files:
+        if os.path.isfile(f+".tsv"): os.remove(f+".tsv")
+    if os.path.isfile("wikiparse.out"): os.remove("wikiparse.out")
+    if os.path.isdir("WikiLearn/data"): rmtree("WikiLearn/data")
+    if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
+    print("Finished cleaning repository.")
+
 def main():
 
+    if len(sys.argv)==2 and sys.argv[1] in ["-c","-clean"]:
+        clean_repo()
+        return
+
+    start_time = time()
     encoder_directory = 'WikiLearn/data/models/tokenizer'
     if not os.path.isfile('titles.tsv'):
         print("\nModel not present...")
@@ -389,6 +412,8 @@ def main():
                     print('One of the words does not occur!')
         #elif algo.lower() in ["add"]:
         #    word_algebra(encoder)
+
+    print("Done in "+str(time()-start_time)[:6]+" seconds.")
 
 if __name__ == "__main__":
     main()
