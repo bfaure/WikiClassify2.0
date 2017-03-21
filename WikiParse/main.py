@@ -75,6 +75,7 @@ def expand_bz2(file_path):
                     new_file.write(data)
                     sys.stdout.write("\r\t\t\t%0.1f%% done" % (100.0*file.tell()/file_size))    
                     sys.stdout.flush()
+            sys.stdout.write("\n")
         except:
             print("\t\t\tCould not expand file.")
     else:
