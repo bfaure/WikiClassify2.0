@@ -348,13 +348,24 @@ def clean_repo():
         if resp in ["Y","y"," ",""]: break
         if resp in ["N","n"]: return
 
-    print("Removing model|compiled|data files...")
+    while True:
+        resp = raw_input("Which [ALL/keep xml]: ")
+        if resp in ["ALL","A","all"," ","","a"]:
+            delete_all = True
+            break
+        if resp in ["k","keep xml","keep","xml","keepxml"]:
+            delete_all = False 
+            break
+
+    print("Removing files...")
+
     base_model_files = ["authors","categories","category_parents","domains","links","redirects","text","titles","related_text","related_authors"]
     for f in base_model_files:
         if os.path.isfile(f+".tsv"): os.remove(f+".tsv")
     if os.path.isfile("wikiparse.out"): os.remove("wikiparse.out")
     if os.path.isdir("WikiLearn/data"): rmtree("WikiLearn/data")
-    if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
+    if delete_all:
+        if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
     print("Finished cleaning repository.")
 
 def main():

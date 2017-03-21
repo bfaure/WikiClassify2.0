@@ -58,6 +58,8 @@ class wikidump {
         string server_password;
         bool connected_to_server;
         int num_sent_to_server;
+        int server_capacity; // bytes
+        bool replace_server_duplicates;
 
     public:
         wikidump(string &path, string &cutoff_date, string password);

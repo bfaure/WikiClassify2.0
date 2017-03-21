@@ -4,7 +4,7 @@
 
 void wikidump::connect_to_server()
 {
-    cout<<"Connecting to server... ";
+    cout<<"\nConnecting to server... ";
 
     num_sent_to_server = 0;
 
@@ -31,10 +31,26 @@ void wikidump::connect_to_server()
         connected_to_server = false;
     }
     cout.flush();
+
+    if ( connected_to_server )
+    {
+        string size_query = "select pg_size_pretty(pg_database_size(\'ebdb\'));";
+
+        pqxx::work size_job(*conn);
+        pqxx::result size_result = size_job.exec(size_query);
+        size_job.commit();
+
+        string current_size = size_result[0][0].c_str();
+        cout<<"Current server usage: "<<current_size<<"\n";
+    }
+    cout<<"\n";
 }
 
 wikidump::wikidump(string &path, string &cutoff_date, string password) {
     server_password = password;
+    //server_capacity = 10000000000 // 10 GB
+    server_capacity  = 100000000; // 100 MB
+    replace_server_duplicates = false; // dont replace duplicates
     connect_to_server();
 
     dump_input = ifstream(path,ifstream::binary);
@@ -138,6 +154,9 @@ void wikidump::connect_database() {
 }
 
 void wikidump::save_page(wikipage &wp) {
+    cout<<"\rArticles sent to server: "<<num_sent_to_server<<"                                ";
+    cout.flush();
+
     if (wp.is_article()) {
         text<<wp.id<<'\t'<<wp.text<<'\n';
 
@@ -162,6 +181,7 @@ void wikidump::save_page(wikipage &wp) {
 
         if ( connected_to_server )
         {
+            /*
             if ( num_sent_to_server>100 )
             {
                 cout<<"\rSent first 100 articles to server, disconnecting... ";
@@ -170,6 +190,28 @@ void wikidump::save_page(wikipage &wp) {
                 cout<<"done.          \n";
                 cout.flush();
                 return;
+            }
+            */
+
+            if ( num_sent_to_server % 1000 == 0 )
+            {
+                string size_query = "select pg_database_size(\'ebdb\');";
+
+                pqxx::work size_job(*conn);
+                pqxx::result size_result = size_job.exec(size_query);
+                size_job.commit();
+
+                int current_size = std::stoi(size_result[0][0].c_str());
+
+                if ( current_size >= server_capacity )
+                {
+                    cout<<"\rServer reached capacity, disconnecting... ";
+                    conn->disconnect();
+                    connected_to_server = false;
+                    cout<<"done.          \n";
+                    cout.flush();
+                    return;
+                }
             }
 
             string index = std::to_string((int)wp.id);
@@ -189,6 +231,9 @@ void wikidump::save_page(wikipage &wp) {
                 categories = "NONE";
             }
 
+            replace_target(categories,"\'","&squot");
+            replace_target(title,"\'","&squot");
+
             string created_at = "2017-03-06 20:13:56.603726";
             string updated_at = "2017-03-06 20:13:56.603726";
             string command = "insert into articles values ("+index+", \'"+title+"\', \'"+categories+"\', \'"+created_at+"\', \'"+updated_at+"\');";
@@ -201,15 +246,18 @@ void wikidump::save_page(wikipage &wp) {
             }
             catch (const std::exception &e)
             {
-                //cout<<"\rWARNING: Could not push article with id "<<index<<" (likely duplicate key)                    \n";
-                string remove_command = "delete from articles where id = \'"+index+"\';";
-                pqxx::work w(*conn);
-                pqxx::result r = w.exec(remove_command);
-                w.commit();
+                if ( replace_server_duplicates )
+                {
+                    //cout<<"\rWARNING: Could not push article with id "<<index<<" (likely duplicate key)                    \n";
+                    string remove_command = "delete from articles where id = \'"+index+"\';";
+                    pqxx::work w(*conn);
+                    pqxx::result r = w.exec(remove_command);
+                    w.commit();
 
-                pqxx::work w2(*conn);
-                pqxx::result r2 = w2.exec(command);
-                w2.commit();
+                    pqxx::work w2(*conn);
+                    pqxx::result r2 = w2.exec(command);
+                    w2.commit();
+                }
             }
             num_sent_to_server++; 
         }
