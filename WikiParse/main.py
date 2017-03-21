@@ -51,7 +51,6 @@ def download(url, directory):
                 if total_length is not None:
                     dl = 0
                     total_length = int(total_length)
-
                     for data in response.iter_content(chunk_size=4096):
                         dl += len(data)
                         f.write(data)
@@ -85,8 +84,7 @@ def expand_bz2(file_path):
                     for prog_index in range(25):
                         if prog_index <= num_items: progress_string+="-"
                         else: progress_string += " "
-                    sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*file.tell()/file_size)[:5]+" % done")
-                    #sys.stdout.write("\r\t\t%0.1f%% done" % (100.0*file.tell()/file_size))    
+                    sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*file.tell()/file_size)[:5]+"% done")
                     sys.stdout.flush()
                 sys.stdout.write("\n")
         except:
