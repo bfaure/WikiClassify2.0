@@ -58,6 +58,8 @@ class main_window(QWidget):
 		self.current_meta_widget_4 = None 
 		self.current_meta_widget_5 = None 
 		self.current_widget_name = "none"
+
+		self.table_data = None 
 		
 		self.commands = []
 		self.init_vars()
@@ -118,12 +120,32 @@ class main_window(QWidget):
 
 		self.view_menu.addAction("Table",self.show_table,QKeySequence("Ctrl+1"))
 
-		self.tools_menu.addAction("Delete \'articles\' Table",self.delete_articles)
+		#self.tools_menu.addAction("Delete \'articles\' Table",self.delete_articles)
+		self.tools_menu.addAction("Search Table",self.table_search,"Ctrl+F")
 
 		self.window_title_manager()
 		self.show()
 		self.view_log()
 		self.show_table()
+
+	def table_search(self):
+		if self.current_widget_name != "table": return
+
+		while True:
+			query, ok = QInputDialog.getText(self,"Search Query","Enter Query: ")
+			if not ok: return
+			if ok:
+				if query in [" ",""]: continue
+				query = str(query).lower()
+				break
+
+		for y in range(len(self.table_data)):
+			for x in range(len(self.table_data[y])):
+				cur_item = str(self.table_data[y][x])
+				if cur_item.lower() == query:
+					self.current_widget.selectRow(y)
+					return
+		print("No matches found for query \'"+query+"\'")
 
 	def add_command(self,command):
 		self.commands.append(command)
@@ -231,6 +253,7 @@ class main_window(QWidget):
 			for x in range(num_cols):
 				table_item = QTableWidgetItem(str(data[y][x]))
 				self.current_widget.setItem(y,x,table_item)
+		self.table_data = data
 
 	def delete_table_full(self):
 		self.delete_articles()
