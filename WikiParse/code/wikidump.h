@@ -57,6 +57,11 @@ class wikidump {
         pqxx::connection *conn;
 
         string  server_password;
+        string  server_username;
+        string  server_host;
+        string  server_port;
+        string  server_dbname;
+
         bool    connected_to_server;
         int     num_sent_to_server;
         int     server_capacity; // bytes

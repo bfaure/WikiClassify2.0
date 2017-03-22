@@ -6,7 +6,7 @@ int wikidump::get_server_used_bytes()
 {
     if ( connected_to_server )
     {
-        string size_query = "select pg_database_size(\'ebdb\');";
+        string size_query = "select pg_database_size(\'"+server_dbname+"\');";
 
         pqxx::work size_job(*conn);
         pqxx::result size_result = size_job.exec(size_query);
@@ -25,20 +25,14 @@ void wikidump::connect_to_server()
 
     num_sent_to_server = 0;
 
-    string username = "waynesun95";
-    string host = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com";
-    string port = "5432";
-    string password = server_password;
-    string dbname = "ebdb";
-
     try
     {
         conn = new pqxx::connection(
-            "user="+username+" "
-            "host="+host+" "
-            "port="+port+" "
-            "password="+password+" "
-            "dbname="+dbname);
+            "user="+server_username+" "
+            "host="+server_host+" "
+            "port="+server_port+" "
+            "password="+server_password+" "
+            "dbname="+server_dbname);
         connected_to_server = true;
         cout<<"success\n";
     }
@@ -77,11 +71,18 @@ void wikidump::connect_to_server()
 }
 
 wikidump::wikidump(string &path, string &cutoff_date, string password) {
+
     server_password = password;
+    server_username = "waynesun95";
+    server_host     = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com";
+    server_port     = "5432";
+    server_dbname   = "ebdb";
+
     //server_capacity = 10000000000 // 10 GB
     server_capacity  = 500000; // 50 KB
-    replace_server_duplicates = false; // dont replace duplicates
-    server_write_buffer_size = 10000; // write to server after this many read
+    //server_capacity = 100000000; // 100 MB
+    replace_server_duplicates   = false; // dont replace duplicates
+    server_write_buffer_size    = 10000; // write to server after this many read
     connect_to_server();
 
     dump_input = ifstream(path,ifstream::binary);
