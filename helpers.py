@@ -52,9 +52,11 @@ class main_window(QWidget):
 		
 		self.current_widget = None
 		self.current_meta_layout = None
-		self.current_meta_widget_left = None 
-		self.current_meta_widget_right = None
-		self.current_meta_widget_right = None
+		self.current_meta_widget_1 = None  # first widget from left
+		self.current_meta_widget_2 = None
+		self.current_meta_widget_3 = None
+		self.current_meta_widget_4 = None 
+		self.current_meta_widget_5 = None 
 		self.current_widget_name = "none"
 		
 		self.commands = []
@@ -152,9 +154,10 @@ class main_window(QWidget):
 	def update_ui(self):
 		if self.current_widget_name == "table": self.show_table()
 
-	def get_table_size(self):
+	def get_table_size(self,pretty=False):
 		cursor 	= self.conn.cursor()
-		command = "select pg_database_size(\'"+self.server_dbname+"\')"
+		if pretty==False: command = "select pg_database_size(\'"+self.server_dbname+"\')"
+		else: command = "select pg_size_pretty(pg_database_size(\'"+self.server_dbname+"\'))"
 
 		try:
 			cursor.execute(command)
@@ -189,8 +192,33 @@ class main_window(QWidget):
 			num_rows = 2
 			num_cols = 2
 
+		self.current_meta_layout = QHBoxLayout()
+		self.layout.addLayout(self.current_meta_layout)
+
+		self.current_meta_widget_1 = QLabel("Database Size: ")
+		self.current_meta_widget_2 = QLineEdit(str(self.get_table_size(pretty=True)))
+		self.current_meta_widget_2.setEnabled(False)
+		self.current_meta_widget_2.setFixedWidth(100)
+
+		self.current_meta_widget_3 = QPushButton("Insert Item")
+		self.current_meta_widget_3.clicked.connect(self.insert_table_item)
+
+		self.current_meta_widget_4 = QPushButton("Delete Item")
+		self.current_meta_widget_4.clicked.connect(self.delete_table_item)
+
+		self.current_meta_widget_5 = QPushButton("Delete Table")
+		self.current_meta_widget_5.clicked.connect(self.delete_table_full)
+
+		self.current_meta_layout.addWidget(self.current_meta_widget_1)
+		self.current_meta_layout.addWidget(self.current_meta_widget_2)
+		self.current_meta_layout.addStretch()
+		self.current_meta_layout.addSpacing(20)
+		self.current_meta_layout.addWidget(self.current_meta_widget_3)
+		self.current_meta_layout.addWidget(self.current_meta_widget_4)
+		self.current_meta_layout.addWidget(self.current_meta_widget_5)
+
 		self.current_widget = QTableWidget(num_rows,num_cols)
-		self.layout.addWidget(self.current_widget)
+		self.layout.addWidget(self.current_widget,2)
 		self.current_widget_name = "table"
 
 		if colnames is not None:
@@ -203,6 +231,17 @@ class main_window(QWidget):
 			for x in range(num_cols):
 				table_item = QTableWidgetItem(str(data[y][x]))
 				self.current_widget.setItem(y,x,table_item)
+
+	def delete_table_full(self):
+		self.delete_articles()
+
+	def delete_table_item(self):
+		print("not yet implemented")
+		pass
+
+	def insert_table_item(self):
+		print("not yet implemented")
+		pass
 
 	def view_log(self):
 		my_point = self.rect().topRight()
