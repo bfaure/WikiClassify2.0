@@ -369,6 +369,10 @@ class main_menu(QWidget):
 		self.setFixedHeight(175)
 		self.show()
 
+	def keyPressEvent(self,qkeyEvent):
+		if qkeyEvent.key()==Qt.Key_Return or qkeyEvent.key()==Qt.Key_Enter:
+			self.open_wikiserver()
+
 	def open_wikiserver(self):
 		self.hide()
 		self.wikiserver_gui.show()
