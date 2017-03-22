@@ -77,6 +77,7 @@ class wikidump {
         void connect_database();
         void save_page(wikipage &wp);
         void server_write();
+        int get_server_used_bytes();
 };
 
 

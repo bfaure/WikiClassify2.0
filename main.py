@@ -349,11 +349,11 @@ def clean_repo():
         if resp in ["N","n"]: return
 
     while True:
-        resp = raw_input("Which [ALL/keep xml]: ")
-        if resp in ["ALL","A","all"," ","","a"]:
+        resp = raw_input("Clean what [(KEEP XML)/all]: ")
+        if resp in ["ALL","A","all","a"]:
             delete_all = True
             break
-        if resp in ["k","keep xml","keep","xml","keepxml"]:
+        if resp in ["k","keep xml","keep","xml","keepxml"," ",""]:
             delete_all = False 
             break
 

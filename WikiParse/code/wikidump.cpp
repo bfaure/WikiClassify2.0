@@ -2,6 +2,23 @@
 #include "wikipage.h"
 #include "string_utils.h"
 
+int wikidump::get_server_used_bytes()
+{
+    if ( connected_to_server )
+    {
+        string size_query = "select pg_database_size(\'ebdb\');";
+
+        pqxx::work size_job(*conn);
+        pqxx::result size_result = size_job.exec(size_query);
+        size_job.commit();
+        return std::stoi(size_result[0][0].c_str());
+    }
+    else
+    {
+        return -1;
+    }
+}
+
 void wikidump::connect_to_server()
 {
     cout<<"\nConnecting to server... ";
@@ -34,14 +51,27 @@ void wikidump::connect_to_server()
 
     if ( connected_to_server )
     {
-        string size_query = "select pg_size_pretty(pg_database_size(\'ebdb\'));";
+        int server_bytes = get_server_used_bytes();
 
-        pqxx::work size_job(*conn);
-        pqxx::result size_result = size_job.exec(size_query);
-        size_job.commit();
+        cout<<"Current server usage: "<<server_bytes<<" Bytes\n";
 
-        string current_size = size_result[0][0].c_str();
-        cout<<"Current server usage: "<<current_size<<"\n";
+        if ( server_bytes > server_write_buffer_size )
+        {
+            cout<<"WARNING: Server overloaded, deleting current table... ";
+            string delete_query = "DELETE FROM articles;";
+            
+            try
+            {
+                pqxx::work delete_job(*conn);
+                pqxx::result delete_result = delete_job.exec(delete_query);
+                delete_job.commit();
+                cout<<"success\n";
+            }
+            catch (const std::exception &e)
+            {
+                cout<<"failure!\n";
+            }
+        }
     }
     cout<<"\n";
 }
@@ -49,7 +79,7 @@ void wikidump::connect_to_server()
 wikidump::wikidump(string &path, string &cutoff_date, string password) {
     server_password = password;
     //server_capacity = 10000000000 // 10 GB
-    server_capacity  = 100000000; // 100 MB
+    server_capacity  = 500000; // 50 KB
     replace_server_duplicates = false; // dont replace duplicates
     server_write_buffer_size = 10000; // write to server after this many read
     connect_to_server();
@@ -156,33 +186,12 @@ void wikidump::connect_database() {
 
 void wikidump::server_write()
 {   
+    string overall_command = "insert into articles values ";
+
     for (int i=0; i<server_write_buffer.size(); i++)
     {
-        cout<<"\rWriting items to server... ("<<i<<"/"<<server_write_buffer.size()<<")                       ";
-        cout.flush();
-
+        
         wikipage wp = server_write_buffer[i];
-
-        if ( num_sent_to_server % 1000 == 0 )
-        {
-            string size_query = "select pg_database_size(\'ebdb\');";
-
-            pqxx::work size_job(*conn);
-            pqxx::result size_result = size_job.exec(size_query);
-            size_job.commit();
-
-            int current_size = std::stoi(size_result[0][0].c_str());
-
-            if ( current_size >= server_capacity )
-            {
-                cout<<"\rServer reached capacity, disconnecting... ";
-                conn->disconnect();
-                connected_to_server = false;
-                cout<<"done.          \n";
-                cout.flush();
-                return;
-            }
-        }
 
         string index = std::to_string((int)wp.id);
         string title = wp.title;
@@ -206,35 +215,40 @@ void wikidump::server_write()
 
         string created_at = "2017-03-06 20:13:56.603726";
         string updated_at = "2017-03-06 20:13:56.603726";
-        string command = "insert into articles values ("+index+", \'"+title+"\', \'"+categories+"\', \'"+created_at+"\', \'"+updated_at+"\');";
+        string command = "("+index+", \'"+title+"\', \'"+categories+"\', \'"+created_at+"\', \'"+updated_at+"\')";
 
-        try
+        if ( i == server_write_buffer.size()-1 )
         {
-            pqxx::work w(*conn);
-            pqxx::result r = w.exec(command);
-            w.commit();        
+            command += " ON CONFLICT (id) DO NOTHING;";
         }
-        catch (const std::exception &e)
+        else
         {
-            if ( replace_server_duplicates )
-            {
-                string remove_command = "delete from articles where id = \'"+index+"\';";
-                pqxx::work w(*conn);
-                pqxx::result r = w.exec(remove_command);
-                w.commit();
+            command += ", ";
+        }
 
-                pqxx::work w2(*conn);
-                pqxx::result r2 = w2.exec(command);
-                w2.commit();
-            }
-        }
-        num_sent_to_server++; 
+        overall_command += command;
+    }
+
+    pqxx::work w(*conn);
+    pqxx::result r = w.exec(overall_command);
+    w.commit();        
+
+    num_sent_to_server += server_write_buffer.size();
+
+    int current_size = get_server_used_bytes();
+
+    if ( current_size >= server_capacity )
+    {
+        cout<<"\rServer reached capacity, disconnecting... ";
+        conn->disconnect();
+        connected_to_server = false;
+        cout<<"done.          \n";
+        cout.flush();
+        return;
     }
 }
 
 void wikidump::save_page(wikipage &wp) {
-    //cout<<"\rArticles sent to server: "<<num_sent_to_server<<"                                ";
-    //cout.flush();
 
     if (wp.is_article()) {
         text<<wp.id<<'\t'<<wp.text<<'\n';
