@@ -5,6 +5,7 @@ import sys
 
 try:
 	import psycopg2
+	from psycopg2 import connect as server_connect
 except:
 	print("Cannot find Python 2.7 library \'psycopg2\', install using pip!")
 
@@ -75,7 +76,7 @@ class wikiserver_window(QWidget):
 		self.init_ui()
 
 	def init_vars(self,new_credentials=True):
-		self.connected = False
+		self.disconnect(False)
 
 		if new_credentials:
 			print("\n")
@@ -93,7 +94,7 @@ class wikiserver_window(QWidget):
 			print("\n")
 		
 		try:
-			self.conn = psycopg2.connect("user="+self.server_username+" host="+self.server_host+" port="+self.server_port+" password="+self.server_password+" dbname="+self.server_dbname)
+			self.conn = server_connect("user="+self.server_username+" host="+self.server_host+" port="+self.server_port+" password="+self.server_password+" dbname="+self.server_dbname)
 		except:
 			ans = raw_input("Could not connect to server, try again [Y/n]: ")
 			if ans in [" ","","Y","y"]: return self.init_vars()
@@ -121,7 +122,8 @@ class wikiserver_window(QWidget):
 		self.view_menu = self.toolbar.addMenu("View")
 		self.toolbar.setMinimumWidth(self.min_width)
 
-		self.file_menu.addAction("Reconnect (New Credentials)",self.init_vars,QKeySequence("Ctrl+N"))
+		new_cred_action = self.file_menu.addAction("Reconnect (New Credentials)",self.init_vars,QKeySequence("Ctrl+N"))
+		new_cred_action.setEnabled(False)
 		self.file_menu.addAction("Reconnect (Prev Credentials)",self.reconnect,QKeySequence("Ctrl+Shift+N"))
 		self.file_menu.addAction("Disconnect",self.disconnect,QKeySequence("Ctrl+D"))
 		self.file_menu.addSeparator()
@@ -325,9 +327,9 @@ class wikiserver_window(QWidget):
 		self.init_vars(new_credentials=False)
 
 	def disconnect(self,update=True):
-		if self.connected: self.conn.close()
-		self.connected = False
-		if update: self.window_title_manager()
+		if self.connected: 	self.conn.close()
+		self.connected 		= False
+		if update: 			self.window_title_manager()
 
 	def exit(self):
 		self.disconnect(update=False)
