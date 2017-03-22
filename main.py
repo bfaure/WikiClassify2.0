@@ -340,7 +340,6 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
                     return None, None
             return queries, category_encoder
 
-
 # Deletes all models and downloaded data
 def clean_repo():
     while True:
@@ -372,6 +371,11 @@ def main():
 
     if len(sys.argv)==2 and sys.argv[1] in ["-c","-clean"]:
         clean_repo()
+        return
+
+    if len(sys.argv)==2 and sys.argv[1] in ["-g","-gui"]:
+        from helpers import start_gui
+        start_gui()
         return
 
     start_time = time()

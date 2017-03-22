@@ -106,11 +106,13 @@ def parse_wikidump(dump_path, cutoff_date='20010115'):
         except:
             return False
     if os.path.isfile('wikiparse.out'):
-        print("\tCalling ./wikiparse.out...")
+        
         if os.name == "nt":
             print("\tDetected Windows, altering command...")
+            print("\tCalling wikiparse.out...")
             call(["wikiparse.out",dump_path,cutoff_date,password])
         else:
+            print("\tCalling ./wikiparse.out...")
             call(["./wikiparse.out", dump_path, cutoff_date,password])
     else:
         print("\tERROR: Could not find wikiparse.out")
