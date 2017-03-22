@@ -7,13 +7,16 @@ try:
 	import psycopg2
 except:
 	print("Cannot find Python 2.7 library \'psycopg2\', install using pip!")
-	sys.exit(1)
 
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+try:
+	from PyQt4 import QtGui, QtCore
+	from PyQt4.QtCore import *
+	from PyQt4.QtGui import *
+except:
+	print("Cannot find Python 2.7 library \'PyQt4\', install using pip!")
 
-pyqt_app = ""
+
+main_menu_window = ""
 
 class log_window(QWidget):
 	def __init__(self, parent=None):
@@ -42,10 +45,9 @@ class log_window(QWidget):
 	def close_window(self):
 		self.close()
 
-class main_window(QWidget):
-
+class wikiserver_window(QWidget):
 	def __init__(self,parent=None):
-		super(main_window,self).__init__()
+		super(wikiserver_window,self).__init__()
 		self.setMouseTracking(True)
 		self.parent = parent
 		self.user_log = log_window(self)
@@ -60,8 +62,15 @@ class main_window(QWidget):
 		self.current_widget_name = "none"
 
 		self.table_data = None 
+
+		self.server_host = None 
+		self.server_username = None 
+		self.server_port = None 
+		self.server_dbname = None 
+		self.server_password = None
 		
 		self.commands = []
+		self.connected = False
 		self.init_vars()
 		self.init_ui()
 
@@ -116,17 +125,24 @@ class main_window(QWidget):
 		self.file_menu.addAction("Reconnect (Prev Credentials)",self.reconnect,QKeySequence("Ctrl+Shift+N"))
 		self.file_menu.addAction("Disconnect",self.disconnect,QKeySequence("Ctrl+D"))
 		self.file_menu.addSeparator()
+
+		self.file_menu.addAction("Main Menu",self.back,QKeySequence("Ctrl+B"))
 		self.file_menu.addAction("Exit",self.exit,QKeySequence("Ctrl+Q"))
 
 		self.view_menu.addAction("Table",self.show_table,QKeySequence("Ctrl+1"))
 
-		#self.tools_menu.addAction("Delete \'articles\' Table",self.delete_articles)
 		self.tools_menu.addAction("Search Table",self.table_search,"Ctrl+F")
 
 		self.window_title_manager()
-		self.show()
 		self.view_log()
 		self.show_table()
+
+	def back(self):
+		if self.parent==None: return
+
+		self.user_log.hide()
+		self.hide()
+		self.parent.show()
 
 	def table_search(self):
 		if self.current_widget_name != "table": return
@@ -166,20 +182,20 @@ class main_window(QWidget):
 
 		try:
 			cursor.execute(command)
-			self.add_command(command)
 			self.conn.commit()
-			cursor.close()
+			self.add_command(command)
 			self.update_ui()
 		except: 
 			print("WARNING: Could not delete \'articles\' table!")
+		cursor.close()
 
 	def update_ui(self):
 		if self.current_widget_name == "table": self.show_table()
 
 	def get_table_size(self,pretty=False):
 		cursor 	= self.conn.cursor()
-		if pretty==False: command = "select pg_database_size(\'"+self.server_dbname+"\')"
-		else: command = "select pg_size_pretty(pg_database_size(\'"+self.server_dbname+"\'))"
+		if pretty==False: command = "SELECT pg_database_size(\'"+self.server_dbname+"\')"
+		else: command = "SELECT pg_size_pretty(pg_database_size(\'"+self.server_dbname+"\'))"
 
 		try:
 			cursor.execute(command)
@@ -187,12 +203,13 @@ class main_window(QWidget):
 			size = str(cursor.fetchone()[0])
 			return size 
 		except: print("WARNING: Could not fetch size of database!")
+		cursor.close()
 
 	def show_table(self):
 		if self.connected is False: return
 
 		if self.current_widget is not None: self.layout.removeWidget(self.current_widget)
-		if self.current_meta_layout is not None: self.layout.removeLayout(self.current_meta_layout)
+		if self.current_meta_layout is not None: self.layout.removeItem(self.current_meta_layout)
 
 		cursor = self.conn.cursor()
 		command = "SELECT * FROM articles"
@@ -206,6 +223,7 @@ class main_window(QWidget):
 			print("WARNING: Could not connect to server!")
 			data = None
 			colnames = None
+		cursor.close()
 
 		if data is not None:
 			num_rows = len(data)
@@ -227,6 +245,7 @@ class main_window(QWidget):
 
 		self.current_meta_widget_4 = QPushButton("Delete Item")
 		self.current_meta_widget_4.clicked.connect(self.delete_table_item)
+		self.current_meta_widget_4.setEnabled(False)
 
 		self.current_meta_widget_5 = QPushButton("Delete Table")
 		self.current_meta_widget_5.clicked.connect(self.delete_table_full)
@@ -240,6 +259,7 @@ class main_window(QWidget):
 		self.current_meta_layout.addWidget(self.current_meta_widget_5)
 
 		self.current_widget = QTableWidget(num_rows,num_cols)
+		self.current_widget.currentCellChanged.connect(self.table_cell_changed)
 		self.layout.addWidget(self.current_widget,2)
 		self.current_widget_name = "table"
 
@@ -255,18 +275,40 @@ class main_window(QWidget):
 				self.current_widget.setItem(y,x,table_item)
 		self.table_data = data
 
+	def table_cell_changed(self):
+		if self.current_widget_name == "table": self.current_meta_widget_4.setEnabled(True)
+
 	def delete_table_full(self):
 		self.delete_articles()
 
 	def delete_table_item(self):
-		print("not yet implemented")
-		pass
+		if self.connected == False: return
+		if self.current_widget_name != "table": return 
+
+		cur_row = self.current_widget.currentRow()
+		cur_article_id = str(self.current_widget.item(cur_row,1).text())
+
+		command = "DELETE FROM articles WHERE title = \'"+cur_article_id+"\'"
+		cursor = self.conn.cursor()
+
+		try:
+			cursor.execute(command)
+			self.conn.commit()
+			cursor.close()
+			self.add_command(command)
+		except:
+			print("WARNING: Could not delete table item!")
+			cursor.close()
+			return
+
+		self.current_widget.removeRow(cur_row)
 
 	def insert_table_item(self):
 		print("not yet implemented")
 		pass
 
 	def view_log(self):
+		if self.isVisible()==False: return
 		my_point = self.rect().topRight()
 		global_point = self.mapToGlobal(my_point)
 		self.user_log.open(global_point)
@@ -275,30 +317,79 @@ class main_window(QWidget):
 		title_str = "PSQL Server Control Panel"
 		if self.connected: title_str += " - Connected - "
 		else: title_str += " - Disconnected - "
-		title_str += self.server_dbname
+		if self.server_dbname!= None: title_str += self.server_dbname
 		self.setWindowTitle(title_str)
 
 	def reconnect(self):
 		self.disconnect()
 		self.init_vars(new_credentials=False)
 
-	def disconnect(self):
+	def disconnect(self,update=True):
 		if self.connected: self.conn.close()
 		self.connected = False
-		self.window_title_manager()
+		if update: self.window_title_manager()
 
 	def exit(self):
-		self.disconnect()
+		self.disconnect(update=False)
 		self.user_log.close_window()
-		sys.exit(1)
+		if self.parent==None: sys.exit(1)
 
 	def closeEvent(self,e):
 		self.exit()
 		return
 
+class main_menu(QWidget):
+
+	def __init__(self,parent=None):
+		super(main_menu,self).__init__()
+		self.wikiserver_gui = wikiserver_window(self)
+		self.wikiparse_gui = None 
+		self.wikilearn_gui = None 
+		self.init_ui()
+
+	def init_ui(self):
+		self.layout = QVBoxLayout(self)
+		self.setWindowTitle("Control Panel")
+		
+		wikilearn_button = QPushButton("WikiLearn")
+		wikiparse_button = QPushButton("WikiParse")
+		wikiserver_button = QPushButton("[WikiServer]")
+
+		wikilearn_button.clicked.connect(self.open_wikilearn)
+		wikiparse_button.clicked.connect(self.open_wikiparse)
+		wikiserver_button.clicked.connect(self.open_wikiserver)
+
+		self.layout.addSpacing(10)
+		self.layout.addWidget(wikiserver_button)
+		self.layout.addWidget(wikiparse_button)
+		self.layout.addWidget(wikilearn_button)
+		self.layout.addSpacing(10)
+
+		self.setFixedWidth(225)
+		self.setFixedHeight(175)
+		self.show()
+
+	def open_wikiserver(self):
+		self.hide()
+		self.wikiserver_gui.show()
+		self.wikiserver_gui.view_log()
+
+	def open_wikiparse(self):
+		pass
+
+	def open_wikilearn(self):
+		pass
+
+	def closeEvent(self,e):
+		'''
+		if self.wikiserver_gui is not None: self.wikiserver_gui.exit()
+		if self.wikiparse_gui is not None: self.wikiparse_gui.exit()
+		if self.wikilearn_gui is not None: self.wikilearn_gui.exit()
+		'''
+		sys.exit(1)
 
 def start_gui():
-	global pyqt_app
-	pyqt_app = QApplication(sys.argv)
-	_ = main_window()
-	sys.exit(pyqt_app.exec_())
+	global main_menu_window
+	app = QApplication(sys.argv)
+	main_menu_window = main_menu(app)
+	sys.exit(app.exec_())
