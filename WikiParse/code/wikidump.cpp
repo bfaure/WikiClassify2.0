@@ -79,8 +79,8 @@ wikidump::wikidump(string &path, string &cutoff_date, string password) {
     server_dbname   = "ebdb";
 
     //server_capacity = 10000000000 // 10 GB
-    server_capacity  = 50000; // 10 KB
-    //server_capacity = 100000000; // 100 MB
+    //server_capacity  = 50000; // 10 KB
+    server_capacity = 100000000; // 100 MB
     replace_server_duplicates   = false; // dont replace duplicates
     server_write_buffer_size    = 10000; // write to server after this many read
     connect_to_server();
