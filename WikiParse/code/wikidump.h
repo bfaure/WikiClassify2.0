@@ -64,7 +64,7 @@ class wikidump {
 
         bool    connected_to_server;
         int     num_sent_to_server;
-        int     server_capacity; // bytes
+        long     server_capacity; // bytes
         bool    replace_server_duplicates;
 
         int                 server_write_buffer_size;
@@ -82,7 +82,7 @@ class wikidump {
         void connect_database();
         void save_page(wikipage &wp);
         void server_write();
-        int get_server_used_bytes();
+        long get_server_used_bytes();
 };
 
 

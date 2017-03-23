@@ -2,7 +2,7 @@
 #include "wikipage.h"
 #include "string_utils.h"
 
-int wikidump::get_server_used_bytes()
+long wikidump::get_server_used_bytes()
 {
     if ( connected_to_server )
     {
@@ -49,7 +49,7 @@ void wikidump::connect_to_server()
 
         cout<<"Current server usage: "<<server_bytes<<" Bytes\n";
 
-        if ( server_bytes > server_write_buffer_size )
+        if ( server_bytes > server_capacity )
         {
             cout<<"WARNING: Server overloaded, deleting current table... ";
             string delete_query = "DELETE FROM articles;";

@@ -594,8 +594,8 @@ class wikiparse_window(QWidget):
 
 		self.resize(300,240)
 
-		self.retrain_check.setChecked(True)
-		self.retrain_check.setEnabled(False)
+		#self.retrain_check.setChecked(True)
+		#self.retrain_check.setEnabled(False)
 
 		self.source_input.setEnabled(False)
 		self.server_check.setEnabled(False)
@@ -637,9 +637,10 @@ class wikiparse_window(QWidget):
 		self.start_execution(use_server=False)
 
 	def start_execution(self,use_server=False):
-		my_point = self.rect().topLeft()
-		global_point = self.mapToGlobal(my_point)
+		#my_point = self.rect().topLeft()
+		#global_point = self.mapToGlobal(my_point)
 		self.hide()
+		time.sleep(1)
 		#self.exec_log.open(global_point)
 		
 		#self.exec_log.update("*See terminal window for detail")
@@ -676,7 +677,7 @@ class wikiparse_window(QWidget):
 			#	self.exec_log.update("> Could not find prior download!")
 
 		#self.exec_log.update("> Parsing dump...")
-		time.sleep(3)
+
 
 		parsed = parse_wikidump(dump_path,password=self.server_password)
 
@@ -696,7 +697,6 @@ class wikiparse_window(QWidget):
 		self.show()
 
 	def cred_ok(self):
-		self.show()
 		self.server_host = self.cred_window.host 
 		self.server_username = self.cred_window.username 
 		self.server_port = self.cred_window.port 
