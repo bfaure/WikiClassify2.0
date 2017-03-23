@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 import sys
 from shutil import rmtree
+import time
 
 from main import get_encoder
 
@@ -638,48 +639,61 @@ class wikiparse_window(QWidget):
 	def start_execution(self,use_server=False):
 		my_point = self.rect().topLeft()
 		global_point = self.mapToGlobal(my_point)
-		self.user_log.open(global_point)
 		self.hide()
-		self.exec_log.open(global_point)
+		#self.exec_log.open(global_point)
 		
-		self.exec_log.update("*See terminal window for detail")
-		self.exec_log.update("> Starting execution...")
+		#self.exec_log.update("*See terminal window for detail")
+		#self.exec_log.update("> Starting execution...")
 
 		if self.retrain_check.isChecked():
-			self.exec_log.update("> Removing prior model files...")
-	    	base_model_files = ["authors","categories","category_parents","domains","links","redirects","text","titles","related_text","related_authors"]
-	    	for f in base_model_files:
-	        	if os.path.isfile(f+".tsv"): os.remove(f+".tsv")
-	    	if os.path.isfile("wikiparse.out"): os.remove("wikiparse.out")
-	    	if os.path.isdir("WikiLearn/data"): rmtree("WikiLearn/data")
-	    
-	    if self.redownload_check.isChecked():
-	    	self.exec_log.update("> Removing prior download...")
-	        if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
+			#self.exec_log.update("> Removing prior model files...")
+			base_model_files = ["authors","categories","category_parents","domains","links","redirects","text","titles","related_text","related_authors"]
+			for f in base_model_files:
+				if os.path.isfile(f+".tsv"): os.remove(f+".tsv")
+			if os.path.isfile("wikiparse.out"): os.remove("wikiparse.out")
+			if os.path.isdir("WikiLearn/data"): rmtree("WikiLearn/data")
+		
+		if self.redownload_check.isChecked():
+			#self.exec_log.update("> Removing prior download...")
+			if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
 		
 		dump_source = str(self.source_input.text())
 		download_location = "WikiParse/data/corpora/"+dump_source+"/data"
 
 		if self.redownload_check.isChecked():
-			self.exec_log.update("> Downloading...")
+			#self.exec_log.update("> Downloading...")
 			dump_path = download_wikidump(dump_source,download_location)
+		else:
+			if os.path.isdir(download_location):
+				files = os.listdir(download_location)
+				for f in files:
+					if f.find(".bz2")!=-1: continue
+					if f.find(".xml")!=-1:
+						dump_path = download_location+"/"+f
+						print(dump_path)
+						break
+			#else:
+			#	self.exec_log.update("> Could not find prior download!")
 
-		self.exec_log.update("> Parsing dump...")
-        parsed = parse_wikidump(dump_path,password=self.server_password)
+		#self.exec_log.update("> Parsing dump...")
+		time.sleep(3)
 
-        if parsed:
-        	self.exec_log.update("> Parsing successful")
-        else:
-        	self.exec_log.update("> Parsing unsucessful!")
+		parsed = parse_wikidump(dump_path,password=self.server_password)
 
-        if self.retrain_check.isChecked() and parsed:
-        	self.exec_log.update("> Re-training models...")
-	    	encoder_directory = 'WikiLearn/data/models/tokenizer'
-	    	get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
-	    	get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-	    	get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+		#if parsed:
+		#	self.exec_log.update("> Parsing successful")
+		#else:
+		#	self.exec_log.update("> Parsing unsucessful!")
+
+		if self.retrain_check.isChecked() and parsed:
+			#self.exec_log.update("> Re-training models...")
+			encoder_directory = 'WikiLearn/data/models/tokenizer'
+			get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
+			get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+			get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
 		
-		self.exec_log.update("> Process complete, close this window.")
+		#self.exec_log.update("> Process complete, close this window.")
+		self.show()
 
 	def cred_ok(self):
 		self.show()
