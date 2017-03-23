@@ -1,6 +1,6 @@
 # WikiClassify2.0
 
-# Download Wikipedia
+## Download Wikipedia
 [Link](https://dumps.wikimedia.org/enwiki/latest/). For the entire data dump download `enwiki-lastest-pages-articles.xml`.
 
 ## Directory Structure
@@ -10,18 +10,45 @@ When first cloning the repo, run the init.py file to create the directory struct
 [Folder here](https://drive.google.com/open?id=0BxJe_Ggl7BIgbGFHd3lkMDA3d3M)
 
 ## Instructions
-### Parser
-`cd` into the WikiClassify2.0/wikiparse directory. Using gcc, from command line enter... <br> `g++ --std=c++11 main.cpp code/wikidump.cpp code/wikitext.cpp code/wikipage.cpp code/string_utils.cpp -o main` <br>... to compile the parser files. To run the program, either enter `./main <path to data dump file>` or modify the main.cpp file such that it includes the path to you're data dump, recompile using the above instruction, and enter simply `./main` to run the program.<br>A completion email will be sent to the `email_to` address set in main.cpp, change this to your email to be notified upon the completion of the program.
 
-### Model
+### Command Line User Interface
+`cd` into the WikiClassify2.0 base directory and run `python main.py` to start the automated workflow in the following order:<br>
+* Download latest Wikipedia data dump bz2 archive
+* Extract archive into .xml format
+* Compile C++ parser files
+* Parse .xml data, sending bursts to remove server at 1000 article increments
+* Train word2vec and LDA models
+<br>
+After a model is present in the working directory, a subsequent call to `python main.py` will open the interface created to interact with the models (including A\* path search and A\* convene functions).
+<br>
+ A call to `python main.py` with a `-c` launch parameter will clean the working directory of models and downloaded data.
+
+### Graphic User Interface
+Run `python main.py` with a `-g` launch parameter to open the user interface main menu.<br>
+![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/main_menu.PNG)
+<br>
+#### [WikiServer]
+Enter server credentials.<br>
+![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/login_window.PNG)
+
+View `articles` database.<br>
+![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/table_view.PNG)
+
+Control database actions.<br>
+![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/control_panel.PNG)
+
+#### WikiParse
+#### WikiLearn
 
 ## Dependencies
 ### Python
-* `python 2.7`
+* `Python 2.7`
 * `numpy`
 * `g++` (for parser)
 * `gensim` (for feature extraction)
 * `sklearn` (for classification)
+* `PyQt4` (for GUI)
+* `psycopg2` (for GUI)
 ### C++
 Both of the following packages can be install via the command line using package manager such as `apt-get` on Ubuntu.<br>
 * `libpq-dev`
