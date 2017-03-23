@@ -2,6 +2,12 @@ from __future__ import print_function
 
 import os
 import sys
+from shutil import rmtree
+
+from main import get_encoder
+
+from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
+from WikiLearn.code.vectorize import doc2vec
 
 try:
 	import psycopg2
@@ -20,8 +26,10 @@ except:
 main_menu_window = ""
 
 class log_window(QWidget):
-	def __init__(self, parent=None):
+	def __init__(self, parent=None, window_title=None):
 		super(log_window, self).__init__()
+		self.window_title = window_title 
+		if window_title is None: self.window_title = "Log"
 		self.initVars()
 		self.initUI()
 
@@ -132,7 +140,7 @@ class credentials_window(QWidget):
 		self.hide()
 		self.parent.cred_cancel()
 
-	def open_window(self,location=None):
+	def open_window(self,location=None,restrict=False):
 		if location != None: self.move(location)
 		self.username_input.setText(self.username)
 		self.host_input.setText(self.host)
@@ -140,6 +148,17 @@ class credentials_window(QWidget):
 		self.dbname_input.setText(self.dbname)
 		self.password_input.setText(self.password)
 		self.password_input.setFocus()
+
+		if restrict:
+			self.username_input.setEnabled(False)
+			self.host_input.setEnabled(False)
+			self.port_input.setEnabled(False)
+			self.dbname_input.setEnabled(False)
+		else:
+			self.username_input.setEnabled(True)
+			self.host_input.setEnabled(True)
+			self.port_input.setEnabled(True)
+			self.dbname_input.setEnabled(True)
 		self.show()
 
 	def closeEvent(self,e):
@@ -156,7 +175,7 @@ class wikiserver_window(QWidget):
 		super(wikiserver_window,self).__init__()
 		self.setMouseTracking(True)
 		self.parent = parent
-		self.user_log = log_window(self)
+		self.user_log = log_window(self,"Connection Log")
 		self.cred_window = credentials_window(self)
 		
 		self.open_location = None # window location of main menu
@@ -254,11 +273,12 @@ class wikiserver_window(QWidget):
 			self.hide()
 
 	def open_window(self,get_cred=True,location=None):
-		self.open_location = location
 		if get_cred: 
+			self.open_location = location
 			self.init_vars()
 			return
-		else:		
+		else:	
+			if self.open_location != None: self.move(self.open_location)
 			self.show()
 			self.view_log()
 			self.window_title_manager()
@@ -514,12 +534,175 @@ class wikiserver_window(QWidget):
 		self.exit()
 		return
 
+class wikiparse_window(QWidget):
+	def __init__(self,parent=None):
+		super(wikiparse_window,self).__init__()
+		self.cred_window = credentials_window(self)
+		self.exec_log = log_window(self,"Execution Log")
+		self.parent = parent
+		self.init_vars()
+		self.init_ui()
+
+	def init_vars(self):
+		self.server_host = None 
+		self.server_username = None 
+		self.server_port = None 
+		self.server_dbname = None 
+		self.server_password = None
+
+	def init_ui(self):
+		self.setWindowTitle("WikiParse Scheduler")
+		self.layout = QVBoxLayout(self)
+
+		self.source_label = QLabel("Source:                       ")
+		self.source_input = QLineEdit("simplewiki")
+		source_layout = QHBoxLayout()
+		source_layout.addWidget(self.source_label)
+		source_layout.addWidget(self.source_input)
+		self.layout.addLayout(source_layout)
+
+		self.redownload_label = QLabel("Re-download: ")
+		self.redownload_check = QCheckBox()
+		redownload_layout = QHBoxLayout()
+		redownload_layout.addWidget(self.redownload_label)
+		redownload_layout.addWidget(self.redownload_check)
+		self.layout.addLayout(redownload_layout)
+
+		self.server_label = QLabel("Add to server:")
+		self.server_check = QCheckBox()
+		server_layout = QHBoxLayout()
+		server_layout.addWidget(self.server_label)
+		server_layout.addWidget(self.server_check)
+		self.layout.addLayout(server_layout)
+
+		self.retrain_label = QLabel("Re-train model:")
+		self.retrain_check = QCheckBox()
+		retrain_layout = QHBoxLayout()
+		retrain_layout.addWidget(self.retrain_label)
+		retrain_layout.addWidget(self.retrain_check)
+		self.layout.addLayout(retrain_layout)
+
+		self.cancel_button = QPushButton("Cancel")
+		self.ok_button = QPushButton("Ok")
+		button_layout = QHBoxLayout()
+		button_layout.addStretch()
+		button_layout.addWidget(self.cancel_button)
+		button_layout.addWidget(self.ok_button)
+		button_layout.addStretch()
+		self.layout.addLayout(button_layout)
+
+		self.resize(300,240)
+
+		self.retrain_check.setChecked(True)
+		self.retrain_check.setEnabled(False)
+
+		self.source_input.setEnabled(False)
+		self.server_check.setEnabled(False)
+
+		self.cancel_button.clicked.connect(self.cancel_pressed)
+		self.ok_button.clicked.connect(self.ok_pressed)
+
+	def has_data_dump(self):
+		dump_dir = "WikiParse/data/corpora/simplewiki/data/"
+		if os.path.isdir(dump_dir):
+			files = os.listdir(dump_dir)
+			for f in files:
+				if f.find(".xml")!=-1: return True 
+			return False
+		else:
+			return False
+
+	def open_window(self,location=None):
+		if location != None: 
+			self.open_location = location
+			self.move(location)
+		if not self.has_data_dump(): 
+			self.redownload_check.setChecked(True)
+			self.redownload_check.setEnabled(False)
+		else:
+			self.redownload_check.setChecked(False)
+			self.redownload_check.setEnabled(True)
+		self.show()
+		self.server_check.setChecked(True)
+
+	def cancel_pressed(self):
+		self.back()
+
+	def ok_pressed(self):
+		if self.server_check.isChecked():
+			self.hide()
+			self.cred_window.open_window(self.open_location,restrict=True)
+			return
+		self.start_execution(use_server=False)
+
+	def start_execution(self,use_server=False):
+		my_point = self.rect().topLeft()
+		global_point = self.mapToGlobal(my_point)
+		self.user_log.open(global_point)
+		self.hide()
+		self.exec_log.open(global_point)
+		
+		self.exec_log.update("*See terminal window for detail")
+		self.exec_log.update("> Starting execution...")
+
+		if self.retrain_check.isChecked():
+			self.exec_log.update("> Removing prior model files...")
+	    	base_model_files = ["authors","categories","category_parents","domains","links","redirects","text","titles","related_text","related_authors"]
+	    	for f in base_model_files:
+	        	if os.path.isfile(f+".tsv"): os.remove(f+".tsv")
+	    	if os.path.isfile("wikiparse.out"): os.remove("wikiparse.out")
+	    	if os.path.isdir("WikiLearn/data"): rmtree("WikiLearn/data")
+	    
+	    if self.redownload_check.isChecked():
+	    	self.exec_log.update("> Removing prior download...")
+	        if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
+		
+		dump_source = str(self.source_input.text())
+		download_location = "WikiParse/data/corpora/"+dump_source+"/data"
+
+		if self.redownload_check.isChecked():
+			self.exec_log.update("> Downloading...")
+			dump_path = download_wikidump(dump_source,download_location)
+
+		self.exec_log.update("> Parsing dump...")
+        parsed = parse_wikidump(dump_path,password=self.server_password)
+
+        if parsed:
+        	self.exec_log.update("> Parsing successful")
+        else:
+        	self.exec_log.update("> Parsing unsucessful!")
+
+        if self.retrain_check.isChecked() and parsed:
+        	self.exec_log.update("> Re-training models...")
+	    	encoder_directory = 'WikiLearn/data/models/tokenizer'
+	    	get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
+	    	get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+	    	get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+		
+		self.exec_log.update("> Process complete, close this window.")
+
+	def cred_ok(self):
+		self.show()
+		self.server_host = self.cred_window.host 
+		self.server_username = self.cred_window.username 
+		self.server_port = self.cred_window.port 
+		self.server_dbname = self.cred_window.dbname 
+		self.server_password = self.cred_window.password
+		self.start_execution(use_server=True)
+
+	def cred_cancel(self):
+		self.show()
+
+	def back(self):
+		self.hide()
+		self.parent.show()
+
 class main_menu(QWidget):
 
 	def __init__(self,parent=None):
 		super(main_menu,self).__init__()
 		self.wikiserver_gui = wikiserver_window(parent=self)
-		self.wikiparse_gui = None 
+		self.wikiparse_gui = wikiparse_window(parent=self)
 		self.wikilearn_gui = None 
 		self.init_ui()
 
@@ -543,6 +726,13 @@ class main_menu(QWidget):
 
 		self.setFixedWidth(225)
 		self.setFixedHeight(175)
+
+		framegm = self.frameGeometry()
+		screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
+		centerpt = QApplication.desktop().screenGeometry(screen).center()
+		framegm.moveCenter(centerpt)
+		self.move(framegm.topLeft())
+
 		self.show()
 
 	def keyPressEvent(self,qkeyEvent):
@@ -556,7 +746,10 @@ class main_menu(QWidget):
 		self.wikiserver_gui.open_window(location=global_point)
 
 	def open_wikiparse(self):
-		pass
+		self.hide()
+		my_point = self.rect().topLeft()
+		global_point = self.mapToGlobal(my_point)
+		self.wikiparse_gui.open_window(location=global_point)
 
 	def open_wikilearn(self):
 		pass

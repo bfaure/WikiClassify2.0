@@ -93,9 +93,9 @@ def expand_bz2(file_path):
         print("\t\tFile already expanded.")
     return file_path[:-4]
 
-def parse_wikidump(dump_path, cutoff_date='20010115'):
+def parse_wikidump(dump_path, cutoff_date='20010115', password=None):
+    if password==None: password = raw_input("Database password: ")
 
-    password = raw_input("Database password: ")
     dump_path = 'WikiParse/data/corpora/simplewiki/data/simplewiki-latest-pages-meta-current.xml'
     compiled = True
     if compiled:
@@ -106,16 +106,18 @@ def parse_wikidump(dump_path, cutoff_date='20010115'):
         except:
             return False
     if os.path.isfile('wikiparse.out'):
-        
         if os.name == "nt":
             print("\tDetected Windows, altering command...")
             print("\tCalling wikiparse.out...")
             call(["wikiparse.out",dump_path,cutoff_date,password])
+            return True
         else:
             print("\tCalling ./wikiparse.out...")
             call(["./wikiparse.out", dump_path, cutoff_date,password])
+            return True
     else:
         print("\tERROR: Could not find wikiparse.out")
+        return False
 
 def gensim_corpus(tsv_path, directory, make_phrases=False,):
     text = text_corpus(tsv_path)
