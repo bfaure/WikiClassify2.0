@@ -36,6 +36,9 @@ Control database actions.<br>
 ![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/control_panel.PNG)
 
 #### WikiParse
+Configure parser launch parameters.<br>
+![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/parser.PNG)
+
 #### WikiLearn
 
 ## Dependencies
