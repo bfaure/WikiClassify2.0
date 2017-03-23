@@ -18,21 +18,21 @@ When first cloning the repo, run the init.py file to create the directory struct
 * Compile C++ parser files
 * Parse .xml data, sending bursts to remove server at 1000 article increments
 * Train word2vec and LDA models
-<br>
+
 After a model is present in the working directory, a subsequent call to `python main.py` will open the interface created to interact with the models (including A\* path search and A\* convene functions). A call to `python main.py` with a `-c` launch parameter will clean the working directory of models and downloaded data.
-<br>
+
 ### Graphic User Interface
-Run `python main.py` with a `-g` launch parameter to open the user interface main menu.<br>
+Run `python main.py` with a `-g` launch parameter to open the user interface main menu.
 ![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/main_menu.PNG)
-<br>
+
 #### [WikiServer]
-Enter server credentials.<br>
+Enter server credentials.
 ![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/login_window.PNG)
 
-View `articles` database.<br>
+View `articles` database.
 ![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/table_view.PNG)
 
-Control database actions.<br>
+Control database actions.
 ![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/control_panel.PNG)
 
 #### WikiParse
@@ -48,20 +48,20 @@ Control database actions.<br>
 * `PyQt4` (for GUI)
 * `psycopg2` (for GUI)
 ### C++
-Both of the following packages can be install via the command line using package manager such as `apt-get` on Ubuntu.<br>
+Both of the following packages can be install via the command line using package manager such as `apt-get` on Ubuntu.
 * `libpq-dev`
 * `libpqxx-4.0`
 
 ## Related Repositories
 
-[Chrome Extension](https://github.com/lukewielgus/WikiExtension) <br>
-[Project Website](https://github.com/waynesun95/WikiClassifySite) <br>
+[Chrome Extension](https://github.com/lukewielgus/WikiExtension) 
+[Project Website](https://github.com/waynesun95/WikiClassifySite)
 [Former Repo](https://github.com/nathankjer/WikiClassify)
 
 #### Running Parser (temp, debugging C++ files...)
-cd into WikiParse/code then compile with...<br>
-`g++ --std=c++11 main.cpp wikidump.cpp wikipage.cpp wikitext.cpp string_utils.cpp -o wikiparse.out`<br>
-then to run the parser...<br>
-`./wikiparse.out <path_to_source> <output_directory>`<br>
-for example...<br>
+cd into WikiParse/code then compile with...
+`g++ --std=c++11 main.cpp wikidump.cpp wikipage.cpp wikitext.cpp string_utils.cpp -o wikiparse.out`
+then to run the parser...
+`./wikiparse.out <path_to_source> <output_directory>`
+for example...
 `./wikiparse.out ../data/input/simplewiki-latest-pages-articles.xml ../data/`
