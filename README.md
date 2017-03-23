@@ -19,10 +19,8 @@ When first cloning the repo, run the init.py file to create the directory struct
 * Parse .xml data, sending bursts to remove server at 1000 article increments
 * Train word2vec and LDA models
 <br>
-After a model is present in the working directory, a subsequent call to `python main.py` will open the interface created to interact with the models (including A\* path search and A\* convene functions).
+After a model is present in the working directory, a subsequent call to `python main.py` will open the interface created to interact with the models (including A\* path search and A\* convene functions). A call to `python main.py` with a `-c` launch parameter will clean the working directory of models and downloaded data.
 <br>
- A call to `python main.py` with a `-c` launch parameter will clean the working directory of models and downloaded data.
-
 ### Graphic User Interface
 Run `python main.py` with a `-g` launch parameter to open the user interface main menu.<br>
 ![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/main_menu.PNG)
