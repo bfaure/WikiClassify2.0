@@ -106,22 +106,35 @@ wikidump::wikidump(string &path, string &cutoff_date, string password) {
     cutoff_day   = stoi(cutoff_date.substr(6,2));
 }
 
-void wikidump::read(bool build_keys) {
+void wikidump::read(bool build_keys) 
+{
     if (build_keys){  cout<<"Building keys...\n";  }
     else           {  cout<<"Reading dump...\n";  }
     
     articles_read = 0;
+    unsigned long long last_articles_read = 0;
+
     streampos offset;
-    const streampos buffer_size = 4000000;
-    char buffer[(unsigned)buffer_size];
-    time_t start_time = time(0);
     
-    while (dump_input.read(buffer, sizeof(buffer))) 
+    streampos buffer_size = 2000000;
+    char *buffer = (char*)malloc(sizeof(char)*(unsigned)buffer_size);
+    memset(buffer,0,sizeof(char)*(unsigned)buffer_size);
+    
+    time_t start_time = time(0);
+    while (dump_input.read(buffer, buffer_size)) 
     {
+        last_articles_read = articles_read;
         offset = save_buffer(buffer, build_keys);
         dump_input.seekg(dump_input.tellg()-buffer_size+offset);
         cout.flush();
         cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles parsed.";
+
+        // check if we need to increase the read buffer size
+        if ( last_articles_read==articles_read )
+        {
+            buffer_size += 1000;
+            buffer = (char*)realloc(buffer, sizeof(char)*(unsigned)buffer_size);
+        }
     }
 
     dump_input.clear();
