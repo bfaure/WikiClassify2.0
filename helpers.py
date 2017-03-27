@@ -539,7 +539,6 @@ class wikiparse_window(QWidget):
 	def __init__(self,parent=None):
 		super(wikiparse_window,self).__init__()
 		self.cred_window = credentials_window(self)
-		self.exec_log = log_window(self,"Execution Log")
 		self.parent = parent
 		self.init_vars()
 		self.init_ui()
@@ -594,17 +593,24 @@ class wikiparse_window(QWidget):
 
 		self.resize(300,240)
 
-		#self.retrain_check.setChecked(True)
-		#self.retrain_check.setEnabled(False)
-
-		self.source_input.setEnabled(False)
-		self.server_check.setEnabled(False)
-
+		self.source_input.textEdited.connect(self.source_changed)
 		self.cancel_button.clicked.connect(self.cancel_pressed)
 		self.ok_button.clicked.connect(self.ok_pressed)
 
-	def has_data_dump(self):
-		dump_dir = "WikiParse/data/corpora/simplewiki/data/"
+	def source_changed(self,new_text):
+		if new_text not in [" ",""]:
+			if self.has_data_dump(dump_name=new_text):
+				self.redownload_check.setChecked(False)
+				self.redownload_check.setEnabled(True)
+			else:
+				self.redownload_check.setChecked(True)
+				self.redownload_check.setEnabled(False)
+		else:
+			self.redownload_check.setChecked(True)
+			self.redownload_check.setEnabled(False)
+
+	def has_data_dump(self,dump_name="simplewiki"):
+		dump_dir = "WikiParse/data/corpora/"+dump_name+"/data/"
 		if os.path.isdir(dump_dir):
 			files = os.listdir(dump_dir)
 			for f in files:
@@ -637,17 +643,8 @@ class wikiparse_window(QWidget):
 		self.start_execution(use_server=False)
 
 	def start_execution(self,use_server=False):
-		#my_point = self.rect().topLeft()
-		#global_point = self.mapToGlobal(my_point)
-		self.hide()
-		time.sleep(1)
-		#self.exec_log.open(global_point)
-		
-		#self.exec_log.update("*See terminal window for detail")
-		#self.exec_log.update("> Starting execution...")
 
 		if self.retrain_check.isChecked():
-			#self.exec_log.update("> Removing prior model files...")
 			base_model_files = ["authors","categories","category_parents","domains","links","redirects","text","titles","related_text","related_authors"]
 			for f in base_model_files:
 				if os.path.isfile(f+".tsv"): os.remove(f+".tsv")
@@ -655,14 +652,12 @@ class wikiparse_window(QWidget):
 			if os.path.isdir("WikiLearn/data"): rmtree("WikiLearn/data")
 		
 		if self.redownload_check.isChecked():
-			#self.exec_log.update("> Removing prior download...")
 			if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
 		
 		dump_source = str(self.source_input.text())
 		download_location = "WikiParse/data/corpora/"+dump_source+"/data"
 
 		if self.redownload_check.isChecked():
-			#self.exec_log.update("> Downloading...")
 			dump_path = download_wikidump(dump_source,download_location)
 		else:
 			if os.path.isdir(download_location):
@@ -673,27 +668,18 @@ class wikiparse_window(QWidget):
 						dump_path = download_location+"/"+f
 						print(dump_path)
 						break
-			#else:
-			#	self.exec_log.update("> Could not find prior download!")
 
-		#self.exec_log.update("> Parsing dump...")
-
-
-		parsed = parse_wikidump(dump_path,password=self.server_password)
-
-		#if parsed:
-		#	self.exec_log.update("> Parsing successful")
-		#else:
-		#	self.exec_log.update("> Parsing unsucessful!")
+		if use_server:
+			parsed = parse_wikidump(dump_path,password=self.server_password)
+		else:
+			parsed = parse_wikidump(dump_path,password="NONE")
 
 		if self.retrain_check.isChecked() and parsed:
-			#self.exec_log.update("> Re-training models...")
 			encoder_directory = 'WikiLearn/data/models/tokenizer'
 			get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
 			get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
 			get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
-		
-		#self.exec_log.update("> Process complete, close this window.")
+
 		self.show()
 
 	def cred_ok(self):

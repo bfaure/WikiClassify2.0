@@ -72,24 +72,35 @@ void wikidump::connect_to_server()
 
 wikidump::wikidump(string &path, string &cutoff_date, string password) {
 
-    server_password = password;
-    server_username = "waynesun95";
-    server_host     = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com";
-    server_port     = "5432";
-    server_dbname   = "ebdb";
+    if ( password!="NONE")
+    {
+        server_password = password;
+        server_username = "waynesun95";
+        server_host     = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com";
+        server_port     = "5432";
+        server_dbname   = "ebdb";
 
-    server_capacity = 10000000000; // 10 GB
-    replace_server_duplicates   = false; // dont replace duplicates
-    server_write_buffer_size    = 5000; // write to server after this many read
-    connect_to_server();
+        server_capacity = 10000000000; // 10 GB
+        replace_server_duplicates   = false; // dont replace duplicates
+        server_write_buffer_size    = 5000; // write to server after this many read
+        connect_to_server();
+    }
+    else
+    {
+        cout<<"Not backing up to server\n";
+        connected_to_server = false;
+    }
 
     dump_input = ifstream(path,ifstream::binary);
-    if (dump_input.is_open()) {
+    if (dump_input.is_open()) 
+    {
         dump_size = ifstream(path,ifstream::ate|ifstream::binary).tellg();
     }
-    else {
+    else 
+    {
         cout<<"Could not open dump! ("<<path<<")\n";
     }
+
     cutoff_year  = stoi(cutoff_date.substr(0,4));
     cutoff_month = stoi(cutoff_date.substr(4,2));
     cutoff_day   = stoi(cutoff_date.substr(6,2));
