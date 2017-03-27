@@ -876,7 +876,7 @@ class wikilearn_window(QWidget):
 
 	def init_ui(self):
 		self.layout = QVBoxLayout(self)
-		self.setWindowTitle("WikiParse Tools")
+		self.setWindowTitle("WikiLearn Tools")
 
 		self.tab_widget = QTabWidget()
 
