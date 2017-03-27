@@ -11,7 +11,7 @@ from time import sleep
 from main import get_encoder
 from main import PriorityQueue, rectify_path, get_transition_cost, elem_t
 
-from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
+from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus, expand_bz2
 from WikiLearn.code.vectorize import doc2vec
 
 try:
@@ -556,12 +556,18 @@ class parser_worker(QThread):
 		else:
 			if os.path.isdir(download_location):
 				files = os.listdir(download_location)
+				dump_path = None 
+				bz2_path = None
 				for f in files:
-					if f.find(".bz2")!=-1: continue
+					if f.find(".bz2")!=-1:
+						bz2_path = download_location+"/"+f 
+						continue
 					if f.find(".xml")!=-1:
 						dump_path = download_location+"/"+f
 						print(dump_path)
 						break
+				if dump_path==None and bz2_path!=None:
+					dump_path = expand_bz2(bz2_path)
 
 		if self.use_server:
 			parsed = parse_wikidump(dump_path,password=self.server_password)
