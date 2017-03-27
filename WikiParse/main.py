@@ -74,9 +74,11 @@ def download(url, directory):
     return file_path
 
 def expand_bz2(file_path):
-    print("\tExpanding bz2...")
+    sys.stdout.write("\tExpanding bz2... ")
     if not os.path.isfile(file_path[:-4]):
         file_size = os.path.getsize(file_path)
+        estimated_file_size = (float(5)*float(file_size))/1000.0
+        sys.stdout.write("Estimated "+str(estimated_file_size)+" MB\n")
         try:
             with open(file_path[:-4], 'wb') as new_file, bz2.BZ2File(file_path, 'rb') as file:
                 for data in iter(lambda : file.read(100 * 1024), b''):
