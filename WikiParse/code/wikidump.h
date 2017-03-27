@@ -46,7 +46,7 @@ class wikidump {
 
         ifstream dump_input;
         ifstream::pos_type dump_size;
-        unsigned articles_read;
+        unsigned long long articles_read;
         unsigned cutoff_year;
         unsigned cutoff_month;
         unsigned cutoff_day;
@@ -62,11 +62,10 @@ class wikidump {
         string  server_port;
         string  server_dbname;
 
-        bool    connected_to_server;
-        int     num_sent_to_server;
-        long     server_capacity; // bytes
-        bool    replace_server_duplicates;
-
+        bool                connected_to_server;
+        unsigned long long  num_sent_to_server;
+        long                server_capacity; // bytes
+        bool                replace_server_duplicates;
         int                 server_write_buffer_size;
         vector<wikipage>    server_write_buffer;
 
