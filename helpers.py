@@ -1000,11 +1000,56 @@ class wikilearn_window(QWidget):
 		if not self.init_vars(): 
 			self.hide()
 
+class exit_dialog(QWidget):
+	exit_ok = pyqtSignal()
+	exit_canceled = pyqtSignal()
+
+	def __init__(self,parent=None):
+		super(exit_dialog,self).__init__()
+		self.parent = parent 
+		self.connect(self,SIGNAL("exit_ok()"),self.parent.exit_accepted)
+		self.connect(self,SIGNAL("exit_canceled()"),self.parent.exit_canceled)
+		self.init_ui()
+
+	def init_ui(self):
+		self.setWindowTitle("Exit Dialog")
+		self.layout = QVBoxLayout(self)
+
+		self.label = QLabel()
+		self.layout.addWidget(self.label)
+
+		self.button_row = QHBoxLayout()
+		self.cancel_button = QPushButton("Cancel")
+		self.cancel_button.clicked.connect(self.cancel_pressed)
+
+		self.ok_button = QPushButton("Ok")
+		self.ok_button.clicked.connect(self.ok_pressed)
+
+		self.button_row.addWidget(self.cancel_button)
+		self.button_row.addWidget(self.ok_button)
+
+		self.layout.addLayout(self.button_row)
+
+	def open_window(self,message,location):
+		self.move(location)
+		self.resize(self.sizeHint())
+		self.label.setText(message)
+		self.show()
+
+	def cancel_pressed(self):
+		self.hide()
+		self.exit_canceled.emit()
+
+	def ok_pressed(self):
+		self.hide()
+		self.exit_ok.emit()
+
 class main_menu(QWidget):
 
 	def __init__(self,parent=None):
 		super(main_menu,self).__init__()
 		self.notification_gui 	= notification_window(parent=self)
+		self.exit_gui 			= exit_dialog(parent=self)
 		self.wikiserver_gui 	= wikiserver_window(parent=self)
 		self.wikiparse_gui 		= wikiparse_window(parent=self)
 		self.wikilearn_gui 		= wikilearn_window(parent=self)
@@ -1096,7 +1141,17 @@ class main_menu(QWidget):
 		self.wikilearn_gui.open_window()
 
 	def closeEvent(self,e):
+		if not self.wikiparse_button.isEnabled():
+			global_point = self.mapToGlobal(self.rect().topLeft())
+			self.exit_gui.open_window("Still parsing, want to exit?",global_point)
+			return
 		sys.exit(1)
+
+	def exit_accepted(self):
+		sys.exit(1)
+
+	def exit_canceled(self):
+		self.show()
 
 	def done_parsing(self):
 		self.wikiparse_button.setEnabled(True)
