@@ -5,6 +5,12 @@ import sys
 from shutil import rmtree
 import time
 
+try:
+	import psutil
+except:
+	print("Cannot find Python 2.7 library\'psutil\', install using pip!")
+	sys.exit(0)
+
 from time import time
 from time import sleep
 
@@ -19,6 +25,7 @@ try:
 	from psycopg2 import connect as server_connect
 except:
 	print("Cannot find Python 2.7 library \'psycopg2\', install using pip!")
+	sys.exit(0)
 
 try:
 	from PyQt4 import QtGui, QtCore
@@ -26,6 +33,7 @@ try:
 	from PyQt4.QtGui import *
 except:
 	print("Cannot find Python 2.7 library \'PyQt4\', install using pip!")
+	sys.exit(0)
 
 
 main_menu_window = ""
@@ -1177,6 +1185,7 @@ class main_menu(QWidget):
 		sys.exit(1)
 
 	def exit_accepted(self):
+		if not self.wikiparse_button.isEnabled(): self.cancel_parsing()
 		sys.exit(1)
 
 	def exit_canceled(self):
@@ -1200,6 +1209,11 @@ class main_menu(QWidget):
 
 	def cancel_parsing(self):
 		self.wikiparse_gui.worker.terminate()
+
+		process_name = "wikiparse.out"
+		for proc in psutil.process_iter():
+			if proc.name()==process_name: proc.kill()
+
 		self.wikiparse_button.setEnabled(True)
 		self.wikiparse_menu_item.setEnabled(True)
 		self.cancel_parsing_action.setEnabled(False)

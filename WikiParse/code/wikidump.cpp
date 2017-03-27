@@ -107,27 +107,28 @@ wikidump::wikidump(string &path, string &cutoff_date, string password) {
 }
 
 void wikidump::read(bool build_keys) {
-    if (build_keys) {
-        cout<<"Building keys...\n";
-    }
-    else {
-        cout<<"Reading dump...\n";
-    }
+    if (build_keys){  cout<<"Building keys...\n";  }
+    else           {  cout<<"Reading dump...\n";  }
+    
     articles_read = 0;
     streampos offset;
     const streampos buffer_size = 2000000;
     char buffer[(unsigned)buffer_size];
     time_t start_time = time(0);
-    while (dump_input.read(buffer, sizeof(buffer))) {
+    
+    while (dump_input.read(buffer, sizeof(buffer))) 
+    {
         offset = save_buffer(buffer, build_keys);
         dump_input.seekg(dump_input.tellg()-buffer_size+offset);
         cout.flush();
         cout<<"\r"<<(int)100.0*dump_input.tellg()/dump_size<<"% done, "<<time(0)-start_time<<" seconds elapsed, "<<articles_read<<" articles parsed.";
     }
+
     dump_input.clear();
     dump_input.seekg(0, dump_input.beg);
     cout<<"\n";
-    if (build_keys) {
+    if (build_keys) 
+    {
         save_keys();
         connect_database();
         read(false);
