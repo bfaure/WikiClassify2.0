@@ -570,9 +570,9 @@ class parser_worker(QThread):
 					dump_path = expand_bz2(bz2_path)
 
 		if self.use_server:
-			parsed = parse_wikidump(dump_path,password=self.server_password)
+			parsed = parse_wikidump(dump_path,password=self.server_password,version=dump_source)
 		else:
-			parsed = parse_wikidump(dump_path,password="NONE")
+			parsed = parse_wikidump(dump_path,password="NONE",version=dump_source)
 
 		if self.retrain and parsed:
 			encoder_directory = 'WikiLearn/data/models/tokenizer'
