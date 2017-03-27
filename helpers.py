@@ -740,6 +740,7 @@ class notification_window(QWidget):
 	def set_notification(self,value,location):
 		self.move(location)
 		self.label.setText(value)
+		self.resize(self.sizeHint())
 		self.show()
 
 class main_menu(QWidget):
