@@ -172,9 +172,12 @@ class credentials_window(QWidget):
 			self.ok_pressed()
 
 class wikiserver_window(QWidget):
+	canceled_wikiserver = pyqtSignal()
+
 	def __init__(self,parent=None):
 		super(wikiserver_window,self).__init__()
 		self.setMouseTracking(True)
+		self.connect(self,SIGNAL("canceled_wikiserver()"),parent.canceled_wikiserver)
 		self.parent = parent
 		self.user_log = log_window(self,"Connection Log")
 		self.cred_window = credentials_window(self)
@@ -215,6 +218,10 @@ class wikiserver_window(QWidget):
 	def cred_cancel(self):
 		self.show()
 		self.open_window(get_cred=False)
+		if self.connected==False:
+			self.hide()
+			self.user_log.hide()
+			self.canceled_wikiserver.emit()
 
 	def init_vars(self,new_credentials=True):
 		self.disconnect(False)
@@ -325,13 +332,6 @@ class wikiserver_window(QWidget):
 
 	def panel_item_selected(self):
 		return
-		'''
-		if self.current_widget_name != "panel": return 
-
-		selection = self.current_widget.currentItem().text()
-
-		if selection == "Clean Repository":
-		'''
 
 	def back(self):
 		if self.parent==None: return
@@ -756,22 +756,58 @@ class main_menu(QWidget):
 		self.layout = QVBoxLayout(self)
 		self.setWindowTitle("Control Panel")
 		
+		p = self.palette()
+		p.setColor(self.backgroundRole(),Qt.white)
+		self.setPalette(p)
+
+		pic_row = QHBoxLayout()
+		pic_row.addStretch()
+		pic = QLabel()
+		pic.setPixmap(QPixmap("resources/icon.png"))
+		pic_row.addWidget(pic)
+		pic_row.addStretch()
+		self.layout.addLayout(pic_row)
+
+		wikilearn_row = QHBoxLayout()
+		wikiparse_row = QHBoxLayout()
+		wikiserver_row = QHBoxLayout()
+
+		wikiserver_row.addStretch()
+		wikiparse_row.addStretch()
+		wikilearn_row.addStretch()
+
 		self.wikilearn_button = QPushButton("WikiLearn")
 		self.wikiparse_button = QPushButton("WikiParse")
 		self.wikiserver_button = QPushButton("[WikiServer]")
+
+		self.wikiserver_button.setFixedWidth(200)
+		self.wikilearn_button.setFixedWidth(200)
+		self.wikiparse_button.setFixedWidth(200)
+
+		#self.wikiparse_button.setStyleSheet("background-color: white")
+		#self.wikiserver_button.setStyleSheet("background-color: white")
+		#self.wikilearn_button.setStyleSheet("background-color: white")
+		
+		wikiserver_row.addWidget(self.wikiserver_button)
+		wikiparse_row.addWidget(self.wikiparse_button)
+		wikilearn_row.addWidget(self.wikilearn_button)
+
+		wikiserver_row.addStretch()
+		wikiparse_row.addStretch()
+		wikilearn_row.addStretch()
 
 		self.wikilearn_button.clicked.connect(self.open_wikilearn)
 		self.wikiparse_button.clicked.connect(self.open_wikiparse)
 		self.wikiserver_button.clicked.connect(self.open_wikiserver)
 
 		self.layout.addSpacing(10)
-		self.layout.addWidget(self.wikiserver_button)
-		self.layout.addWidget(self.wikiparse_button)
-		self.layout.addWidget(self.wikilearn_button)
+		self.layout.addLayout(wikiserver_row)
+		self.layout.addLayout(wikiparse_row)
+		self.layout.addLayout(wikilearn_row)
 		self.layout.addSpacing(10)
 
-		self.setFixedWidth(225)
-		self.setFixedHeight(175)
+		self.setFixedWidth(400)
+		self.setFixedHeight(410)
 
 		framegm = self.frameGeometry()
 		screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
@@ -779,6 +815,9 @@ class main_menu(QWidget):
 		framegm.moveCenter(centerpt)
 		self.move(framegm.topLeft())
 
+		self.show()
+
+	def canceled_wikiserver(self):
 		self.show()
 
 	def keyPressEvent(self,qkeyEvent):
@@ -818,5 +857,7 @@ class main_menu(QWidget):
 def start_gui():
 	global main_menu_window
 	app = QApplication(sys.argv)
+	f = open("resources/icon.png")
+	app.setWindowIcon(QIcon("resources/icon.png"))
 	main_menu_window = main_menu(app)
 	sys.exit(app.exec_())
