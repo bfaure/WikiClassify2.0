@@ -587,12 +587,20 @@ class wikiparse_window(QWidget):
 		self.server_dbname = None 
 		self.server_password = None
 
+		# not all, just most common
+		self.wiki_types = [	"simplewiki","enwiki","frwiki","zhwiki","dewiki","ruwiki","itwiki","eswiki","metawiki",
+							"ptwiki","jawiki","nlwiki","plwiki","svwiki","shwiki","arwiki","fawiki","ukwiki","cawiki"]
+
 	def init_ui(self):
 		self.setWindowTitle("WikiParse Scheduler")
 		self.layout = QVBoxLayout(self)
 
 		self.source_label = QLabel("Source:                       ")
-		self.source_input = QLineEdit("simplewiki")
+		#self.source_input = QLineEdit("simplewiki")
+		self.source_input = QComboBox()
+		self.source_input.addItems(self.wiki_types)
+		self.source_input.setCurrentIndex(0)
+
 		source_layout = QHBoxLayout()
 		source_layout.addWidget(self.source_label)
 		source_layout.addWidget(self.source_input)
@@ -630,11 +638,13 @@ class wikiparse_window(QWidget):
 
 		self.resize(300,240)
 
-		self.source_input.textEdited.connect(self.source_changed)
+		#self.source_input.textEdited.connect(self.source_changed)
+		self.source_input.currentIndexChanged.connect(self.source_changed)
 		self.cancel_button.clicked.connect(self.cancel_pressed)
 		self.ok_button.clicked.connect(self.ok_pressed)
 
-	def source_changed(self,new_text):
+	def source_changed(self):
+		new_text = str(self.source_input.currentText())
 		if new_text not in [" ",""]:
 			if self.has_data_dump(dump_name=new_text):
 				self.redownload_check.setChecked(False)
@@ -693,7 +703,7 @@ class wikiparse_window(QWidget):
 
 		self.worker = parser_worker(self)
 		self.worker.use_server = use_server
-		self.worker.source = str(self.source_input.text())
+		self.worker.source = str(self.source_input.currentText())
 		self.worker.redownload = True if self.redownload_check.isChecked() else False
 		if use_server: self.worker.server_password = self.server_password
 		self.worker.retrain = True if self.retrain_check.isChecked() else False 
