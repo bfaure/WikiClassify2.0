@@ -544,7 +544,6 @@ class parser_worker(QThread):
 		self.exiting = False
 
 	def run(self):
-
 		dump_source = str(self.source)
 		download_location = "WikiParse/data/corpora/"+dump_source+"/data"
 
@@ -570,6 +569,8 @@ class parser_worker(QThread):
 			get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
 			get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
 			get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+
+		self.done_parsing.emit()
 
 class wikiparse_window(QWidget):
 	def __init__(self,parent=None):
