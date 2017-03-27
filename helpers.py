@@ -535,6 +535,42 @@ class wikiserver_window(QWidget):
 		self.exit()
 		return
 
+class parser_worker(QThread):
+	done_parsing = pyqtSignal()
+
+	def __init__(self,parent=None):
+		QThread.__init__(self,parent)
+		self.connect(self,SIGNAL("done_parsing()"),parent.parent.done_parsing)
+		self.exiting = False
+
+	def run(self):
+
+		dump_source = str(self.source)
+		download_location = "WikiParse/data/corpora/"+dump_source+"/data"
+
+		if self.redownload:
+			dump_path = download_wikidump(dump_source,download_location)
+		else:
+			if os.path.isdir(download_location):
+				files = os.listdir(download_location)
+				for f in files:
+					if f.find(".bz2")!=-1: continue
+					if f.find(".xml")!=-1:
+						dump_path = download_location+"/"+f
+						print(dump_path)
+						break
+
+		if self.use_server:
+			parsed = parse_wikidump(dump_path,password=self.server_password)
+		else:
+			parsed = parse_wikidump(dump_path,password="NONE")
+
+		if self.retrain and parsed:
+			encoder_directory = 'WikiLearn/data/models/tokenizer'
+			get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
+			get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+			get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+
 class wikiparse_window(QWidget):
 	def __init__(self,parent=None):
 		super(wikiparse_window,self).__init__()
@@ -653,34 +689,15 @@ class wikiparse_window(QWidget):
 		
 		if self.redownload_check.isChecked():
 			if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
-		
-		dump_source = str(self.source_input.text())
-		download_location = "WikiParse/data/corpora/"+dump_source+"/data"
 
-		if self.redownload_check.isChecked():
-			dump_path = download_wikidump(dump_source,download_location)
-		else:
-			if os.path.isdir(download_location):
-				files = os.listdir(download_location)
-				for f in files:
-					if f.find(".bz2")!=-1: continue
-					if f.find(".xml")!=-1:
-						dump_path = download_location+"/"+f
-						print(dump_path)
-						break
-
-		if use_server:
-			parsed = parse_wikidump(dump_path,password=self.server_password)
-		else:
-			parsed = parse_wikidump(dump_path,password="NONE")
-
-		if self.retrain_check.isChecked() and parsed:
-			encoder_directory = 'WikiLearn/data/models/tokenizer'
-			get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
-			get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-			get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
-
-		self.show()
+		self.worker = parser_worker(self)
+		self.worker.use_server = use_server
+		self.worker.source = str(self.source_input.text())
+		self.worker.redownload = True if self.redownload_check.isChecked() else False
+		if use_server: self.worker.server_password = self.server_password
+		self.worker.retrain = True if self.retrain_check.isChecked() else False 
+		self.worker.start()
+		self.parent.parsing_started()
 
 	def cred_ok(self):
 		self.server_host = self.cred_window.host 
@@ -697,10 +714,28 @@ class wikiparse_window(QWidget):
 		self.hide()
 		self.parent.show()
 
+class notification_window(QWidget):
+	def __init__(self,parent=None):
+		super(notification_window,self).__init__()
+		self.init_ui()
+
+	def init_ui(self):
+		self.setWindowTitle("Update")
+		self.layout = QVBoxLayout(self)
+		self.label = QLabel("")
+		self.layout.addWidget(self.label)
+		self.resize(400,100)
+
+	def set_notification(self,value,location):
+		self.move(location)
+		self.label.setText(value)
+		self.show()
+
 class main_menu(QWidget):
 
 	def __init__(self,parent=None):
 		super(main_menu,self).__init__()
+		self.notification_gui = notification_window(parent=self)
 		self.wikiserver_gui = wikiserver_window(parent=self)
 		self.wikiparse_gui = wikiparse_window(parent=self)
 		self.wikilearn_gui = None 
@@ -710,18 +745,18 @@ class main_menu(QWidget):
 		self.layout = QVBoxLayout(self)
 		self.setWindowTitle("Control Panel")
 		
-		wikilearn_button = QPushButton("WikiLearn")
-		wikiparse_button = QPushButton("WikiParse")
-		wikiserver_button = QPushButton("[WikiServer]")
+		self.wikilearn_button = QPushButton("WikiLearn")
+		self.wikiparse_button = QPushButton("WikiParse")
+		self.wikiserver_button = QPushButton("[WikiServer]")
 
-		wikilearn_button.clicked.connect(self.open_wikilearn)
-		wikiparse_button.clicked.connect(self.open_wikiparse)
-		wikiserver_button.clicked.connect(self.open_wikiserver)
+		self.wikilearn_button.clicked.connect(self.open_wikilearn)
+		self.wikiparse_button.clicked.connect(self.open_wikiparse)
+		self.wikiserver_button.clicked.connect(self.open_wikiserver)
 
 		self.layout.addSpacing(10)
-		self.layout.addWidget(wikiserver_button)
-		self.layout.addWidget(wikiparse_button)
-		self.layout.addWidget(wikilearn_button)
+		self.layout.addWidget(self.wikiserver_button)
+		self.layout.addWidget(self.wikiparse_button)
+		self.layout.addWidget(self.wikilearn_button)
 		self.layout.addSpacing(10)
 
 		self.setFixedWidth(225)
@@ -755,12 +790,19 @@ class main_menu(QWidget):
 		pass
 
 	def closeEvent(self,e):
-		'''
-		if self.wikiserver_gui is not None: self.wikiserver_gui.exit()
-		if self.wikiparse_gui is not None: self.wikiparse_gui.exit()
-		if self.wikilearn_gui is not None: self.wikilearn_gui.exit()
-		'''
 		sys.exit(1)
+
+	def done_parsing(self):
+		self.wikiparse_button.setEnabled(True)
+		global_point = self.mapToGlobal(self.rect().topLeft())
+		self.notification_gui.set_notification("Parsing is complete",global_point)
+
+	def parsing_started(self):
+		self.wikiparse_gui.hide()
+		self.wikiparse_button.setEnabled(False)
+		self.show()
+		global_point = self.mapToGlobal(self.rect().topLeft())
+		self.notification_gui.set_notification("Parsing has begun, see command line for detail",global_point)
 
 def start_gui():
 	global main_menu_window
