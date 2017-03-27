@@ -42,12 +42,15 @@ def download(url, directory):
         os.makedirs(directory)
     file_name = os.path.basename(urlparse(url)[2])
     file_path = os.path.join(directory, file_name)
-    print("\tDownloading '%s'..." % file_name)
+    sys.stdout.write("\tDownloading '%s'... " % file_name)
     if not os.path.isfile(file_path):
         try:
             with open(file_path, "wb") as f:
                 response = requests.get(url, stream=True)
                 total_length = response.headers.get('content-length')
+                megabytes = int(total_length)/1000000
+                sys.stdout.write(str(megabytes)+" MB\n")
+                
                 if total_length is not None:
                     dl = 0
                     total_length = int(total_length)
