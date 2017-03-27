@@ -1063,6 +1063,24 @@ class main_menu(QWidget):
 		p.setColor(self.backgroundRole(),Qt.white)
 		self.setPalette(p)
 
+		self.toolbar = QMenuBar(self)
+		self.toolbar.setFixedWidth(390)
+
+		file_menu = self.toolbar.addMenu("File")
+		file_menu.addAction("Quit",self.quit,QKeySequence("Ctrl+Q"))
+
+		tools_menu = self.toolbar.addMenu("Tools")
+
+		tools_menu.addAction("WikiServer",self.open_wikiserver,QKeySequence("Ctrl+1"))
+		self.wikiparse_menu_item = tools_menu.addAction("WikiParse",self.open_wikiparse,QKeySequence("Ctrl+2"))
+		tools_menu.addAction("WikiLearn",self.open_wikilearn,QKeySequence("Ctrl+3"))
+
+		tools_menu.addSeparator()
+		self.cancel_parsing_action = tools_menu.addAction("Cancel Parsing",self.cancel_parsing)
+		self.cancel_parsing_action.setEnabled(False)
+
+		if sys.platform=="win32": self.layout.addSpacing(20)
+
 		pic_row = QHBoxLayout()
 		pic_row.addStretch()
 		pic = QLabel()
@@ -1105,9 +1123,10 @@ class main_menu(QWidget):
 		self.layout.addLayout(wikilearn_row)
 		self.layout.addSpacing(10)
 
-		self.setFixedWidth(400)
+		self.setFixedWidth(390)
 		self.setFixedHeight(410)
 		if sys.platform =="darwin": self.setFixedHeight(500)
+		if sys.platform =="win32": self.setFixedHeight(435)
 
 		framegm = self.frameGeometry()
 		screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
@@ -1141,6 +1160,9 @@ class main_menu(QWidget):
 		self.wikilearn_gui.open_window()
 
 	def closeEvent(self,e):
+		self.quit()
+
+	def quit(self):
 		if not self.wikiparse_button.isEnabled():
 			global_point = self.mapToGlobal(self.rect().topLeft())
 			self.exit_gui.open_window("Still parsing, want to exit?",global_point)
@@ -1155,15 +1177,27 @@ class main_menu(QWidget):
 
 	def done_parsing(self):
 		self.wikiparse_button.setEnabled(True)
+		self.wikiparse_menu_item.setEnabled(True)
+		self.cancel_parsing_action.setEnabled(False)
 		global_point = self.mapToGlobal(self.rect().topLeft())
 		self.notification_gui.set_notification("Parsing is complete",global_point)
 
 	def parsing_started(self):
 		self.wikiparse_gui.hide()
 		self.wikiparse_button.setEnabled(False)
+		self.wikiparse_menu_item.setEnabled(False)
+		self.cancel_parsing_action.setEnabled(True)
 		self.show()
 		global_point = self.mapToGlobal(self.rect().topLeft())
 		self.notification_gui.set_notification("Parsing has begun, see command line for detail",global_point)
+
+	def cancel_parsing(self):
+		self.wikiparse_gui.worker.terminate()
+		self.wikiparse_button.setEnabled(True)
+		self.wikiparse_menu_item.setEnabled(True)
+		self.cancel_parsing_action.setEnabled(False)
+		global_point = self.mapToGlobal(self.rect().topLeft())
+		self.notification_gui.set_notification("Parsing canceled",global_point)
 
 def start_gui():
 	global main_menu_window
