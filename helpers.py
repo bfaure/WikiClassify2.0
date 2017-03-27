@@ -809,6 +809,7 @@ class main_menu(QWidget):
 
 		self.setFixedWidth(400)
 		self.setFixedHeight(410)
+		if sys.platform =="darwin": self.setFixedHeight(500)
 
 		framegm = self.frameGeometry()
 		screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
@@ -861,4 +862,5 @@ def start_gui():
 	f = open("resources/icon.png")
 	app.setWindowIcon(QIcon("resources/icon.png"))
 	main_menu_window = main_menu(app)
+	print("Opened GUI Window.")
 	sys.exit(app.exec_())
