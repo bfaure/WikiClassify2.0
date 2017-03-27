@@ -112,7 +112,7 @@ void wikidump::read(bool build_keys) {
     
     articles_read = 0;
     streampos offset;
-    const streampos buffer_size = 2500000;
+    const streampos buffer_size = 4000000;
     char buffer[(unsigned)buffer_size];
     time_t start_time = time(0);
     
