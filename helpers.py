@@ -1079,7 +1079,7 @@ class main_menu(QWidget):
 		self.cancel_parsing_action = tools_menu.addAction("Cancel Parsing",self.cancel_parsing)
 		self.cancel_parsing_action.setEnabled(False)
 
-		if sys.platform=="win32": self.layout.addSpacing(20)
+		if sys.platform!="darwin": self.layout.addSpacing(20)
 
 		pic_row = QHBoxLayout()
 		pic_row.addStretch()
@@ -1126,7 +1126,8 @@ class main_menu(QWidget):
 		self.setFixedWidth(390)
 		self.setFixedHeight(410)
 		if sys.platform =="darwin": self.setFixedHeight(500)
-		if sys.platform =="win32": self.setFixedHeight(435)
+		else: self.setFixedHeight(435)
+		#if sys.platform =="win32": self.setFixedHeight(435)
 
 		framegm = self.frameGeometry()
 		screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
