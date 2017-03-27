@@ -5,7 +5,10 @@ import sys
 from shutil import rmtree
 import time
 
+from time import time
+
 from main import get_encoder
+from main import PriorityQueue, rectify_path, get_transition_cost, elem_t
 
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
 from WikiLearn.code.vectorize import doc2vec
@@ -743,14 +746,259 @@ class notification_window(QWidget):
 		self.resize(self.sizeHint())
 		self.show()
 
+class wikilearn_worker(QThread):
+	got_path = pyqtSignal()
+	failure = pyqtSignal()
+
+	def __init__(self,parent=None):
+		QThread.__init__(self,parent)
+		self.parent=parent
+		self.connect(self,SIGNAL("got_path()"),self.parent.got_path)
+		self.connect(self,SIGNAL("failure()"),self.parent.no_path)
+		self.exiting = False 
+		self.valid = False
+		self.start_query = None 
+		self.end_query = None 
+		self.encoder = None 
+		self.branching_factor = None 
+		self.weight = None
+
+	def run(self):
+		start_query = self.start_query
+		end_query = self.end_query
+		encoder = self.encoder 
+		branching_factor = self.branching_factor
+		weight = self.weight 
+
+		start_vector = encoder.get_nearest_word(start_query,topn = branching_factor)
+		end_vector   = encoder.get_nearest_word(end_query,topn = branching_factor)
+		if start_vector == None:
+			self.offender = "query1"
+
+		if end_vector == None:
+			self.offender = "query2"
+
+		if start_vector==None or end_vector==None:
+			self.failure.emit()
+			return
+		
+		frontier = PriorityQueue()
+		start_elem = elem_t(start_query,parent=None,cost=get_transition_cost(start_query,end_query,encoder))
+		frontier.push(start_elem)
+		cost_list = {}
+		cost_list[start_query] = 0
+		path_end = start_elem
+		base_cost = 0
+		explored = []
+		return_code = "NONE"
+		while True:
+			if self.exiting:
+				return
+			sys.stdout.flush()
+			if frontier.length() == 0:
+				return_code = "NOT FOUND"
+				break
+			cur_node = frontier.pop()
+			cur_word = cur_node.value
+			explored.append(cur_word)
+			if cur_word == end_query:
+				path_end = cur_node
+				break
+			neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
+			if neighbors == None:
+				continue
+			base_cost = cost_list[cur_word]
+			for neighbor_word in neighbors:
+				if cur_word == neighbor_word:
+					continue
+				cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
+				new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
+				new_elem.column_offset = neighbors.index(neighbor_word)
+				if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
+					cost_list[neighbor_word] = cost
+					new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
+					frontier.push(new_elem)
+		
+		solution_path,offsets = rectify_path(path_end)
+		self.solution_path = solution_path
+		self.valid = True
+		self.got_path.emit()
+
+class wikilearn_window(QWidget):
+
+	def __init__(self,parent=None):
+		super(wikilearn_window,self).__init__()
+		self.parent = parent
+		self.notification_gui = notification_window(self)
+		self.workers = []
+		self.init_ui()
+
+	def close_workers(self):
+		for f in self.workers:
+			f.exiting = True
+
+	def return_to_main_menu(self):
+		self.hide()
+		self.parent.show()
+		self.close_workers()
+
+	def init_vars(self):
+		encoder_directory = 'WikiLearn/data/models/tokenizer'
+		if not os.path.isdir(encoder_directory):
+			self.notification_gui.set_notification("Could not locate \""+encoder_directory+"\"")
+			self.return_to_main_menu()
+			return False
+
+		if not os.path.isfile('titles.tsv'):
+			self.notification_gui.set_notification("Could not locate titles.tsv")
+			self.return_to_main_menu()
+			return False
+
+		try:
+			self.text_encoder     = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
+			self.category_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+			self.link_encoder     = get_encoder('links.tsv',False,encoder_directory+'/links',200,300,1,5,20)
+			self.doc_ids          = dict([x.strip().split('\t') for x in open('titles.tsv')])
+		except:
+			self.notification_gui.set_notification("Could not load encoders")
+			self.return_to_main_menu()
+			return False
+
+		return True
+
+	def init_ui(self):
+		self.layout = QVBoxLayout(self)
+		self.setWindowTitle("WikiParse Tools")
+
+		self.tab_widget = QTabWidget()
+
+		self.layout.addWidget(self.tab_widget)
+
+		self.path_widget = QWidget()
+		self.add_widget = QWidget()
+
+		self.path_layout = QVBoxLayout(self.path_widget)
+		self.add_layout = QVBoxLayout(self.add_widget)
+
+		self.tab_widget.addTab(self.path_widget,"Path Finder")
+		self.tab_widget.addTab(self.add_widget,"Word Summation")
+
+		path_upper_row = QHBoxLayout()
+		path_upper_row.addWidget(QLabel("Query 1: "))
+
+		self.path_query_1 = QLineEdit()
+		self.path_query_1.setPlaceholderText("Query 1...")
+		self.path_query_1.setFixedWidth(100)
+		self.path_query_1.textEdited.connect(self.path_query_changed)
+		path_upper_row.addWidget(self.path_query_1)
+		path_upper_row.addStretch(2)
+
+		self.path_layout.addLayout(path_upper_row)
+
+		self.path_result_widget = QTextEdit()
+		self.path_result_widget.setEnabled(False)
+		self.path_layout.addWidget(self.path_result_widget,2)
+
+		path_lower_row = QHBoxLayout()
+		path_lower_row.addWidget(QLabel("Query 2: "))
+
+		self.path_query_2 = QLineEdit()
+		self.path_query_2.setPlaceholderText("Query 2..")
+		self.path_query_2.setFixedWidth(100)
+		self.path_query_2.textEdited.connect(self.path_query_changed)
+		path_lower_row.addWidget(self.path_query_2)
+		path_lower_row.addStretch()
+
+		self.path_layout.addLayout(path_lower_row)
+
+		divider = QFrame()
+		divider.setFrameShape(QFrame.HLine)
+		self.path_layout.addWidget(divider)
+
+		path_parameter_row = QHBoxLayout()
+
+		path_parameter_row.addWidget(QLabel("Cost: "))
+
+		self.path_cost_input = QLineEdit()
+		self.path_cost_input.setText("5")
+		self.path_cost_input.textEdited.connect(self.path_query_changed)
+		path_parameter_row.addWidget(self.path_cost_input)
+
+		path_parameter_row.addSpacing(50)
+		path_parameter_row.addWidget(QLabel("Branching Factor: "))
+
+		self.path_branching_factor_input = QLineEdit()
+		self.path_branching_factor_input.setText("100")
+		self.path_branching_factor_input.textEdited.connect(self.path_query_changed)
+		path_parameter_row.addWidget(self.path_branching_factor_input)
+
+		self.path_layout.addLayout(path_parameter_row)
+
+		self.tab_widget.setCurrentIndex(0)
+
+		self.width = 500
+		self.height = 500
+
+		self.resize(self.width,self.height)
+
+	def collect_values(self):
+		self.query_1 = str(self.path_query_1.text())
+		self.query_2 = str(self.path_query_2.text())
+		try:
+			self.cost = int(str(self.path_cost_input.text()))
+		except:
+			self.cost = None
+		try:
+			self.branching_factor = int(str(self.path_branching_factor_input.text()))
+		except:
+			self.branching_factor = None
+
+	def path_query_changed(self):
+		self.collect_values()
+
+		if self.query_1 in [" ",""]: return 
+		if self.query_2 in [" ",""]: return 
+		if self.branching_factor==None or self.cost==None: return 
+
+		self.close_workers()
+
+		new_worker = wikilearn_worker(parent=self)
+		new_worker.start_query = self.query_1 
+		new_worker.end_query = self.query_2
+		new_worker.branching_factor = self.branching_factor 
+		new_worker.weight = self.cost
+		new_worker.encoder = self.text_encoder
+		new_worker.start()
+
+		self.workers.append(new_worker)
+
+	def got_path(self):
+		for f in self.workers:
+			if f.valid:
+				f.valid = False
+				soln_path = f.solution_path
+				self.path_result_widget.clear()
+				for word in reversed(soln_path):
+					self.path_result_widget.append(word)
+				del self.workers[self.workers.index(f)]
+				return
+
+	def no_path(self):
+		self.path_result_widget.clear()
+
+	def open_window(self):
+		self.show()
+		if not self.init_vars(): 
+			self.hide()
+
 class main_menu(QWidget):
 
 	def __init__(self,parent=None):
 		super(main_menu,self).__init__()
-		self.notification_gui = notification_window(parent=self)
-		self.wikiserver_gui = wikiserver_window(parent=self)
-		self.wikiparse_gui = wikiparse_window(parent=self)
-		self.wikilearn_gui = None 
+		self.notification_gui 	= notification_window(parent=self)
+		self.wikiserver_gui 	= wikiserver_window(parent=self)
+		self.wikiparse_gui 		= wikiparse_window(parent=self)
+		self.wikilearn_gui 		= wikilearn_window(parent=self)
 		self.init_ui()
 
 	def init_ui(self):
@@ -784,10 +1032,6 @@ class main_menu(QWidget):
 		self.wikiserver_button.setFixedWidth(200)
 		self.wikilearn_button.setFixedWidth(200)
 		self.wikiparse_button.setFixedWidth(200)
-
-		#self.wikiparse_button.setStyleSheet("background-color: white")
-		#self.wikiserver_button.setStyleSheet("background-color: white")
-		#self.wikilearn_button.setStyleSheet("background-color: white")
 		
 		wikiserver_row.addWidget(self.wikiserver_button)
 		wikiparse_row.addWidget(self.wikiparse_button)
@@ -839,7 +1083,8 @@ class main_menu(QWidget):
 		self.wikiparse_gui.open_window(location=global_point)
 
 	def open_wikilearn(self):
-		pass
+		self.hide()
+		self.wikilearn_gui.open_window()
 
 	def closeEvent(self,e):
 		sys.exit(1)
@@ -859,8 +1104,6 @@ class main_menu(QWidget):
 def start_gui():
 	global main_menu_window
 	app = QApplication(sys.argv)
-	f = open("resources/icon.png")
-	app.setWindowIcon(QIcon("resources/icon.png"))
 	main_menu_window = main_menu(app)
 	print("Opened GUI Window.")
 	sys.exit(app.exec_())
