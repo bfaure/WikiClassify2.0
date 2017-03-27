@@ -609,6 +609,7 @@ class wikiparse_window(QWidget):
 		#self.source_input = QLineEdit("simplewiki")
 		self.source_input = QComboBox()
 		self.source_input.addItems(self.wiki_types)
+		self.source_input.setToolTip("Names of popular Wikipedia versions")
 		self.source_input.setCurrentIndex(0)
 
 		source_layout = QHBoxLayout()
@@ -618,6 +619,8 @@ class wikiparse_window(QWidget):
 
 		self.redownload_label = QLabel("Re-download: ")
 		self.redownload_check = QCheckBox()
+		self.redownload_check.setToolTip("Disabled if no prior version found")
+
 		redownload_layout = QHBoxLayout()
 		redownload_layout.addWidget(self.redownload_label)
 		redownload_layout.addWidget(self.redownload_check)
@@ -1043,6 +1046,9 @@ class exit_dialog(QWidget):
 	def ok_pressed(self):
 		self.hide()
 		self.exit_ok.emit()
+
+	def closeEvent(self,e):
+		self.cancel_pressed()
 
 class main_menu(QWidget):
 
