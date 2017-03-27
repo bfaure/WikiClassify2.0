@@ -40,7 +40,8 @@ Configure parser launch parameters.<br>
 ![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/parser.PNG)
 
 #### WikiLearn
-
+Live A\* Path Search<br>
+![Alt text](https://github.com/bfaure/WikiClassify2.0/blob/master/resources/screenshots/path_connect.png)
 ## Dependencies
 ### Python
 * `Python 2.7`
