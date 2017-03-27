@@ -173,9 +173,11 @@ class text_corpus(object):
 
     def train_phraser(self):
         print("\t\tTraining bigram detector...")
-        self.bigram = Phraser(Phrases(self.docs(), min_count=5, threshold=10, max_vocab_size=100000))
+        phraser_sensitivity = 2
+
+        self.bigram = Phraser(Phrases(self.docs(), min_count=5, threshold=phraser_sensitivity, max_vocab_size=100000))
         print("\t\tTraining trigram detector...")
-        self.trigram = Phraser(Phrases(self.bigram[self.docs()], min_count=5, threshold=10, max_vocab_size=100000))
+        self.trigram = Phraser(Phrases(self.bigram[self.docs()], min_count=5, threshold=phraser_sensitivity, max_vocab_size=100000))
 
     def save_phraser(self, directory):
         print("\tSaving gram detector...")
