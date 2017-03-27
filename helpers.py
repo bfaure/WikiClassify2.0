@@ -6,6 +6,7 @@ from shutil import rmtree
 import time
 
 from time import time
+from time import sleep
 
 from main import get_encoder
 from main import PriorityQueue, rectify_path, get_transition_cost, elem_t
@@ -843,14 +844,15 @@ class wikilearn_window(QWidget):
 		self.close_workers()
 
 	def init_vars(self):
+		global_point = self.mapToGlobal(self.rect().topLeft())
 		encoder_directory = 'WikiLearn/data/models/tokenizer'
 		if not os.path.isdir(encoder_directory):
-			self.notification_gui.set_notification("Could not locate \""+encoder_directory+"\"")
+			self.notification_gui.set_notification("Could not locate \""+encoder_directory+"\"",global_point)
 			self.return_to_main_menu()
 			return False
 
 		if not os.path.isfile('titles.tsv'):
-			self.notification_gui.set_notification("Could not locate titles.tsv")
+			self.notification_gui.set_notification("Could not locate titles.tsv",global_point)
 			self.return_to_main_menu()
 			return False
 
@@ -860,7 +862,7 @@ class wikilearn_window(QWidget):
 			self.link_encoder     = get_encoder('links.tsv',False,encoder_directory+'/links',200,300,1,5,20)
 			self.doc_ids          = dict([x.strip().split('\t') for x in open('titles.tsv')])
 		except:
-			self.notification_gui.set_notification("Could not load encoders")
+			self.notification_gui.set_notification("Could not load encoders",global_point)
 			self.return_to_main_menu()
 			return False
 
@@ -988,6 +990,7 @@ class wikilearn_window(QWidget):
 
 	def open_window(self):
 		self.show()
+		sleep(0.1)
 		if not self.init_vars(): 
 			self.hide()
 
