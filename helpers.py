@@ -1047,6 +1047,9 @@ class exit_dialog(QWidget):
 		self.hide()
 		self.exit_ok.emit()
 
+	def closeEvent(self,e):
+		self.cancel_pressed()
+
 class main_menu(QWidget):
 
 	def __init__(self,parent=None):
