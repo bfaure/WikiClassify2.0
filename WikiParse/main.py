@@ -101,7 +101,6 @@ def parse_wikidump(dump_path, cutoff_date='20010115', password=None, version="si
     if password==None: password = raw_input("Database password: ")
 
     dump_path = "WikiParse/data/corpora/"+version+"/data/"+version+"-latest-pages-meta-current.xml"
-    #dump_path = 'WikiParse/data/corpora/simplewiki/data/simplewiki-latest-pages-meta-current.xml'
     compiled = True
     if compiled:
         try:
