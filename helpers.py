@@ -5,6 +5,8 @@ import sys
 from shutil import rmtree
 import time
 
+import webbrowser
+
 try:
 	import psutil
 except:
@@ -1083,6 +1085,9 @@ class main_menu(QWidget):
 		self.cancel_parsing_action = tools_menu.addAction("Cancel Parsing",self.cancel_parsing)
 		self.cancel_parsing_action.setEnabled(False)
 
+		help_menu = self.toolbar.addMenu("Help")
+		help_menu.addAction("WikiClassify 2.0",self.open_repo)
+
 		if sys.platform!="darwin": self.layout.addSpacing(20)
 
 		pic_row = QHBoxLayout()
@@ -1108,8 +1113,6 @@ class main_menu(QWidget):
 		self.wikiserver_button.setFixedWidth(200)
 		self.wikilearn_button.setFixedWidth(200)
 		self.wikiparse_button.setFixedWidth(200)
-		
-
 
 		wikiserver_row.addWidget(self.wikiserver_button)
 		wikiparse_row.addWidget(self.wikiparse_button)
@@ -1142,6 +1145,9 @@ class main_menu(QWidget):
 		self.move(framegm.topLeft())
 
 		self.show()
+
+	def open_repo(self):
+		webbrowser.open("http://www.github.com/bfaure/WikiClassify2.0")
 
 	def canceled_wikiserver(self):
 		self.show()
@@ -1216,7 +1222,7 @@ def start_gui():
 	global main_menu_window
 
 	app              = QApplication(sys.argv)
-	app.setStyle('plastique')
+	#app.setStyle('plastique')
 	main_menu_window = main_menu(app)
 	print("Opened GUI Window.")
 	sys.exit(app.exec_())
