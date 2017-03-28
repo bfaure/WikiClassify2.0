@@ -380,13 +380,8 @@ class wikiserver_window(QWidget):
 	def delete_articles(self):
 		if not self.connected: return
 
-		while True:
-			resp = raw_input("Are you sure [y/N]: ")
-			if resp in ["y","Y"]: break
-			elif resp in [""," ","N","n"]: return
-
 		cursor 	= self.conn.cursor()
-		command = "DELETE FROM articles"
+		command = "DELETE FROM articles;"
 
 		try:
 			cursor.execute(command)
