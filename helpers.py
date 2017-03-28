@@ -343,7 +343,7 @@ class wikiserver_window(QWidget):
 		self.current_widget.addItem("Clean Repository")
 
 	def panel_item_selected(self):
-		return
+		pass
 
 	def back(self):
 		if self.parent==None: return
@@ -380,10 +380,8 @@ class wikiserver_window(QWidget):
 
 		while True:
 			resp = raw_input("Are you sure [y/N]: ")
-			if resp in ["y","Y"]:
-				break
-			elif resp in [""," ","N","n"]:
-				return
+			if resp in ["y","Y"]: break
+			elif resp in [""," ","N","n"]: return
 
 		cursor 	= self.conn.cursor()
 		command = "DELETE FROM articles"
@@ -403,7 +401,7 @@ class wikiserver_window(QWidget):
 	def get_table_size(self,pretty=False):
 		cursor 	= self.conn.cursor()
 		if pretty==False: command = "SELECT pg_database_size(\'"+self.server_dbname+"\')"
-		else: command = "SELECT pg_size_pretty(pg_database_size(\'"+self.server_dbname+"\'))"
+		else: 			  command = "SELECT pg_size_pretty(pg_database_size(\'"+self.server_dbname+"\'))"
 
 		try:
 			cursor.execute(command)
@@ -415,21 +413,20 @@ class wikiserver_window(QWidget):
 
 	def show_table(self):
 		if self.connected is False: return
-
 		if self.current_widget is not None: self.layout.removeWidget(self.current_widget)
 		if self.current_meta_layout is not None: self.layout.removeItem(self.current_meta_layout)
 
-		cursor = self.conn.cursor()
+		cursor  = self.conn.cursor()
 		command = "SELECT * FROM articles"
 
 		try:
 			cursor.execute(command)
 			self.add_command(command)
-			data = cursor.fetchall()
+			data 	 = cursor.fetchall()
 			colnames = [col[0] for col in cursor.description]
 		except:
 			print("WARNING: Could not connect to server!")
-			data = None
+			data     = None
 			colnames = None
 		cursor.close()
 
@@ -441,7 +438,7 @@ class wikiserver_window(QWidget):
 			num_rows = 2
 			num_cols = 2
 
-		self.current_meta_layout = QHBoxLayout()
+		self.current_meta_layout   = QHBoxLayout()
 		self.layout.addLayout(self.current_meta_layout)
 
 		self.current_meta_widget_1 = QLabel("Database Size: ")
@@ -467,7 +464,7 @@ class wikiserver_window(QWidget):
 		self.current_meta_layout.addWidget(self.current_meta_widget_4)
 		self.current_meta_layout.addWidget(self.current_meta_widget_5)
 
-		self.current_widget = QTableWidget(num_rows,num_cols)
+		self.current_widget      = QTableWidget(num_rows,num_cols)
 		self.current_widget.currentCellChanged.connect(self.table_cell_changed)
 		self.layout.addWidget(self.current_widget,2)
 		self.current_widget_name = "table"
@@ -491,14 +488,14 @@ class wikiserver_window(QWidget):
 		self.delete_articles()
 
 	def delete_table_item(self):
-		if self.connected == False: return
+		if self.connected == False: 			return
 		if self.current_widget_name != "table": return 
 
-		cur_row = self.current_widget.currentRow()
-		cur_article_id = str(self.current_widget.item(cur_row,1).text())
+		cur_row 		= self.current_widget.currentRow()
+		cur_article_id 	= str(self.current_widget.item(cur_row,1).text())
 
 		command = "DELETE FROM articles WHERE title = \'"+cur_article_id+"\'"
-		cursor = self.conn.cursor()
+		cursor 	= self.conn.cursor()
 
 		try:
 			cursor.execute(command)
@@ -514,18 +511,18 @@ class wikiserver_window(QWidget):
 
 	def insert_table_item(self):
 		print("not yet implemented")
-		pass
 
 	def view_log(self):
 		if self.isVisible()==False: return
-		my_point = self.rect().topRight()
+		my_point     = self.rect().topRight()
 		global_point = self.mapToGlobal(my_point)
 		self.user_log.open(global_point)
 
 	def window_title_manager(self):
-		title_str = "PSQL Server Control Panel"
+		title_str 					  = "PSQL Server Control Panel"
 		if self.connected: title_str += " - Connected - "
-		else: title_str += " - Disconnected - "
+		else: title_str 			 += " - Disconnected - "
+
 		if self.server_dbname!= None: title_str += self.server_dbname
 		self.setWindowTitle(title_str)
 
@@ -545,7 +542,6 @@ class wikiserver_window(QWidget):
 
 	def closeEvent(self,e):
 		self.exit()
-		return
 
 class parser_worker(QThread):
 	done_parsing = pyqtSignal()
@@ -556,31 +552,27 @@ class parser_worker(QThread):
 		self.exiting = False
 
 	def run(self):
-		dump_source = str(self.source)
+		dump_source 	  = str(self.source)
 		download_location = "WikiParse/data/corpora/"+dump_source+"/data"
 
-		if self.redownload:
-			dump_path = download_wikidump(dump_source,download_location)
+		if self.redownload: dump_path = download_wikidump(dump_source,download_location)
 		else:
 			if os.path.isdir(download_location):
-				files = os.listdir(download_location)
+				files     = os.listdir(download_location)
 				dump_path = None 
-				bz2_path = None
+				bz2_path  = None
 				for f in files:
 					if f.find(".bz2")!=-1:
-						bz2_path = download_location+"/"+f 
+						bz2_path  = download_location+"/"+f 
 						continue
 					if f.find(".xml")!=-1:
 						dump_path = download_location+"/"+f
 						print(dump_path)
 						break
-				if dump_path==None and bz2_path!=None:
-					dump_path = expand_bz2(bz2_path)
+				if dump_path==None and bz2_path!=None: dump_path = expand_bz2(bz2_path)
 
-		if self.use_server:
-			parsed = parse_wikidump(dump_path,password=self.server_password,version=dump_source)
-		else:
-			parsed = parse_wikidump(dump_path,password="NONE",version=dump_source)
+		if self.use_server: parsed = parse_wikidump(dump_path,password=self.server_password,version=dump_source)
+		else: parsed = parse_wikidump(dump_path,password="NONE",version=dump_source)
 
 		if self.retrain and parsed:
 			encoder_directory = 'WikiLearn/data/models/tokenizer'
@@ -594,16 +586,16 @@ class wikiparse_window(QWidget):
 	def __init__(self,parent=None):
 		super(wikiparse_window,self).__init__()
 		self.cred_window = credentials_window(self)
-		self.parent = parent
+		self.parent 	 = parent
 		self.init_vars()
 		self.init_ui()
 
 	def init_vars(self):
-		self.server_host = None 
-		self.server_username = None 
-		self.server_port = None 
-		self.server_dbname = None 
-		self.server_password = None
+		self.server_host 		= None 
+		self.server_username 	= None 
+		self.server_port 		= None 
+		self.server_dbname 		= None 
+		self.server_password 	= None
 
 		# not all, just most common
 		self.wiki_types = [	"simplewiki","enwiki","frwiki","zhwiki","dewiki","ruwiki","itwiki","eswiki","metawiki",
@@ -636,21 +628,21 @@ class wikiparse_window(QWidget):
 
 		self.server_label = QLabel("Add to server:")
 		self.server_check = QCheckBox()
-		server_layout = QHBoxLayout()
+		server_layout     = QHBoxLayout()
 		server_layout.addWidget(self.server_label)
 		server_layout.addWidget(self.server_check)
 		self.layout.addLayout(server_layout)
 
 		self.retrain_label = QLabel("Re-train model:")
 		self.retrain_check = QCheckBox()
-		retrain_layout = QHBoxLayout()
+		retrain_layout     = QHBoxLayout()
 		retrain_layout.addWidget(self.retrain_label)
 		retrain_layout.addWidget(self.retrain_check)
 		self.layout.addLayout(retrain_layout)
 
 		self.cancel_button = QPushButton("Cancel")
-		self.ok_button = QPushButton("Ok")
-		button_layout = QHBoxLayout()
+		self.ok_button     = QPushButton("Ok")
+		button_layout      = QHBoxLayout()
 		button_layout.addStretch()
 		button_layout.addWidget(self.cancel_button)
 		button_layout.addWidget(self.ok_button)
@@ -684,8 +676,7 @@ class wikiparse_window(QWidget):
 			for f in files:
 				if f.find(".xml")!=-1: return True 
 			return False
-		else:
-			return False
+		else: return False
 
 	def open_window(self,location=None):
 		if location != None: 
@@ -722,20 +713,20 @@ class wikiparse_window(QWidget):
 		if self.redownload_check.isChecked():
 			if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
 
-		self.worker = parser_worker(self)
-		self.worker.use_server = use_server
-		self.worker.source = str(self.source_input.currentText())
-		self.worker.redownload = True if self.redownload_check.isChecked() else False
+		self.worker 			= parser_worker(self)
+		self.worker.use_server 	= use_server
+		self.worker.source 		= str(self.source_input.currentText())
+		self.worker.redownload 	= True if self.redownload_check.isChecked() else False
 		if use_server: self.worker.server_password = self.server_password
 		self.worker.retrain = True if self.retrain_check.isChecked() else False 
 		self.worker.start()
 		self.parent.parsing_started()
 
 	def cred_ok(self):
-		self.server_host = self.cred_window.host 
+		self.server_host     = self.cred_window.host 
 		self.server_username = self.cred_window.username 
-		self.server_port = self.cred_window.port 
-		self.server_dbname = self.cred_window.dbname 
+		self.server_port     = self.cred_window.port 
+		self.server_dbname   = self.cred_window.dbname 
 		self.server_password = self.cred_window.password
 		self.start_execution(use_server=True)
 
