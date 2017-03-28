@@ -429,7 +429,9 @@ class wikiserver_window(QWidget):
 
 		if data is not None:
 			num_rows = len(data)
-			if num_rows==0: print(data)
+			if num_rows==0:
+				print("WARNING: Got empty articles table!")
+				return
 			num_cols = len(data[0])
 		else:
 			num_rows = 2
@@ -707,12 +709,14 @@ class wikiparse_window(QWidget):
 			if os.path.isfile("wikiparse.out"): os.remove("wikiparse.out")
 			if os.path.isdir("WikiLearn/data"): rmtree("WikiLearn/data")
 		
+		src = str(self.source_input.currentText())
 		if self.redownload_check.isChecked():
-			if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
+			is os.path.isdir("WikiParse/data/corpora/"+src): rmtree("WikiParse/data/corpora/"+src)
+			#if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
 
 		self.worker 			= parser_worker(self)
 		self.worker.use_server 	= use_server
-		self.worker.source 		= str(self.source_input.currentText())
+		self.worker.source 		= src
 		self.worker.redownload 	= True if self.redownload_check.isChecked() else False
 		if use_server: self.worker.server_password = self.server_password
 		self.worker.retrain = True if self.retrain_check.isChecked() else False 
