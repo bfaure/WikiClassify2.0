@@ -76,9 +76,9 @@ class credentials_window(QWidget):
 
 	def init_vars(self):
 		self.username = "waynesun95"
-		self.host = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
-		self.port = "5432"
-		self.dbname = "ebdb"
+		self.host     = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
+		self.port     = "5432"
+		self.dbname   = "ebdb"
 		self.password = ""
 
 	def init_ui(self):
@@ -90,40 +90,40 @@ class credentials_window(QWidget):
 
 		self.username_label = QLabel("Username: ")
 		self.username_input = QLineEdit()
-		username_layout = QHBoxLayout()
+		username_layout     = QHBoxLayout()
 		username_layout.addWidget(self.username_label)
 		username_layout.addWidget(self.username_input)
 		self.layout.addLayout(username_layout)
 
 		self.host_label = QLabel("Host:           ")
 		self.host_input = QLineEdit()
-		host_layout = QHBoxLayout()
+		host_layout     = QHBoxLayout()
 		host_layout.addWidget(self.host_label)
 		host_layout.addWidget(self.host_input)
 		self.layout.addLayout(host_layout)
 
 		self.port_label = QLabel("Port:           ")
 		self.port_input = QLineEdit()
-		port_layout = QHBoxLayout()
+		port_layout     = QHBoxLayout()
 		port_layout.addWidget(self.port_label)
 		port_layout.addWidget(self.port_input)
 		self.layout.addLayout(port_layout)
 
 		self.dbname_label = QLabel("dbName:   ")
 		self.dbname_input = QLineEdit()
-		dbname_layout = QHBoxLayout()
+		dbname_layout     = QHBoxLayout()
 		dbname_layout.addWidget(self.dbname_label)
 		dbname_layout.addWidget(self.dbname_input)
 		self.layout.addLayout(dbname_layout)
 
 		self.password_label = QLabel("Password: ")
 		self.password_input = QLineEdit()
-		password_layout = QHBoxLayout()
+		password_layout     = QHBoxLayout()
 		password_layout.addWidget(self.password_label)
 		password_layout.addWidget(self.password_input)
 		self.layout.addLayout(password_layout)
 
-		ok_button = QPushButton("Ok")
+		ok_button     = QPushButton("Ok")
 		cancel_button = QPushButton("Cancel")
 
 		button_layout = QHBoxLayout()
@@ -138,9 +138,9 @@ class credentials_window(QWidget):
 
 	def collect_values(self):
 		self.username = str(self.username_input.text())
-		self.host = str(self.host_input.text())
-		self.port = str(self.port_input.text())
-		self.dbname = str(self.dbname_input.text())
+		self.host     = str(self.host_input.text())
+		self.port     = str(self.port_input.text())
+		self.dbname   = str(self.dbname_input.text())
 		self.password = str(self.password_input.text())
 
 	def ok_pressed(self):
@@ -190,39 +190,39 @@ class wikiserver_window(QWidget):
 		super(wikiserver_window,self).__init__()
 		self.setMouseTracking(True)
 		self.connect(self,SIGNAL("canceled_wikiserver()"),parent.canceled_wikiserver)
-		self.parent = parent
-		self.user_log = log_window(self,"Connection Log")
+		self.parent      = parent
+		self.user_log    = log_window(self,"Connection Log")
 		self.cred_window = credentials_window(self)
 		
-		self.open_location = None # window location of main menu
-		self.current_widget = None
-		self.current_meta_layout = None
+		self.open_location         = None # window location of main menu
+		self.current_widget        = None
+		self.current_meta_layout   = None
 		self.current_meta_widget_1 = None  # first widget from left
 		self.current_meta_widget_2 = None
 		self.current_meta_widget_3 = None
 		self.current_meta_widget_4 = None 
 		self.current_meta_widget_5 = None 
-		self.current_widget_name = "none"
+		self.current_widget_name   = "none"
 
 		self.table_data = None 
 
-		self.server_host = None 
+		self.server_host     = None 
 		self.server_username = None 
-		self.server_port = None 
-		self.server_dbname = None 
+		self.server_port     = None 
+		self.server_dbname   = None 
 		self.server_password = None
 		
-		self.commands = []
+		self.commands  = []
 		self.connected = False
 		if self.parent==None: self.init_vars()
 		self.init_ui()
 
 	def cred_ok(self):
 		self.show()
-		self.server_host = self.cred_window.host 
+		self.server_host     = self.cred_window.host 
 		self.server_username = self.cred_window.username 
-		self.server_port = self.cred_window.port 
-		self.server_dbname = self.cred_window.dbname 
+		self.server_port     = self.cred_window.port 
+		self.server_dbname   = self.cred_window.dbname 
 		self.server_password = self.cred_window.password
 		self.init_vars(new_credentials=False)
 		self.open_window(get_cred=False)
@@ -254,10 +254,10 @@ class wikiserver_window(QWidget):
 
 	def init_ui(self):
 
-		self.layout = QVBoxLayout(self) # layout for overall window
+		self.layout  = QVBoxLayout(self) # layout for overall window
 		self.toolbar = QMenuBar(self) # toolbar on the top of window
 
-		self.min_width = 700
+		self.min_width  = 700
 		self.min_height = 500
 		self.setMinimumWidth(self.min_width)
 		self.setMinimumHeight(self.min_height)
@@ -266,10 +266,10 @@ class wikiserver_window(QWidget):
 		os_name = sys.platform
 		if os_name in ["linux","linux2","win32"]: self.layout.addSpacing(25)
 
-		self.file_menu = self.toolbar.addMenu("File")
-		self.edit_menu = self.toolbar.addMenu("Edit")
+		self.file_menu  = self.toolbar.addMenu("File")
+		self.edit_menu  = self.toolbar.addMenu("Edit")
 		self.tools_menu = self.toolbar.addMenu("Tools")
-		self.view_menu = self.toolbar.addMenu("View")
+		self.view_menu  = self.toolbar.addMenu("View")
 		self.toolbar.setMinimumWidth(self.min_width)
 
 		self.file_menu.addAction("Reconnect (New Credentials)",self.init_vars,QKeySequence("Ctrl+N"))
@@ -884,11 +884,11 @@ class wikilearn_window(QWidget):
 
 		self.layout.addWidget(self.tab_widget)
 
-		self.path_widget = QWidget()
-		self.add_widget = QWidget()
+		self.path_widget = QWidget() # parent for layout in path tab
+		self.add_widget  = QWidget() # parent for layout in add tab
 
-		self.path_layout = QVBoxLayout(self.path_widget)
-		self.add_layout = QVBoxLayout(self.add_widget)
+		self.path_layout = QVBoxLayout(self.path_widget) # path tab layout
+		self.add_layout  = QVBoxLayout(self.add_widget) # add tab layout
 
 		self.tab_widget.addTab(self.path_widget,"Path Finder")
 		self.tab_widget.addTab(self.add_widget,"Word Summation")
@@ -946,7 +946,7 @@ class wikilearn_window(QWidget):
 
 		self.tab_widget.setCurrentIndex(0)
 
-		self.width = 500
+		self.width  = 500
 		self.height = 500
 
 		self.resize(self.width,self.height)
@@ -972,12 +972,12 @@ class wikilearn_window(QWidget):
 
 		self.close_workers()
 
-		new_worker = wikilearn_worker(parent=self)
-		new_worker.start_query = self.query_1 
-		new_worker.end_query = self.query_2
+		new_worker                  = wikilearn_worker(parent=self)
+		new_worker.start_query      = self.query_1 
+		new_worker.end_query        = self.query_2
 		new_worker.branching_factor = self.branching_factor 
-		new_worker.weight = self.cost
-		new_worker.encoder = self.text_encoder
+		new_worker.weight           = self.cost
+		new_worker.encoder          = self.text_encoder
 		new_worker.start()
 
 		self.workers.append(new_worker)
@@ -985,7 +985,7 @@ class wikilearn_window(QWidget):
 	def got_path(self):
 		for f in self.workers:
 			if f.valid:
-				f.valid = False
+				f.valid   = False
 				soln_path = f.solution_path
 				self.path_result_widget.clear()
 				for word in reversed(soln_path):
@@ -999,11 +999,10 @@ class wikilearn_window(QWidget):
 	def open_window(self):
 		self.show()
 		sleep(0.1)
-		if not self.init_vars(): 
-			self.hide()
+		if not self.init_vars(): self.hide()
 
 class exit_dialog(QWidget):
-	exit_ok = pyqtSignal()
+	exit_ok       = pyqtSignal()
 	exit_canceled = pyqtSignal()
 
 	def __init__(self,parent=None):
@@ -1213,7 +1212,8 @@ class main_menu(QWidget):
 
 def start_gui():
 	global main_menu_window
-	app = QApplication(sys.argv)
+
+	app              = QApplication(sys.argv)
 	main_menu_window = main_menu(app)
 	print("Opened GUI Window.")
 	sys.exit(app.exec_())

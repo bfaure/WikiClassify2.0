@@ -42,14 +42,15 @@ def get_encoder(tsv_path, make_phrases, directory, features, context_window, min
         encoder.save(directory)
     else:
         encoder.load(directory)
+    
     return encoder
 
 class elem_t:
     def __init__(self,value,parent=None,cost=None):
-        self.value = value
-        self.cost = cost
+        self.value         = value
+        self.cost          = cost
         self.column_offset = 0
-        self.parent = parent
+        self.parent        = parent
 
 class PriorityQueue:
     def __init__(self):
@@ -70,8 +71,7 @@ class PriorityQueue:
     def has(self,value):
         for item in self._queue:
             queued_elem = item[-1]
-            if queued_elem.value == value:
-                return True
+            if queued_elem.value == value: return True
         return False
 
     def update(self,new_elem):
@@ -85,23 +85,21 @@ class PriorityQueue:
 
     def get_cost(self,value):
         for cost,_,item in self._queue:
-            if item.value == value:
-                return cost
+            if item.value == value: return cost
         return -1
 
 def get_transition_cost(word1,word2,encoder):
     return 1.0-float(encoder.model.similarity(word1,word2))
 
 def rectify_path(path_end):
-    path = []
+    path    = []
     offsets = []
-    cur = path_end
+    cur     = path_end
     path.append(path_end.value)
     offsets.append(path_end.column_offset)
     while True:
         cur = cur.parent
-        if cur == None:
-            break
+        if cur == None: break
         path.append(cur.value)
         offsets.append(cur.column_offset)
     return path,offsets
@@ -113,23 +111,21 @@ def astar_path(start_query,end_query,encoder,branching_factor=60):
     
     start_vector = encoder.get_nearest_word(start_query,topn = branching_factor)
     end_vector   = encoder.get_nearest_word(end_query,topn = branching_factor)
-    if start_vector == None:
-        print("Could not find relation vector for "+start_query)
-    if end_vector == None:
-        print("Could not find relation vector for "+end_query)
-    if start_vector==None or end_vector==None:
-        return []
+
+    if start_vector == None:                   print("Could not find relation vector for "+start_query)
+    if end_vector == None:                     print("Could not find relation vector for "+end_query)
+    if start_vector==None or end_vector==None: return []
     
-    frontier = PriorityQueue()
+    frontier   = PriorityQueue()
     start_elem = elem_t(start_query,parent=None,cost=get_transition_cost(start_query,end_query,encoder))
     frontier.push(start_elem)
-    cost_list = {}
+    cost_list              = {}
     cost_list[start_query] = 0
-    path_end = start_elem
-    base_cost = 0
-    explored = []
+    path_end     = start_elem
+    base_cost    = 0
+    explored     = []
     search_start = time()
-    return_code = "NONE"
+    return_code  = "NONE"
     while True:
         if (time()-search_start)>5:
             print('\nTimed out, trying with higher branching factor ('+str(branching_factor+10)+').')
@@ -149,12 +145,10 @@ def astar_path(start_query,end_query,encoder,branching_factor=60):
             path_end = cur_node
             break
         neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
-        if neighbors == None:
-            continue
+        if neighbors == None: continue
         base_cost = cost_list[cur_word]
         for neighbor_word in neighbors:
-            if cur_word == neighbor_word:
-                continue
+            if cur_word == neighbor_word: continue
             cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
             new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
             new_elem.column_offset = neighbors.index(neighbor_word)

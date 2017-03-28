@@ -38,8 +38,7 @@ def download_wikidump(corpus_name, directory):
     return file_path
 
 def download(url, directory):
-    if not os.path.isdir(directory):
-        os.makedirs(directory)
+    if not os.path.isdir(directory): os.makedirs(directory)
     file_name = os.path.basename(urlparse(url)[2])
     file_path = os.path.join(directory, file_name)
     sys.stdout.write("\tDownloading '%s'... " % file_name)
@@ -130,14 +129,12 @@ def gensim_corpus(tsv_path, directory, make_phrases=False,):
     if not os.path.isfile(directory+'/dictionary.dict'):
         text.train_dictionary()
         text.save_dictionary(directory)
-    else:
-        text.load_dictionary(directory)
+    else: text.load_dictionary(directory)
     if make_phrases:
         if not os.path.isfile(directory+'/bigrams.pkl'):
             text.train_phraser()
             text.save_phraser(directory)
-        else:
-            text.load_phraser(directory)
+        else: text.load_phraser(directory)
     return text
 
 #                      Tagged Document iterator
@@ -175,32 +172,29 @@ class text_corpus(object):
     def train_phraser(self):
         print("\t\tTraining bigram detector...")
         phraser_sensitivity = 2
-
-        self.bigram = Phraser(Phrases(self.docs(), min_count=5, threshold=phraser_sensitivity, max_vocab_size=100000))
+        self.bigram         = Phraser(Phrases(self.docs(), min_count=5, threshold=phraser_sensitivity, max_vocab_size=100000))
         print("\t\tTraining trigram detector...")
-        self.trigram = Phraser(Phrases(self.bigram[self.docs()], min_count=5, threshold=phraser_sensitivity, max_vocab_size=100000))
+        self.trigram        = Phraser(Phrases(self.bigram[self.docs()], min_count=5, threshold=phraser_sensitivity, max_vocab_size=100000))
 
     def save_phraser(self, directory):
         print("\tSaving gram detector...")
-        if not os.path.isdir(directory):
-            os.makedirs(directory)
+        if not os.path.isdir(directory): os.makedirs(directory)
         self.bigram.save(directory+'/bigrams.pkl')
         self.trigram.save(directory+'/trigrams.pkl')
 
     def load_phraser(self, directory):
         print("\tLoading gram detector...")
-        self.bigram = Dictionary.load(directory+'/bigrams.pkl')
+        self.bigram  = Dictionary.load(directory+'/bigrams.pkl')
         self.trigram = Dictionary.load(directory+'/trigrams.pkl')
 
     def train_dictionary(self):
         print("\tBuilding dictionary...")
         self.dictionary = Dictionary(self.docs(), prune_at=2000000)
-        self.dictionary.filter_extremes(no_below=3, no_above=0.5, keep_n=100000)
+        self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=100000)
 
     def save_dictionary(self, directory):
         print("\tSaving dictionary...")
-        if not os.path.isdir(directory):
-            os.makedirs(directory)
+        if not os.path.isdir(directory): os.makedirs(directory)
         self.dictionary.save(directory+'/dictionary.dict')
         self.dictionary.save_as_text(directory+'/word_list.tsv')
 
