@@ -1109,6 +1109,8 @@ class main_menu(QWidget):
 		self.wikilearn_button.setFixedWidth(200)
 		self.wikiparse_button.setFixedWidth(200)
 		
+
+
 		wikiserver_row.addWidget(self.wikiserver_button)
 		wikiparse_row.addWidget(self.wikiparse_button)
 		wikilearn_row.addWidget(self.wikilearn_button)
@@ -1214,6 +1216,7 @@ def start_gui():
 	global main_menu_window
 
 	app              = QApplication(sys.argv)
+	app.setStyle('plastique')
 	main_menu_window = main_menu(app)
 	print("Opened GUI Window.")
 	sys.exit(app.exec_())
