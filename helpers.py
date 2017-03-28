@@ -34,7 +34,7 @@ try:
 	from PyQt4.QtCore import *
 	from PyQt4.QtGui import *
 except:
-	print("Cannot find Python 2.7 library \'PyQt4\', install using pip!")
+	print("Cannot find Python 2.7 library \'PyQt4\', install using \'apt-get install python-qt4\'!")
 	sys.exit(0)
 
 
@@ -711,7 +711,7 @@ class wikiparse_window(QWidget):
 		
 		src = str(self.source_input.currentText())
 		if self.redownload_check.isChecked():
-			is os.path.isdir("WikiParse/data/corpora/"+src): rmtree("WikiParse/data/corpora/"+src)
+			if os.path.isdir("WikiParse/data/corpora/"+src): rmtree("WikiParse/data/corpora/"+src)
 			#if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
 
 		self.worker 			= parser_worker(self)
