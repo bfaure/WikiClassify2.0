@@ -108,8 +108,8 @@ wikidump::wikidump(string &path, string &cutoff_date, string password) {
 
 void wikidump::read(bool build_keys) 
 {
-    if (build_keys){  cout<<"Building keys...\n";  }
-    else           {  cout<<"Reading dump...\n";  }
+    if (build_keys){  cout<<"\nBuilding keys...\n";  }
+    else           {  cout<<"\nReading dump...\n";  }
     
     articles_read = 0;
     unsigned long long last_articles_read = 0;
@@ -184,6 +184,8 @@ unsigned wikidump::save_buffer(const string &str, bool build_keys) {
 }
 
 void wikidump::save_keys() {
+    cout<<"Saving keys...\n";
+
     titles.open("titles.tsv");
     for (auto& kv:title_map) {
         titles<<kv.second<<"\t"<<kv.first<<"\n";

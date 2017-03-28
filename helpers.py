@@ -38,6 +38,12 @@ except:
 	sys.exit(0)
 
 
+print("\nNOTE: To interface with server C++ PSQL Bindings must be installed.")
+print("      1. \'sudo apt-get install libpq-dev\'")
+print("      2. \'sudo apt-get install libpqxx-dev\'")
+print("      Ignore if both are already installed.\n")	
+
+
 main_menu_window = ""
 
 class log_window(QWidget):
@@ -688,7 +694,6 @@ class wikiparse_window(QWidget):
 			self.redownload_check.setChecked(False)
 			self.redownload_check.setEnabled(True)
 		self.show()
-		self.server_check.setChecked(True)
 
 	def cancel_pressed(self):
 		self.back()
@@ -748,6 +753,8 @@ class notification_window(QWidget):
 		self.layout = QVBoxLayout(self)
 		self.label = QLabel("")
 		self.layout.addWidget(self.label)
+		self.layout.addSpacing(10)
+		self.layout.addWidget(QLabel("You may close this window"))
 		self.resize(400,100)
 
 	def set_notification(self,value,location):
@@ -1216,6 +1223,7 @@ class main_menu(QWidget):
 		self.cancel_parsing_action.setEnabled(False)
 		global_point = self.mapToGlobal(self.rect().topLeft())
 		self.notification_gui.set_notification("Parsing canceled",global_point)
+		print("\nParsing canceled.\n")
 
 def start_gui():
 	global main_menu_window
