@@ -144,37 +144,27 @@ class word2vec(object):
         self.features = features
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=7)
 
-    def train(self, corpus=None, epochs=10, directory=None):
+    def train(self, corpus, epochs=10, directory=None):
 
-        if corpus is None:
-            url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"
-            path = download(url,directory)
-            path = expand_gz(directory)
-            #self.model = Word2Vec.load_word2vec_format(path, binary=True)
-            print("Loading model...")
-            self.model = KeyedVectors.load_word2vec_format(path,binary=True)
-            print("Loaded Pre-Trained Google Model")
-        
-        else:
-            print("\t\tBuilding vocab...")
-            self.model.build_vocab(corpus)
+        print("\t\tBuilding vocab...")
+        self.model.build_vocab(corpus)
 
-            print("\tTraining doc2vec model...")
+        print("\tTraining doc2vec model...")
 
-            t = epoch_timer(epochs)
-            for i in xrange(epochs):
-                
-                t.start()
-                print("\t\tEpoch %s..." % (i+1))
-                self.model.train(corpus)
-                t.stop()
-
-            elapsed  = t.get_elapsed()
-            print('\tTime elapsed: %0.2f hours' % (elapsed))
-            #self.model.init_sims(replace=True)
+        t = epoch_timer(epochs)
+        for i in xrange(epochs):
             
-            print("\tSaving doc2vec model...")
-            self.model.save(directory+'/word2vec.d2v')
+            t.start()
+            print("\t\tEpoch %s..." % (i+1))
+            self.model.train(corpus)
+            t.stop()
+
+        elapsed  = t.get_elapsed()
+        print('\tTime elapsed: %0.2f hours' % (elapsed))
+        #self.model.init_sims(replace=True)
+        
+        print("\tSaving doc2vec model...")
+        self.model.save(directory+'/word2vec.d2v')
 
     def test(self):
         directory = "WikiLearn/data/tests/"
@@ -184,7 +174,16 @@ class word2vec(object):
         num_correct = sum([len(x['correct']) for x in acc])
         num_incorrect = sum([len(x['incorrect']) for x in acc])
         return float(num_correct)/(num_correct+num_incorrect)
-        
+
+    def load_pretrained(self, directory):
+        url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"
+        path = download(url,directory)
+        path = expand_gz(directory)
+        #self.model = Word2Vec.load_word2vec_format(path, binary=True)
+        print("Loading model...")
+        self.model = KeyedVectors.load_word2vec_format(path,binary=True)
+        print("Loaded Pre-Trained Google Model")
+
     def load(self, directory):
         print("\tLoading doc2vec model...")
         self.model = Doc2Vec.load(directory+'/word2vec.d2v')

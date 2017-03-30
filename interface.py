@@ -17,7 +17,7 @@ from time import time
 from time import sleep
 
 from main import get_encoder
-from main import PriorityQueue, rectify_path, get_transition_cost, elem_t
+from pathfinder import PriorityQueue, rectify_path, get_transition_cost, elem_t
 
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus, expand_bz2
 from WikiLearn.code.vectorize import word2vec
@@ -581,9 +581,7 @@ class parser_worker(QThread):
 
 		if self.retrain and parsed:
 			encoder_directory = 'WikiLearn/data/models/tokenizer'
-			get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
-			get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-			get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+			get_encoder()
 
 		self.done_parsing.emit()
 
@@ -910,7 +908,7 @@ class wikilearn_window(QWidget):
 
 		# for loading google model...
 		encoder_directory = 'WikiLearn/data/models/word2vec'
-		self.text_encoder = get_encoder('text.tsv',True,encoder_directory+'/google_model',400,10,5,10,10)
+		self.text_encoder = get_encoder()
 		#self.text_encoder = None
 		return True
 
