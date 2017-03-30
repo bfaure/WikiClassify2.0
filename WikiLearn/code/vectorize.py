@@ -8,6 +8,11 @@ import os, time, datetime
 import random
 random.seed(0)
 
+from urlparse import urlparse
+import sys
+
+import gzip
+
 #                         Third-party imports
 #-----------------------------------------------------------------------------#
 
@@ -16,6 +21,8 @@ np.random.seed(0)
 
 from gensim.models.ldamodel import LdaModel
 from gensim.models import Doc2Vec
+from gensim.models import Word2Vec
+from gensim.models import KeyedVectors
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
@@ -54,10 +61,64 @@ class epoch_timer(object):
     def get_elapsed(self):
         return sum(self.times)/3600.0
 
+def download(url, directory):
+    if not os.path.isdir(directory): os.makedirs(directory)
+    file_name = os.path.basename(urlparse(url)[2])
+    file_path = os.path.join(directory, file_name)
+    sys.stdout.write("\tDownloading '%s'... " % file_name)
+    if not os.path.isfile(file_path):
+        try:
+            with open(file_path, "wb") as f:
+                response = requests.get(url, stream=True)
+                total_length = response.headers.get('content-length')
+                megabytes = int(total_length)/1000000
+                sys.stdout.write(str(megabytes)+" MB\n")
+                
+                if total_length is not None:
+                    dl = 0
+                    total_length = int(total_length)
+                    for data in response.iter_content(chunk_size=4096):
+                        dl += len(data)
+                        f.write(data)
+                        num_items = int( float(dl)/float(total_length)*float(25) )
+                        progress_string = ""
+                        for prog_index in range(25):
+                            if prog_index<=num_items: progress_string+="-"
+                            else: progress_string += " "
+                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done") 
+                        sys.stdout.flush()
+                    sys.stdout.write("\n")
+                else:
+                    f.write(response.content)
+        except:
+            print("\t\tCould not download '%s'." % file_name)
+    else:
+        print("\t\t'%s' already exists." % file_name)
+    return file_path
+
+def expand_gz(directory):
+    print("\tExpanding gz... ")
+    #if not os.path.isfile(file_path[:-3]):
+    for file_path in os.listdir(directory):
+        file_path = directory+"/"+file_path
+        if file_path.endswith(".gz"):
+            if not os.path.isfile(file_path[:-3]):
+                try:
+                    with gzip.open(file_path) as src:
+                        with open(file_path[:-3], 'wb') as new_file:
+                            new_file.write(src.read())
+                except:
+                    print("\t\tCould not expand file %s"%file_path)
+            
+            return file_path[:-3]
+    #else:
+    #    print("\t\tFile already expanded.")
+    print("No gz files in directory.")
+
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
-class doc2vec(object):
+class word2vec(object):
 
     def __init__(self):
         print('Initializing doc2vec encoder...')
@@ -86,29 +147,47 @@ class doc2vec(object):
         self.features = features
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=7)
 
-    def train(self, corpus, epochs=10):
+    def train(self, corpus=None, epochs=10, directory=None):
 
-        print("\t\tBuilding vocab...")
-        self.model.build_vocab(corpus)
-
-        print("\tTraining doc2vec model...")
-
-        t = epoch_timer(epochs)
-        for i in xrange(epochs):
-            
-            t.start()
-            print("\t\tEpoch %s..." % (i+1))
-            self.model.train(corpus)
-            t.stop()
-
-        elapsed  = t.get_elapsed()
-        print('\tTime elapsed: %0.2f hours' % (elapsed))
-        #self.model.init_sims(replace=True)
+        if corpus is None:
+            url = "https://drive.google.com/uc?export=download&confirm=-55h&id=0B7XkCwpI5KDYNlNUTTlSS21pQmM"
+            path = download(url,directory)
+            path = expand_gz(directory)
+            #self.model = Word2Vec.load_word2vec_format(path, binary=True)
+            print("Loading model...")
+            self.model = KeyedVectors.load_word2vec_format(path,binary=True)
+            print("Loaded Pre-Trained Google Model")
         
-    def save(self, directory):
-        print("\tSaving doc2vec model...")
-        self.model.save(directory+'/word2vec.d2v')
-    
+        else:
+            print("\t\tBuilding vocab...")
+            self.model.build_vocab(corpus)
+
+            print("\tTraining doc2vec model...")
+
+            t = epoch_timer(epochs)
+            for i in xrange(epochs):
+                
+                t.start()
+                print("\t\tEpoch %s..." % (i+1))
+                self.model.train(corpus)
+                t.stop()
+
+            elapsed  = t.get_elapsed()
+            print('\tTime elapsed: %0.2f hours' % (elapsed))
+            #self.model.init_sims(replace=True)
+            
+            print("\tSaving doc2vec model...")
+            self.model.save(directory+'/word2vec.d2v')
+
+    def test(self):
+        directory = "WikiLearn/data/tests/"
+        url = "https://raw.githubusercontent.com/nicholas-leonard/word2vec/master/questions-words.txt"
+        path = download(url,directory)
+        acc = self.model.accuracy(path, case_insensitive=True)
+        num_correct = sum([len(x['correct']) for x in acc])
+        num_incorrect = sum([len(x['incorrect']) for x in acc])
+        return float(num_correct)/(num_correct+num_incorrect)
+        
     def load(self, directory):
         print("\tLoading doc2vec model...")
         self.model = Doc2Vec.load(directory+'/word2vec.d2v')

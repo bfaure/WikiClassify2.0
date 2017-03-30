@@ -20,7 +20,7 @@ from main import get_encoder
 from main import PriorityQueue, rectify_path, get_transition_cost, elem_t
 
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus, expand_bz2
-from WikiLearn.code.vectorize import doc2vec
+from WikiLearn.code.vectorize import word2vec
 
 try:
 	import psycopg2
@@ -766,80 +766,103 @@ class notification_window(QWidget):
 class wikilearn_worker(QThread):
 	got_path = pyqtSignal()
 	failure = pyqtSignal()
+	got_result = pyqtSignal()
 
 	def __init__(self,parent=None):
 		QThread.__init__(self,parent)
 		self.parent=parent
 		self.connect(self,SIGNAL("got_path()"),self.parent.got_path)
 		self.connect(self,SIGNAL("failure()"),self.parent.no_path)
+		self.connect(self,SIGNAL("got_result()"),self.parent.got_sum)
 		self.exiting = False 
 		self.valid = False
 		self.start_query = None 
 		self.end_query = None 
 		self.encoder = None 
+		self.job = None
 		self.branching_factor = None 
 		self.weight = None
 
 	def run(self):
-		start_query = self.start_query
-		end_query = self.end_query
-		encoder = self.encoder 
-		branching_factor = self.branching_factor
-		weight = self.weight 
+		if self.job=="path":
+			start_query = self.start_query
+			end_query = self.end_query
+			encoder = self.encoder 
+			branching_factor = self.branching_factor
+			weight = self.weight 
 
-		start_vector = encoder.get_nearest_word(start_query,topn = branching_factor)
-		end_vector   = encoder.get_nearest_word(end_query,topn = branching_factor)
-		if start_vector == None:
-			self.offender = "query1"
+			start_vector = encoder.get_nearest_word(start_query,topn = branching_factor)
+			end_vector   = encoder.get_nearest_word(end_query,topn = branching_factor)
+			if start_vector == None:
+				self.offender = "query1"
 
-		if end_vector == None:
-			self.offender = "query2"
+			if end_vector == None:
+				self.offender = "query2"
 
-		if start_vector==None or end_vector==None:
-			self.failure.emit()
-			return
-		
-		frontier = PriorityQueue()
-		start_elem = elem_t(start_query,parent=None,cost=get_transition_cost(start_query,end_query,encoder))
-		frontier.push(start_elem)
-		cost_list = {}
-		cost_list[start_query] = 0
-		path_end = start_elem
-		base_cost = 0
-		explored = []
-		return_code = "NONE"
-		while True:
-			if self.exiting:
+			if start_vector==None or end_vector==None:
+				self.failure.emit()
 				return
-			sys.stdout.flush()
-			if frontier.length() == 0:
-				return_code = "NOT FOUND"
-				break
-			cur_node = frontier.pop()
-			cur_word = cur_node.value
-			explored.append(cur_word)
-			if cur_word == end_query:
-				path_end = cur_node
-				break
-			neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
-			if neighbors == None:
-				continue
-			base_cost = cost_list[cur_word]
-			for neighbor_word in neighbors:
-				if cur_word == neighbor_word:
+			
+			frontier = PriorityQueue()
+			start_elem = elem_t(start_query,parent=None,cost=get_transition_cost(start_query,end_query,encoder))
+			frontier.push(start_elem)
+			cost_list = {}
+			cost_list[start_query] = 0
+			path_end = start_elem
+			base_cost = 0
+			explored = []
+			return_code = "NONE"
+			while True:
+				if self.exiting:
+					return
+				sys.stdout.flush()
+				if frontier.length() == 0:
+					return_code = "NOT FOUND"
+					break
+				cur_node = frontier.pop()
+				cur_word = cur_node.value
+				explored.append(cur_word)
+				if cur_word == end_query:
+					path_end = cur_node
+					break
+				neighbors = encoder.get_nearest_word(cur_word,topn=branching_factor)
+				if neighbors == None:
 					continue
-				cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
-				new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
-				new_elem.column_offset = neighbors.index(neighbor_word)
-				if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
-					cost_list[neighbor_word] = cost
-					new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
-					frontier.push(new_elem)
-		
-		solution_path,offsets = rectify_path(path_end)
-		self.solution_path = solution_path
-		self.valid = True
-		self.got_path.emit()
+				base_cost = cost_list[cur_word]
+				for neighbor_word in neighbors:
+					if cur_word == neighbor_word:
+						continue
+					cost = base_cost + get_transition_cost(cur_word,neighbor_word,encoder)
+					new_elem = elem_t(neighbor_word,parent=cur_node,cost=cost)
+					new_elem.column_offset = neighbors.index(neighbor_word)
+					if (neighbor_word not in cost_list or cost<cost_list[neighbor_word]) and neighbor_word not in explored:
+						cost_list[neighbor_word] = cost
+						new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
+						frontier.push(new_elem)
+			
+			solution_path,offsets = rectify_path(path_end)
+			self.solution_path = solution_path
+			self.valid = True
+			self.got_path.emit()
+
+		if self.job=="algebra":
+			if len(self.positive_words)!=0 and len(self.negative_words)!=0:
+				try:
+					output = self.text_encoder.model.most_similar_cosmul(positive=self.positive_words,negative=self.negative_words)[0][0]
+				except:
+					output = "ERROR (1)"
+			elif len(self.positive_words)!=0:
+				try:
+					output = self.text_encoder.model.most_similar_cosmul(positive=self.positive_words)[0][0]
+				except:
+					output = "ERROR (2)"
+			elif len(self.negative_words)!=0:
+				try:
+					output = self.text_encoder.model.most_similar(negative=self.negative_words)[0][0]
+				except:
+					output = "ERROR (3)"
+			self.output = output 
+			self.got_result.emit()
 
 class wikilearn_window(QWidget):
 
@@ -860,6 +883,8 @@ class wikilearn_window(QWidget):
 		self.close_workers()
 
 	def init_vars(self):
+		# commented out region is the former code used to load our custom models
+		'''
 		global_point = self.mapToGlobal(self.rect().topLeft())
 		encoder_directory = 'WikiLearn/data/models/tokenizer'
 		if not os.path.isdir(encoder_directory):
@@ -881,7 +906,12 @@ class wikilearn_window(QWidget):
 			self.notification_gui.set_notification("Could not load encoders",global_point)
 			self.return_to_main_menu()
 			return False
+		'''
 
+		# for loading google model...
+		encoder_directory = 'WikiLearn/data/models/word2vec'
+		self.text_encoder = get_encoder('text.tsv',True,encoder_directory+'/google_model',400,10,5,10,10)
+		#self.text_encoder = None
 		return True
 
 	def init_ui(self):
@@ -896,7 +926,14 @@ class wikilearn_window(QWidget):
 		self.add_widget  = QWidget() # parent for layout in add tab
 
 		self.path_layout = QVBoxLayout(self.path_widget) # path tab layout
-		self.add_layout  = QVBoxLayout(self.add_widget) # add tab layout
+
+		self.add_tab_layout = QVBoxLayout(self.add_widget) # add tab layout
+		self.add_layout = QVBoxLayout()
+		self.add_lower = QVBoxLayout()
+
+		self.add_tab_layout.addLayout(self.add_layout)
+		self.add_tab_layout.addStretch(1)
+		self.add_tab_layout.addLayout(self.add_lower)
 
 		self.tab_widget.addTab(self.path_widget,"Path Finder")
 		self.tab_widget.addTab(self.add_widget,"Word Summation")
@@ -954,10 +991,135 @@ class wikilearn_window(QWidget):
 
 		self.tab_widget.setCurrentIndex(0)
 
+		self.word_inputs = []
+
+		divider2 = QFrame()
+		divider2.setFrameShape(QFrame.HLine)
+		self.add_lower.addWidget(divider2)
+
+		self.add_lower_row = QHBoxLayout()
+		self.add_lower_row.addWidget(QLabel("Result: "))
+
+		self.add_result = QLineEdit()
+		self.add_result.setEnabled(False)
+		self.add_lower_row.addWidget(self.add_result)
+
+		self.add_lower_row.addSpacing(40)
+
+		self.cancel_add_button = QPushButton("Reset")
+		self.cancel_add_button.clicked.connect(self.reset_add)
+		self.add_lower_row.addWidget(self.cancel_add_button)
+
+		self.add_lower.addLayout(self.add_lower_row)
+
 		self.width  = 500
 		self.height = 500
 
 		self.resize(self.width,self.height)
+
+		self.tab_widget.currentChanged.connect(self.current_tab_changed)
+
+	def reset_add(self):
+		self.current_tab_changed()
+
+	def keyPressEvent(self,e):
+		if e.key() in [Qt.Key_Space,Qt.Key_Return,Qt.Key_Enter]:
+			if self.tab_widget.currentIndex()==1:
+				if len(self.word_inputs)!=0:
+					if self.word_inputs[-2].hasFocus: self.word_inputs[-1].setFocus()
+					#return self.add_input_generator()
+
+	def current_tab_changed(self):
+		# if the "Word Algebra" tab...
+		if self.tab_widget.currentIndex()==1:
+			self.add_result.setText("")
+
+			# remove all items in add tab
+			for i in reversed(range(self.add_layout.count())):
+				self.add_layout.itemAt(i).widget().setParent(None)
+
+			# clear word inputs list
+			self.word_inputs = []
+			self.num_word_inputs_displayed = 1
+
+			# create widget for first word
+			first_word = QLineEdit()
+			first_word.setPlaceholderText("...")
+			self.next_placeholder_text = "+, -, or ="
+
+			# connect to more input generator
+			first_word.textEdited.connect(self.add_input_generator)
+
+			# add word input to layout
+			self.add_layout.addWidget(first_word)
+
+			# add to list of word inputs
+			self.word_inputs.append(first_word)
+
+	def add_tab_collect_values(self):
+		self.positive_words = []
+		self.negative_words = []
+		cur_sign = "+"
+
+		for i in range(self.add_layout.count()):
+			text = str(self.add_layout.itemAt(i).widget().text())
+			if text=="=": break 
+			if text not in ["+","-"]:
+				if cur_sign=="+": self.positive_words.append(text)
+				if cur_sign=="-": self.negative_words.append(text)
+				continue
+			cur_sign = text 
+
+	def add_tab_get_result(self):
+		self.add_result.setText("...")
+		self.sum_worker = wikilearn_worker(parent=self)
+		self.sum_worker.job = "algebra"
+		self.sum_worker.positive_words = self.positive_words
+		self.sum_worker.negative_words = self.negative_words
+		self.sum_worker.text_encoder   = self.text_encoder 
+		self.sum_worker.start()
+
+	def got_sum(self):
+		self.add_result.setText(self.sum_worker.output)
+
+	def add_input_generator(self):
+		if len(self.word_inputs)==0: return
+
+		if self.word_inputs[-1].hasFocus():
+
+			if self.word_inputs[-1].text() in ["+","-","="]:
+				txt = self.word_inputs[-1].text()
+				self.add_layout.itemAt(len(self.word_inputs)-1).widget().setParent(None)
+				self.add_layout.addWidget(QLabel(str(txt)))
+				froze = True
+
+				if txt=="=":
+					self.add_tab_collect_values()
+					return self.add_tab_get_result()
+			else:
+				froze = False
+
+			'''
+			if froze==False:
+				if self.word_inputs[-1].text()[-1] in ["+","-"]:
+					txt = self.word_inputs[-1].text()[-1]
+					self.add_layout.addWidget(QLabel(str(txt)))
+					froze = True 
+			'''
+
+			new_word = QLineEdit()
+			new_word.setPlaceholderText(self.next_placeholder_text)
+			if self.next_placeholder_text=="+, -, or =": 
+				self.next_placeholder_text=="..."
+			else:
+				self.next_placeholder_text=="+, -, or ="
+
+			new_word.textChanged.connect(self.add_input_generator)
+			self.add_layout.addWidget(new_word)
+			self.word_inputs.append(new_word)
+			
+			if froze:
+				new_word.setFocus()
 
 	def collect_values(self):
 		self.query_1 = str(self.path_query_1.text())
@@ -985,6 +1147,7 @@ class wikilearn_window(QWidget):
 		new_worker.end_query        = self.query_2
 		new_worker.branching_factor = self.branching_factor 
 		new_worker.weight           = self.cost
+		new_worker.job 				= "path"
 		new_worker.encoder          = self.text_encoder
 		new_worker.start()
 
@@ -992,14 +1155,15 @@ class wikilearn_window(QWidget):
 
 	def got_path(self):
 		for f in self.workers:
-			if f.valid:
-				f.valid   = False
-				soln_path = f.solution_path
-				self.path_result_widget.clear()
-				for word in reversed(soln_path):
-					self.path_result_widget.append(word)
-				del self.workers[self.workers.index(f)]
-				return
+			if f.job=="path":
+				if f.valid:
+					f.valid   = False
+					soln_path = f.solution_path
+					self.path_result_widget.clear()
+					for word in reversed(soln_path):
+						self.path_result_widget.append(word)
+					del self.workers[self.workers.index(f)]
+					return
 
 	def no_path(self):
 		self.path_result_widget.clear()

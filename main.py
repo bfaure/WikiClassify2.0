@@ -18,7 +18,7 @@ import math
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
-from WikiLearn.code.vectorize import doc2vec
+from WikiLearn.code.vectorize import word2vec
 
 #                            Main function
 #-----------------------------------------------------------------------------#
@@ -34,15 +34,19 @@ def get_related_docs(encoder):
         print(doc_id+'\t'+'\t'.join(nearest)+'\n')
 
 def get_encoder(tsv_path, make_phrases, directory, features, context_window, min_count, negative, epochs):
-    encoder = doc2vec()
+    
+    encoder = word2vec()
     if not os.path.isfile(os.path.join(directory,'word2vec.d2v')):
         encoder.build(features, context_window, min_count, negative)
-        documents  = gensim_corpus(tsv_path,directory,make_phrases)
-        encoder.train(documents, epochs)
-        encoder.save(directory)
+        documents = None
+        #documents  = gensim_corpus(tsv_path,directory,make_phrases)
+        encoder.train(documents, epochs, directory)
+        #encoder.save(directory)
+        #acc = encoder.test()
+        #print("Model Accuracy: "+str(acc))
+
     else:
         encoder.load(directory)
-    
     return encoder
 
 class elem_t:
@@ -373,14 +377,14 @@ def main():
         return
 
     start_time = time()
-    encoder_directory = 'WikiLearn/data/models/tokenizer'
+    encoder_directory = 'WikiLearn/data/models/word2vec'
     if not os.path.isfile('titles.tsv'):
         print("\nModel not present...")
-        dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
-        parse_wikidump(dump_path)
-        get_encoder('text.tsv',True,encoder_directory+'/text',400,10,5,10,10)
-        get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-        get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
+        #dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
+        #parse_wikidump(dump_path)
+        get_encoder('text.tsv',True,encoder_directory+'/google_model',400,10,5,10,10)
+        #get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+        #get_encoder('links.tsv',False,encoder_directory+'/links',400,500,1,5,20)
         
     else:
         print("\nFound prior model, loading encoders...")
