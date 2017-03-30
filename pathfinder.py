@@ -284,5 +284,5 @@ def get_queries(encoder, n=None):
             temp = encoder.model.most_similar(q,topn=1)
         except:
             print('%s not found!' % q)
-            return None, None
+            return None
     return queries
