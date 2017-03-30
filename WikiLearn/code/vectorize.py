@@ -150,7 +150,7 @@ class word2vec(object):
     def train(self, corpus=None, epochs=10, directory=None):
 
         if corpus is None:
-            url = "https://drive.google.com/uc?export=download&confirm=-55h&id=0B7XkCwpI5KDYNlNUTTlSS21pQmM"
+            url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"
             path = download(url,directory)
             path = expand_gz(directory)
             #self.model = Word2Vec.load_word2vec_format(path, binary=True)
