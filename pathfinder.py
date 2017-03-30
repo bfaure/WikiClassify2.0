@@ -265,7 +265,7 @@ def word_algebra(encoder):
         else:
             print("Could not calculate result.")
 
-def get_queries(n=None):
+def get_queries(encoder, n=None):
     doc_ids = dict([(x.strip().split('\t')[1],x.strip().split('\t')[0]) for x in open('titles.tsv')])
     if n == None:
         queries = []
@@ -281,9 +281,8 @@ def get_queries(n=None):
     queries = [q.lower() for q in queries]
     for q in queries:
         try:
-            temp = text_encoder.model.most_similar(q,topn=1)
+            temp = encoder.model.most_similar(q,topn=1)
         except:
-        #if q not in text_encoder.model.index2word:
             print('%s not found!' % q)
             return None, None
     return queries

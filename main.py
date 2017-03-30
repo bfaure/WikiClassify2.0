@@ -50,7 +50,7 @@ def main():
             break
     if algo == 'p':
         while True:
-            queries, encoder = get_queries(n=2)
+            queries, encoder = get_queries(encoder,n=2)
             if queries:
                 path = astar_path(queries[0],queries[1],encoder)
                 if all([i.isdigit() for i in path]):
@@ -62,7 +62,7 @@ def main():
                 print('='*41)
     elif algo == 'j':
         while True:
-            queries, encoder = get_queries()
+            queries, encoder = get_queries(encoder)
             try:
                 middle_word = encoder.model.most_similar(queries,topn=1)[0][0]
                 print((' '*64)+'\r',end='\r')
