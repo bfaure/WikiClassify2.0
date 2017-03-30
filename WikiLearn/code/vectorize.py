@@ -4,14 +4,11 @@ from __future__ import print_function
 
 #                          Standard imports
 #-----------------------------------------------------------------------------#
-import os, time, datetime
+import os, time, datetime, sys, gzip, requests
 import random
 random.seed(0)
 
 from urlparse import urlparse
-import sys
-
-import gzip
 
 #                         Third-party imports
 #-----------------------------------------------------------------------------#
