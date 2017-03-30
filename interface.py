@@ -1234,7 +1234,7 @@ class main_menu(QWidget):
 		self.setWindowTitle("Control Panel")
 		
 		p = self.palette()
-		p.setColor(self.backgroundRole(),Qt.white)
+		p.setColor(self.backgroundRole(),QColor(255,255,255))
 		self.setPalette(p)
 
 		self.toolbar = QMenuBar(self)
@@ -1294,13 +1294,13 @@ class main_menu(QWidget):
 		self.wikiparse_button.clicked.connect(self.open_wikiparse)
 		self.wikiserver_button.clicked.connect(self.open_wikiserver)
 
-		self.layout.addSpacing(10)
+		#self.layout.addSpacing(10)
 		self.layout.addLayout(wikiserver_row)
 		self.layout.addLayout(wikiparse_row)
 		self.layout.addLayout(wikilearn_row)
 		self.layout.addSpacing(10)
 
-		self.setFixedWidth(390)
+		self.setFixedWidth(370)
 		self.setFixedHeight(410)
 		if sys.platform =="darwin": self.setFixedHeight(500)
 		else: self.setFixedHeight(435)
@@ -1389,9 +1389,8 @@ class main_menu(QWidget):
 
 def start_gui():
 	global main_menu_window
-
 	app              = QApplication(sys.argv)
-	#app.setStyle('plastique')
+	app.setStyle('plastique')
 	main_menu_window = main_menu(app)
 	print("Opened GUI Window.")
 	sys.exit(app.exec_())
