@@ -265,7 +265,7 @@ def word_algebra(encoder):
         else:
             print("Could not calculate result.")
 
-def get_queries(text_encoder, category_encoder, link_encoder, n=None):
+def get_queries(n=None):
     doc_ids = dict([(x.strip().split('\t')[1],x.strip().split('\t')[0]) for x in open('titles.tsv')])
     if n == None:
         queries = []
@@ -278,33 +278,12 @@ def get_queries(text_encoder, category_encoder, link_encoder, n=None):
     else:
         queries = [raw_input('Query %d: ' % (q+1)) for q in xrange(n)]
     queries = [q.replace(" ","_") for q in queries]
-    while True:
-        source = raw_input("\nSelect a type:\nWord [W]\nTitle [t]\nCategory [c]\n> ")
-        if source.lower() in ['w','']:
-            queries = [q.lower() for q in queries]
-            for q in queries:
-                try:
-                    temp = text_encoder.model.most_similar(q,topn=1)
-                except:
-                #if q not in text_encoder.model.index2word:
-                    print('%s not found!' % q)
-                    return None, None
-            return queries, text_encoder
-        elif source.lower() in ['t']:
-            queries = [q[0].upper()+q[1:] for q in queries]
-            for i in xrange(len(queries)):
-                try:
-                    queries[i] = doc_ids[queries[i]]
-                except:
-                    print('%s not found!' % queries[i])
-                    return None, None
-            return queries, link_encoder
-        elif source.lower() in ['c']:
-            queries = ['Category:'+q[0].upper()+q[1:] for q in queries]
-            for i in xrange(len(queries)):
-                try:
-                    queries[i] = doc_ids[queries[i]]
-                except:
-                    print('%s not found!' % queries[i])
-                    return None, None
-            return queries, category_encoder
+    queries = [q.lower() for q in queries]
+    for q in queries:
+        try:
+            temp = text_encoder.model.most_similar(q,topn=1)
+        except:
+        #if q not in text_encoder.model.index2word:
+            print('%s not found!' % q)
+            return None, None
+    return queries
