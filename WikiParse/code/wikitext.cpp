@@ -23,28 +23,34 @@ void wikitext::read_talk() {
 }
 
 void wikitext::read_quality() {
-    size_t tag_location = page_text.find("class", 0);
-    if (tag_location!=string::npos) {
-        size_t equal_location = page_text.find("=",tag_location);
-        size_t end_location   = page_text.find("|",equal_location+1);
-        size_t end_location2  = page_text.find("}}",equal_location+1);
-        if (end_location2<end_location) {
-            end_location = end_location2;
+    size_t template_location = page_text.find("WikiProject",0);
+    if (template_location!=string::npos) {
+        size_t tag_location = page_text.find("class", template_location);
+        if (tag_location!=string::npos) {
+            size_t equal_location = page_text.find("=",tag_location);
+            size_t end_location   = page_text.find("|",equal_location+1);
+            size_t end_location2  = page_text.find("}}",equal_location+1);
+            if (end_location2<end_location) {
+                end_location = end_location2;
+            }
+            quality = page_text.substr(equal_location+1,end_location-equal_location-1);
         }
-        quality = page_text.substr(equal_location+1,end_location-equal_location-1);
     }
 }
 
 void wikitext::read_importance() {
-    size_t tag_location = page_text.find("importance", 0);
-    if (tag_location!=string::npos) {
-        size_t equal_location = page_text.find("=",tag_location);
-        size_t end_location   = page_text.find("|",equal_location+1);
-        size_t end_location2  = page_text.find("}}",equal_location+1);
-        if (end_location2<end_location) {
-            end_location = end_location2;
+    size_t template_location = page_text.find("WikiProject",0);
+    if (template_location!=string::npos) {
+        size_t tag_location = page_text.find("importance", template_location);
+        if (tag_location!=string::npos) {
+            size_t equal_location = page_text.find("=",tag_location);
+            size_t end_location   = page_text.find("|",equal_location+1);
+            size_t end_location2  = page_text.find("}}",equal_location+1);
+            if (end_location2<end_location) {
+                end_location = end_location2;
+            }
+            importance = page_text.substr(equal_location+1,end_location-equal_location-1);
         }
-        importance = page_text.substr(equal_location+1,end_location-equal_location-1);
     }
 }
 
