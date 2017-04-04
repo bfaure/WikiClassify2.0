@@ -20,6 +20,8 @@ void wikitext::read_category() {
 void wikitext::read_talk() {
     read_quality();
     read_importance();
+    cout<<"Quality: "<<quality<<'\n';
+    cout<<"Importance: "<<importance<<'\n';
 }
 
 void wikitext::read_quality() {
