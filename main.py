@@ -39,6 +39,8 @@ def main():
         start_gui()
         return
 
+    dump_path = download_wikidump('simplewiki','WikiParse/data/corpora/simplewiki/data')
+    parse_wikidump(dump_path)
     encoder = get_encoder()
 
     while True:

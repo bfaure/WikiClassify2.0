@@ -298,7 +298,7 @@ void wikidump::save_page(wikipage &wp) {
         }
         links<<'\n';
 
-        if ( connected_to_server )
+        if ( false )// False for now // connected_to_server )
         {
             server_write_buffer.push_back(wp);
             if ( server_write_buffer.size() >= server_write_buffer_size )
