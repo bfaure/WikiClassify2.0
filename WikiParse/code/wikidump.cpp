@@ -219,44 +219,73 @@ void wikidump::server_write()
 {
     string overall_command = "insert into articles values ";
 
+    // iterate over each wikipage in the write buffer
     for (int i=0; i<server_write_buffer.size(); i++)
     {
-
         wikipage wp = server_write_buffer[i];
 
+        // get page id
         string index = std::to_string((int)wp.id);
+
+        // get page title
         string title = wp.title;
+        replace_target(title,"\'","&squot");
+
+        // get page categories
         string categories = "";
         for (int i=0; i<wp.categories.size(); i++)
         {
             categories += wp.categories[i];
-            if ( i != wp.categories.size()-1 )
-            {
-                categories += " | ";
-            }
+            if ( i != wp.categories.size()-1 ){  categories += " | ";  }
         }
-
-        if ( wp.categories.size()==0 )
-        {
-            categories = "NONE";
-        }
-
+        if ( wp.categories.size()==0 ){  categories = "NONE";  }
         replace_target(categories,"\'","&squot");
-        replace_target(title,"\'","&squot");
 
+        // get cited domains
+        string cited_domains = "";
+        for (int i=0; i<wp.domains.size(); i++)
+        {
+          cited_domains += wp.domains[i];
+          if (i != wp.domains.size()-1 ){  cited_domains += " | ";  }
+        }
+        if ( wp.domains.size()==0 ){  cited_domains = "NONE";  }
+        replace_target(cited_domains,"\'","&squot");
+
+        // get cited authors
+        string cited_authors = "";
+        for (int i=0; i<wp.authors.size(); i++)
+        {
+          cited_authors += wp.authors[i];
+          if ( i != wp.authors.size()-1  ){  cited_authors += " | ";  }
+        }
+        if ( wp.authors.size()==0 ){  cited_authors = "NONE"; }
+        replace_target(cited_authors,"\'","&squot");
+
+        // set temporary quality and importance
+        string quality = "Example Quality";
+        string importance = "Example Importance";
+
+        // set temporary timestamps
         string created_at = "2017-03-06 20:13:56.603726";
         string updated_at = "2017-03-06 20:13:56.603726";
-        string command = "("+index+", \'"+title+"\', \'"+categories+"\', \'"+created_at+"\', \'"+updated_at+"\')";
 
-        if ( i == server_write_buffer.size()-1 )
-        {
-            command += " ON CONFLICT (id) DO NOTHING;";
-        }
-        else
-        {
-            command += ", ";
-        }
+        // set slug item
+        string slug = wp.title;
+        replace_target(slug, " ","_");
+        replace_target(slug,"\'","&squot");
 
+        // assemble command used to insert this article
+        string command =  "("+index+", \'"+title+"\', \'"+categories+"\', \'"+cited_domains+"\', \'"+cited_authors+"\',";
+        command        += " \'"+quality+"\', \'"+importance+"\', \'"+created_at+"\', \'"+updated_at+"\', \'"+slug+"\')";
+        //string command = "("+index+", \'"+title+"\', \'"+categories+"\', \'"+created_at+"\', \'"+updated_at+"\')";
+
+        // tell database to skip duplicates
+        if ( i == server_write_buffer.size()-1 ){  command += " ON CONFLICT (id) DO NOTHING;";  }
+
+        // deliminate for next article string after
+        else                                    {  command += ", ";  }
+
+        // append to overall command string
         overall_command += command;
     }
 

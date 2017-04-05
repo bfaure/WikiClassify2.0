@@ -92,7 +92,8 @@ class credentials_window(QWidget):
 
 	def init_vars(self):
 		self.username = "waynesun95"
-		self.host     = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
+		#self.host     = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
+		self.host 	  = "aa9qiuq51j8l7b.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
 		self.port     = "5432"
 		self.dbname   = "ebdb"
 		self.password = ""

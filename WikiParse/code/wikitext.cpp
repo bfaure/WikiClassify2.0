@@ -20,8 +20,8 @@ void wikitext::read_category() {
 void wikitext::read_talk() {
     read_quality();
     read_importance();
-    cout<<"Quality: "<<quality<<'\n';
-    cout<<"Importance: "<<importance<<'\n';
+    //cout<<"Quality: "<<quality<<'\n';
+    //cout<<"Importance: "<<importance<<'\n';
 }
 
 void wikitext::read_quality() {
@@ -216,7 +216,7 @@ void wikitext::read_authors(vector<string> &citations) {
             if (it==authors.end()) {
                 replace_target(author," ","_");
                 authors.push_back(author);
-            } 
+            }
         }
     }
 }
@@ -224,22 +224,22 @@ void wikitext::read_authors(vector<string> &citations) {
 void parse_author(string &author) {
 
     decode_text(author);
-    
+
     // if someone tried to put multiple authors in, keep only the first
     if ((author.find("&")!=string::npos)) {
         author = author.substr(0,author.find("&"));
     }
-    
+
     // if someone tried to put multiple authors in, keep only the first
     if ((author.find(";")!=string::npos)) {
         author = author.substr(0,author.find(";"));
     }
-    
+
     // if someone tried to put multiple authors in, keep only the first
     if ((author.find("and")!=string::npos)) {
         author = author.substr(0,author.find("and"));
     }
-    
+
     // if someone put "By" in front of the name
     if ((author.find("By ")!=string::npos)) {
         author = author.substr(author.find("By ")+3);

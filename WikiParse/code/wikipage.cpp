@@ -21,7 +21,7 @@ void wikipage::make_kosher() {
     kosher(text);
     kosher(importance);
     kosher(quality);
-    kosher(categories); 
+    kosher(categories);
     kosher(links);
     kosher(domains);
     kosher(authors);
@@ -70,7 +70,7 @@ void wikipage::read_namespace() {
 }
 
 void wikipage::read_id() {
-    string id_str; 
+    string id_str;
     parse(dump_page, "    <id>", "</id>", id_str);
     id = stoi(id_str);
 }
@@ -100,8 +100,8 @@ void wikipage::read_text() {
         text          = wt.text;
         categories    = wt.categories;
         links         = wt.links;
-        domains = wt.domains;
-        authors = wt.authors;
+        domains       = wt.domains;
+        authors       = wt.authors;
         problems      = wt.problems;
     }
     else if (is_category()) {
@@ -116,7 +116,7 @@ void wikipage::read_text() {
 }
 
 bool wikipage::is_after(unsigned int &cutoff_year, unsigned int &cutoff_month, unsigned int &cutoff_day) {
-    
+
     unsigned int page_year  = stoi(year);
     unsigned int page_month = stoi(month);
     unsigned int page_day   = stoi(day);
