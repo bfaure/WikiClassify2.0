@@ -18,6 +18,12 @@ void wikitext::read_category() {
 }
 
 void wikitext::read_talk() {
+    decode_text(page_text);
+
+    target = "<!--";
+    endtarget = "-->";
+    remove_between(page_text,target,endtarget);
+
     read_quality();
     read_importance();
     cout<<"Quality: "<<quality<<'\n';
@@ -35,7 +41,7 @@ void wikitext::read_quality() {
             if (end_location2<end_location) {
                 end_location = end_location2;
             }
-            quality = page_text.substr(equal_location+1,end_location-equal_location-1);
+            quality = trim(page_text.substr(equal_location+1,end_location-equal_location-1));
         }
     }
 }
@@ -51,7 +57,7 @@ void wikitext::read_importance() {
             if (end_location2<end_location) {
                 end_location = end_location2;
             }
-            importance = page_text.substr(equal_location+1,end_location-equal_location-1);
+            importance = trim(page_text.substr(equal_location+1,end_location-equal_location-1));
         }
     }
 }
