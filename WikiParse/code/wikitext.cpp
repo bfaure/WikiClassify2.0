@@ -43,6 +43,7 @@ void wikitext::read_quality() {
             }
             quality = page_text.substr(equal_location+1,end_location-equal_location-1);
             quality = trim(quality);
+            transform(quality.begin(), quality.end(), quality.begin(), ::tolower);
         }
     }
 }
@@ -60,6 +61,7 @@ void wikitext::read_importance() {
             }
             importance = page_text.substr(equal_location+1,end_location-equal_location-1);
             importance = trim(importance);
+            transform(importance.begin(), importance.end(), importance.begin(), ::tolower);
         }
     }
 }

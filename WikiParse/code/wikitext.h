@@ -15,6 +15,7 @@ using std::vector;
 
 #include <algorithm>
 using std::find;
+using std::transform;
 
 #include <time.h>
 #include <unistd.h>
