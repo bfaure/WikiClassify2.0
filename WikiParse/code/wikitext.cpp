@@ -30,6 +30,7 @@ void wikitext::read_talk() {
     //cout<<"Importance: "<<importance<<'\n';
 }
 
+vector<string> quality_list{"fa","a","ga","bplus","b","c","start","stub"};
 void wikitext::read_quality() {
     size_t template_location = page_text.find("WikiProject",0);
     if (template_location!=string::npos) {
@@ -44,10 +45,14 @@ void wikitext::read_quality() {
             quality = page_text.substr(equal_location+1,end_location-equal_location-1);
             quality = trim(quality);
             transform(quality.begin(), quality.end(), quality.begin(), ::tolower);
+            if (find(begin(quality_list), end(quality_list), quality) == end(quality_list)) {
+                quality = "unknown";
+            }
         }
     }
 }
 
+vector<string> importance_list{"top","high","mid","low"};
 void wikitext::read_importance() {
     size_t template_location = page_text.find("WikiProject",0);
     if (template_location!=string::npos) {
@@ -62,6 +67,9 @@ void wikitext::read_importance() {
             importance = page_text.substr(equal_location+1,end_location-equal_location-1);
             importance = trim(importance);
             transform(importance.begin(), importance.end(), importance.begin(), ::tolower);
+            if (find(begin(importance_list), end(importance_list), quality) == end(importance_list)) {
+                quality = "unknown";
+            }
         }
     }
 }
