@@ -97,7 +97,7 @@ def expand_bz2(file_path):
         print("\t\tFile already expanded.")
     return file_path[:-4]
 
-def parse_wikidump(dump_path, cutoff_date='20010115', creds=None, version="simplewiki"):
+def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
     #if password==None: password = raw_input("Database password: ")
 
     if creds is not None:
@@ -115,7 +115,6 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None, version="simpl
         port        = "NONE"
         dbname      = "NONE"
 
-    dump_path = "WikiParse/data/corpora/"+version+"/data/"+version+"-latest-pages-meta-current.xml"
     compiled = True
     if compiled:
         try:
