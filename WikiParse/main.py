@@ -33,8 +33,6 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 def download_wikidump(corpus_name, directory):
     url  = 'https://dumps.wikimedia.org/{0}/latest/{0}-latest-pages-meta-current.xml.bz2'.format(corpus_name)
-    # For now, since latest-pages-meta-current.xml.bz2 does not always exist
-    url = 'https://dumps.wikimedia.org/enwiki/20170320/enwiki-20170320-pages-meta-current.xml.bz2'
     file_path = download(url, directory)
     file_path = expand_bz2(file_path)
     return file_path
@@ -98,33 +96,6 @@ def expand_bz2(file_path):
     else:
         print("\t\tFile already expanded.")
     return file_path[:-4]
-
-'''
-def parse_wikidump(dump_path, cutoff_date='20010115', password=None, version="simplewiki"):
-    if password==None: password = raw_input("Database password: ")
-
-    compiled = True
-    if compiled:
-        try:
-            print("\tCompiling parser...")
-            scripts = ["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]
-            call(["g++","--std=c++11","-O3"]+scripts+["-lpqxx","-lpq","-o","wikiparse.out"])
-        except:
-            return False
-    if os.path.isfile('wikiparse.out'):
-        if os.name == "nt":
-            print("\tDetected Windows, altering command...")
-            print("\tCalling wikiparse.out...")
-            call(["wikiparse.out",dump_path,cutoff_date,password])
-            return True
-        else:
-            print("\tCalling ./wikiparse.out...")
-            call(["./wikiparse.out", dump_path, cutoff_date,password])
-            return True
-    else:
-        print("\tERROR: Could not find wikiparse.out")
-        return False
-'''
 
 def parse_wikidump(dump_path, cutoff_date='20010115', creds=None, version="simplewiki"):
     #if password==None: password = raw_input("Database password: ")
