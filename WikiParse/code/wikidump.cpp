@@ -23,16 +23,17 @@ void wikidump::connect_to_server()
 {
     cout<<"\nConnecting to server... ";
 
-    num_sent_to_server = 0;
-
     try
     {
-        conn = new pqxx::connection(
+        conn = new pqxx::connection
+        (
             "user="+server_username+" "
             "host="+server_host+" "
             "port="+server_port+" "
             "password="+server_password+" "
-            "dbname="+server_dbname);
+            "dbname="+server_dbname
+          );
+
         connected_to_server = true;
         cout<<"success\n";
     }
@@ -70,21 +71,30 @@ void wikidump::connect_to_server()
     cout<<"\n";
 }
 
-wikidump::wikidump(string &path, string &cutoff_date, string password, string host, string username, string port, string dbname) {
-
+wikidump::wikidump(string &path, string &cutoff_date, string password, string host, string username, string port, string dbname)
+{
+    // if valid server credentials were passed
     if ( password!="NONE")
     {
+        // save passed credentials
         server_password = password;
         server_username = username;
         server_host     = host;
         server_port     = port;
         server_dbname   = dbname;
 
-        server_capacity = 10000000000; // 10 GB
+        server_capacity             = 10000000000; // 10 GB
         replace_server_duplicates   = false; // dont replace duplicates
-        server_write_buffer_size    = 5000; // write to server after this many read
+        server_write_buffer_size    = 100; // write to server after this many read
+        maximum_server_writes       = 2; // maximum number of buffers to write to server
+        num_sent_to_server          = 0; // number of articles sent to server
+        num_server_writes           = 0; // number of server writes executed
+
+        // attempt to connect to server
         connect_to_server();
     }
+
+    // if not connecting to server
     else
     {
         cout<<"Not backing up to server\n";
@@ -92,14 +102,8 @@ wikidump::wikidump(string &path, string &cutoff_date, string password, string ho
     }
 
     dump_input = ifstream(path,ifstream::binary);
-    if (dump_input.is_open())
-    {
-        dump_size = ifstream(path,ifstream::ate|ifstream::binary).tellg();
-    }
-    else
-    {
-        cout<<"Could not open dump! ("<<path<<")\n";
-    }
+    if (dump_input.is_open()){  dump_size = ifstream(path,ifstream::ate|ifstream::binary).tellg();  }
+    else                     {  cout<<"Could not open dump! ("<<path<<")\n";  }
 
     cutoff_year  = stoi(cutoff_date.substr(0,4));
     cutoff_month = stoi(cutoff_date.substr(4,2));
@@ -108,6 +112,7 @@ wikidump::wikidump(string &path, string &cutoff_date, string password, string ho
 
 void wikidump::read(bool build_keys)
 {
+
     if (build_keys){  cout<<"\nBuilding keys...\n";  }
     else           {  cout<<"\nReading dump...\n";  }
 
@@ -259,10 +264,11 @@ void wikidump::server_write()
     pqxx::result r = w.exec(overall_command);
     w.commit();
 
+    num_server_writes++;
     num_sent_to_server += server_write_buffer.size();
-
     int current_size = get_server_used_bytes();
 
+    // if we are past the maximum capacity of the server
     if ( current_size >= server_capacity )
     {
         cout<<"\rServer reached capacity, disconnecting... ";
@@ -271,6 +277,17 @@ void wikidump::server_write()
         cout<<"done.          \n";
         cout.flush();
         return;
+    }
+
+    // if we are past the maximum number of server write calls
+    if ( num_server_writes >= maximum_server_writes )
+    {
+      cout<<"\rMaximum number of server writes performed, disconnecting...";
+      conn->disconnect();
+      connected_to_server = false;
+      cout<<"done.                  \n";
+      cout.flush();
+      return;
     }
 }
 
@@ -298,12 +315,15 @@ void wikidump::save_page(wikipage &wp) {
         }
         links<<'\n';
 
-        if ( false )// False for now // connected_to_server )
+        if ( connected_to_server )
         {
             server_write_buffer.push_back(wp);
             if ( server_write_buffer.size() >= server_write_buffer_size )
             {
+                // write current buffer to server
                 server_write();
+
+                // clear current buffer
                 server_write_buffer.clear();
             }
         }

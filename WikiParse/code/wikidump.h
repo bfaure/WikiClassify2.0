@@ -63,10 +63,13 @@ class wikidump {
         string  server_dbname;
 
         bool                connected_to_server;
-        unsigned long long  num_sent_to_server;
+        unsigned long long  num_sent_to_server; // number of articles sent to server
         long                server_capacity; // bytes
         bool                replace_server_duplicates;
-        int                 server_write_buffer_size;
+        int                 server_write_buffer_size; // in # of articles
+        
+        int                 maximum_server_writes; //
+        int                 num_server_writes;
         vector<wikipage>    server_write_buffer;
 
     public:
