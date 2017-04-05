@@ -53,7 +53,7 @@ void wikidump::connect_to_server()
         {
             cout<<"WARNING: Server overloaded, deleting current table... ";
             string delete_query = "DELETE FROM articles;";
-            
+
             try
             {
                 pqxx::work delete_job(*conn);
@@ -70,15 +70,15 @@ void wikidump::connect_to_server()
     cout<<"\n";
 }
 
-wikidump::wikidump(string &path, string &cutoff_date, string password) {
+wikidump::wikidump(string &path, string &cutoff_date, string password, string host, string username, string port, string dbname) {
 
     if ( password!="NONE")
     {
         server_password = password;
-        server_username = "waynesun95";
-        server_host     = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com";
-        server_port     = "5432";
-        server_dbname   = "ebdb";
+        server_username = username;
+        server_host     = host;
+        server_port     = port;
+        server_dbname   = dbname;
 
         server_capacity = 10000000000; // 10 GB
         replace_server_duplicates   = false; // dont replace duplicates
@@ -92,11 +92,11 @@ wikidump::wikidump(string &path, string &cutoff_date, string password) {
     }
 
     dump_input = ifstream(path,ifstream::binary);
-    if (dump_input.is_open()) 
+    if (dump_input.is_open())
     {
         dump_size = ifstream(path,ifstream::ate|ifstream::binary).tellg();
     }
-    else 
+    else
     {
         cout<<"Could not open dump! ("<<path<<")\n";
     }
@@ -106,22 +106,22 @@ wikidump::wikidump(string &path, string &cutoff_date, string password) {
     cutoff_day   = stoi(cutoff_date.substr(6,2));
 }
 
-void wikidump::read(bool build_keys) 
+void wikidump::read(bool build_keys)
 {
     if (build_keys){  cout<<"\nBuilding keys...\n";  }
     else           {  cout<<"\nReading dump...\n";  }
-    
+
     articles_read = 0;
     unsigned long long last_articles_read = 0;
 
     streampos offset;
-    
+
     streampos buffer_size = 2000000;
     char *buffer = (char*)malloc(sizeof(char)*(unsigned)buffer_size);
     memset(buffer,0,sizeof(char)*(unsigned)buffer_size);
-    
+
     time_t start_time = time(0);
-    while (dump_input.read(buffer, buffer_size)) 
+    while (dump_input.read(buffer, buffer_size))
     {
         last_articles_read = articles_read;
         offset = save_buffer(buffer, build_keys);
@@ -140,7 +140,7 @@ void wikidump::read(bool build_keys)
     dump_input.clear();
     dump_input.seekg(0, dump_input.beg);
     cout<<"\n";
-    if (build_keys) 
+    if (build_keys)
     {
         save_keys();
         connect_database();
@@ -211,12 +211,12 @@ void wikidump::connect_database() {
 }
 
 void wikidump::server_write()
-{   
+{
     string overall_command = "insert into articles values ";
 
     for (int i=0; i<server_write_buffer.size(); i++)
     {
-        
+
         wikipage wp = server_write_buffer[i];
 
         string index = std::to_string((int)wp.id);
@@ -257,7 +257,7 @@ void wikidump::server_write()
 
     pqxx::work w(*conn);
     pqxx::result r = w.exec(overall_command);
-    w.commit();        
+    w.commit();
 
     num_sent_to_server += server_write_buffer.size();
 

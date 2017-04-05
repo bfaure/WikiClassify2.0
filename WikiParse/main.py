@@ -49,7 +49,7 @@ def download(url, directory):
                 total_length = response.headers.get('content-length')
                 megabytes = int(total_length)/1000000
                 sys.stdout.write(str(megabytes)+" MB\n")
-                
+
                 if total_length is not None:
                     dl = 0
                     total_length = int(total_length)
@@ -61,7 +61,7 @@ def download(url, directory):
                         for prog_index in range(25):
                             if prog_index<=num_items: progress_string+="-"
                             else: progress_string += " "
-                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done") 
+                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done")
                         sys.stdout.flush()
                     sys.stdout.write("\n")
                 else:
@@ -97,6 +97,7 @@ def expand_bz2(file_path):
         print("\t\tFile already expanded.")
     return file_path[:-4]
 
+'''
 def parse_wikidump(dump_path, cutoff_date='20010115', password=None, version="simplewiki"):
     if password==None: password = raw_input("Database password: ")
 
@@ -118,6 +119,48 @@ def parse_wikidump(dump_path, cutoff_date='20010115', password=None, version="si
         else:
             print("\tCalling ./wikiparse.out...")
             call(["./wikiparse.out", dump_path, cutoff_date,password])
+            return True
+    else:
+        print("\tERROR: Could not find wikiparse.out")
+        return False
+'''
+
+def parse_wikidump(dump_path, cutoff_date='20010115', creds=None, version="simplewiki"):
+    #if password==None: password = raw_input("Database password: ")
+
+    if creds is not None:
+        # retrieve passed server credentials
+        password = creds.server_password
+        host     = creds.server_host
+        username = creds.server_username
+        port     = creds.server_port
+        dbname   = creds.server_dbname
+    else:
+        # set to defaults to tell C++ not to use server
+        password    = "NONE"
+        host        = "NONE"
+        username    = "NONE"
+        port        = "NONE"
+        dbname      = "NONE"
+
+    dump_path = "WikiParse/data/corpora/"+version+"/data/"+version+"-latest-pages-meta-current.xml"
+    compiled = True
+    if compiled:
+        try:
+            print("\tCompiling parser...")
+            scripts = ["WikiParse/code/"+x for x in ["main.cpp","wikidump.cpp","wikipage.cpp","wikitext.cpp","string_utils.cpp"]]
+            call(["g++","--std=c++11","-O3"]+scripts+["-lpqxx","-lpq","-o","wikiparse.out"])
+        except:
+            return False
+    if os.path.isfile('wikiparse.out'):
+        if os.name == "nt":
+            print("\tDetected Windows, altering command...")
+            print("\tCalling wikiparse.out...")
+            call(["wikiparse.out",dump_path,cutoff_date,password,host,username,port,dbname])
+            return True
+        else:
+            print("\tCalling ./wikiparse.out...")
+            call(["./wikiparse.out", dump_path, cutoff_date,password,host,username,port,dbname])
             return True
     else:
         print("\tERROR: Could not find wikiparse.out")

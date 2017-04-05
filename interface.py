@@ -41,15 +41,23 @@ except:
 print("\nNOTE: To interface with server C++ PSQL Bindings must be installed.")
 print("      1. \'sudo apt-get install libpq-dev\'")
 print("      2. \'sudo apt-get install libpqxx-dev\'")
-print("      Ignore if both are already installed.\n")	
+print("      Ignore if both are already installed.\n")
 
 
 main_menu_window = ""
 
+class cred_t(object):
+	def __init__(self):
+		self.server_host     = "NONE"
+		self.server_username = "NONE"
+		self.server_port     = "NONE"
+		self.server_dbname   = "NONE"
+		self.server_password = "NONE"
+
 class log_window(QWidget):
 	def __init__(self, parent=None, window_title=None):
 		super(log_window, self).__init__()
-		self.window_title = window_title 
+		self.window_title = window_title
 		if window_title is None: self.window_title = "Log"
 		self.initVars()
 		self.initUI()
@@ -201,25 +209,25 @@ class wikiserver_window(QWidget):
 		self.parent      = parent
 		self.user_log    = log_window(self,"Connection Log")
 		self.cred_window = credentials_window(self)
-		
+
 		self.open_location         = None # window location of main menu
 		self.current_widget        = None
 		self.current_meta_layout   = None
 		self.current_meta_widget_1 = None  # first widget from left
 		self.current_meta_widget_2 = None
 		self.current_meta_widget_3 = None
-		self.current_meta_widget_4 = None 
-		self.current_meta_widget_5 = None 
+		self.current_meta_widget_4 = None
+		self.current_meta_widget_5 = None
 		self.current_widget_name   = "none"
 
-		self.table_data = None 
+		self.table_data = None
 
-		self.server_host     = None 
-		self.server_username = None 
-		self.server_port     = None 
-		self.server_dbname   = None 
+		self.server_host     = None
+		self.server_username = None
+		self.server_port     = None
+		self.server_dbname   = None
 		self.server_password = None
-		
+
 		self.commands  = []
 		self.connected = False
 		if self.parent==None: self.init_vars()
@@ -227,10 +235,10 @@ class wikiserver_window(QWidget):
 
 	def cred_ok(self):
 		self.show()
-		self.server_host     = self.cred_window.host 
-		self.server_username = self.cred_window.username 
-		self.server_port     = self.cred_window.port 
-		self.server_dbname   = self.cred_window.dbname 
+		self.server_host     = self.cred_window.host
+		self.server_username = self.cred_window.username
+		self.server_port     = self.cred_window.port
+		self.server_dbname   = self.cred_window.dbname
 		self.server_password = self.cred_window.password
 		self.init_vars(new_credentials=False)
 		self.open_window(get_cred=False)
@@ -301,11 +309,11 @@ class wikiserver_window(QWidget):
 			self.hide()
 
 	def open_window(self,get_cred=True,location=None):
-		if get_cred: 
+		if get_cred:
 			self.open_location = location
 			self.init_vars()
 			return
-		else:	
+		else:
 			if self.open_location != None: self.move(self.open_location)
 			self.show()
 			self.view_log()
@@ -394,7 +402,7 @@ class wikiserver_window(QWidget):
 			self.conn.commit()
 			self.add_command(command)
 			self.update_ui()
-		except: 
+		except:
 			print("WARNING: Could not delete \'articles\' table!")
 		cursor.close()
 
@@ -410,7 +418,7 @@ class wikiserver_window(QWidget):
 			cursor.execute(command)
 			self.add_command(command)
 			size = str(cursor.fetchone()[0])
-			return size 
+			return size
 		except: print("WARNING: Could not fetch size of database!")
 		cursor.close()
 
@@ -494,7 +502,7 @@ class wikiserver_window(QWidget):
 
 	def delete_table_item(self):
 		if self.connected == False: 			return
-		if self.current_widget_name != "table": return 
+		if self.current_widget_name != "table": return
 
 		cur_row 		= self.current_widget.currentRow()
 		cur_article_id 	= str(self.current_widget.item(cur_row,1).text())
@@ -564,11 +572,11 @@ class parser_worker(QThread):
 		else:
 			if os.path.isdir(download_location):
 				files     = os.listdir(download_location)
-				dump_path = None 
+				dump_path = None
 				bz2_path  = None
 				for f in files:
 					if f.find(".bz2")!=-1:
-						bz2_path  = download_location+"/"+f 
+						bz2_path  = download_location+"/"+f
 						continue
 					if f.find(".xml")!=-1:
 						dump_path = download_location+"/"+f
@@ -576,8 +584,7 @@ class parser_worker(QThread):
 						break
 				if dump_path==None and bz2_path!=None: dump_path = expand_bz2(bz2_path)
 
-		if self.use_server: parsed = parse_wikidump(dump_path,password=self.server_password,version=dump_source)
-		else: parsed = parse_wikidump(dump_path,password="NONE",version=dump_source)
+		parsed = parse_wikidump(dump_path,creds=self.creds,version=dump_source)
 
 		if self.retrain and parsed:
 			encoder_directory = 'WikiLearn/data/models/tokenizer'
@@ -594,10 +601,10 @@ class wikiparse_window(QWidget):
 		self.init_ui()
 
 	def init_vars(self):
-		self.server_host 		= None 
-		self.server_username 	= None 
-		self.server_port 		= None 
-		self.server_dbname 		= None 
+		self.server_host 		= None
+		self.server_username 	= None
+		self.server_port 		= None
+		self.server_dbname 		= None
 		self.server_password 	= None
 
 		# not all, just most common
@@ -677,15 +684,15 @@ class wikiparse_window(QWidget):
 		if os.path.isdir(dump_dir):
 			files = os.listdir(dump_dir)
 			for f in files:
-				if f.find(".xml")!=-1: return True 
+				if f.find(".xml")!=-1: return True
 			return False
 		else: return False
 
 	def open_window(self,location=None):
-		if location != None: 
+		if location != None:
 			self.open_location = location
 			self.move(location)
-		if not self.has_data_dump(): 
+		if not self.has_data_dump():
 			self.redownload_check.setChecked(True)
 			self.redownload_check.setEnabled(False)
 		else:
@@ -711,26 +718,34 @@ class wikiparse_window(QWidget):
 				if os.path.isfile(f+".tsv"): os.remove(f+".tsv")
 			if os.path.isfile("wikiparse.out"): os.remove("wikiparse.out")
 			if os.path.isdir("WikiLearn/data"): rmtree("WikiLearn/data")
-		
+
 		src = str(self.source_input.currentText())
 		if self.redownload_check.isChecked():
 			if os.path.isdir("WikiParse/data/corpora/"+src): rmtree("WikiParse/data/corpora/"+src)
 			#if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
 
 		self.worker 			= parser_worker(self)
-		self.worker.use_server 	= use_server
 		self.worker.source 		= src
 		self.worker.redownload 	= True if self.redownload_check.isChecked() else False
-		if use_server: self.worker.server_password = self.server_password
-		self.worker.retrain = True if self.retrain_check.isChecked() else False 
+
+		exec_creds = cred_t()
+		if use_server:
+			exec_creds.server_host 		= self.server_host
+			exec_creds.server_username 	= self.server_username
+			exec_creds.server_port 		= self.server_port
+			exec_creds.server_dbname 	= self.server_dbname
+			exec_creds.server_password 	= self.server_password
+
+		self.worker.creds = exec_creds
+		self.worker.retrain = True if self.retrain_check.isChecked() else False
 		self.worker.start()
 		self.parent.parsing_started()
 
 	def cred_ok(self):
-		self.server_host     = self.cred_window.host 
-		self.server_username = self.cred_window.username 
-		self.server_port     = self.cred_window.port 
-		self.server_dbname   = self.cred_window.dbname 
+		self.server_host     = self.cred_window.host
+		self.server_username = self.cred_window.username
+		self.server_port     = self.cred_window.port
+		self.server_dbname   = self.cred_window.dbname
 		self.server_password = self.cred_window.password
 		self.start_execution(use_server=True)
 
@@ -772,22 +787,22 @@ class wikilearn_worker(QThread):
 		self.connect(self,SIGNAL("got_path()"),self.parent.got_path)
 		self.connect(self,SIGNAL("failure()"),self.parent.no_path)
 		self.connect(self,SIGNAL("got_result()"),self.parent.got_sum)
-		self.exiting = False 
+		self.exiting = False
 		self.valid = False
-		self.start_query = None 
-		self.end_query = None 
-		self.encoder = None 
+		self.start_query = None
+		self.end_query = None
+		self.encoder = None
 		self.job = None
-		self.branching_factor = None 
+		self.branching_factor = None
 		self.weight = None
 
 	def run(self):
 		if self.job=="path":
 			start_query = self.start_query
 			end_query = self.end_query
-			encoder = self.encoder 
+			encoder = self.encoder
 			branching_factor = self.branching_factor
-			weight = self.weight 
+			weight = self.weight
 
 			start_vector = encoder.get_nearest_word(start_query,topn = branching_factor)
 			end_vector   = encoder.get_nearest_word(end_query,topn = branching_factor)
@@ -800,7 +815,7 @@ class wikilearn_worker(QThread):
 			if start_vector==None or end_vector==None:
 				self.failure.emit()
 				return
-			
+
 			frontier = PriorityQueue()
 			start_elem = elem_t(start_query,parent=None,cost=get_transition_cost(start_query,end_query,encoder))
 			frontier.push(start_elem)
@@ -837,7 +852,7 @@ class wikilearn_worker(QThread):
 						cost_list[neighbor_word] = cost
 						new_elem.cost = cost + (float(weight)*(get_transition_cost(neighbor_word,end_query,encoder)))
 						frontier.push(new_elem)
-			
+
 			solution_path,offsets = rectify_path(path_end)
 			self.solution_path = solution_path
 			self.valid = True
@@ -859,7 +874,7 @@ class wikilearn_worker(QThread):
 					output = self.text_encoder.model.most_similar(negative=self.negative_words)[0][0]
 				except:
 					output = "ERROR (3)"
-			self.output = output 
+			self.output = output
 			self.got_result.emit()
 
 class wikilearn_window(QWidget):
@@ -1061,12 +1076,12 @@ class wikilearn_window(QWidget):
 
 		for i in range(self.add_layout.count()):
 			text = str(self.add_layout.itemAt(i).widget().text())
-			if text=="=": break 
+			if text=="=": break
 			if text not in ["+","-"]:
 				if cur_sign=="+": self.positive_words.append(text)
 				if cur_sign=="-": self.negative_words.append(text)
 				continue
-			cur_sign = text 
+			cur_sign = text
 
 	def add_tab_get_result(self):
 		self.add_result.setText("...")
@@ -1074,7 +1089,7 @@ class wikilearn_window(QWidget):
 		self.sum_worker.job = "algebra"
 		self.sum_worker.positive_words = self.positive_words
 		self.sum_worker.negative_words = self.negative_words
-		self.sum_worker.text_encoder   = self.text_encoder 
+		self.sum_worker.text_encoder   = self.text_encoder
 		self.sum_worker.start()
 
 	def got_sum(self):
@@ -1102,12 +1117,12 @@ class wikilearn_window(QWidget):
 				if self.word_inputs[-1].text()[-1] in ["+","-"]:
 					txt = self.word_inputs[-1].text()[-1]
 					self.add_layout.addWidget(QLabel(str(txt)))
-					froze = True 
+					froze = True
 			'''
 
 			new_word = QLineEdit()
 			new_word.setPlaceholderText(self.next_placeholder_text)
-			if self.next_placeholder_text=="+, -, or =": 
+			if self.next_placeholder_text=="+, -, or =":
 				self.next_placeholder_text=="..."
 			else:
 				self.next_placeholder_text=="+, -, or ="
@@ -1115,7 +1130,7 @@ class wikilearn_window(QWidget):
 			new_word.textChanged.connect(self.add_input_generator)
 			self.add_layout.addWidget(new_word)
 			self.word_inputs.append(new_word)
-			
+
 			if froze:
 				new_word.setFocus()
 
@@ -1134,16 +1149,16 @@ class wikilearn_window(QWidget):
 	def path_query_changed(self):
 		self.collect_values()
 
-		if self.query_1 in [" ",""]: return 
-		if self.query_2 in [" ",""]: return 
-		if self.branching_factor==None or self.cost==None: return 
+		if self.query_1 in [" ",""]: return
+		if self.query_2 in [" ",""]: return
+		if self.branching_factor==None or self.cost==None: return
 
 		self.close_workers()
 
 		new_worker                  = wikilearn_worker(parent=self)
-		new_worker.start_query      = self.query_1 
+		new_worker.start_query      = self.query_1
 		new_worker.end_query        = self.query_2
-		new_worker.branching_factor = self.branching_factor 
+		new_worker.branching_factor = self.branching_factor
 		new_worker.weight           = self.cost
 		new_worker.job 				= "path"
 		new_worker.encoder          = self.text_encoder
@@ -1177,7 +1192,7 @@ class exit_dialog(QWidget):
 
 	def __init__(self,parent=None):
 		super(exit_dialog,self).__init__()
-		self.parent = parent 
+		self.parent = parent
 		self.connect(self,SIGNAL("exit_ok()"),self.parent.exit_accepted)
 		self.connect(self,SIGNAL("exit_canceled()"),self.parent.exit_canceled)
 		self.init_ui()
@@ -1232,7 +1247,7 @@ class main_menu(QWidget):
 	def init_ui(self):
 		self.layout = QVBoxLayout(self)
 		self.setWindowTitle("Control Panel")
-		
+
 		p = self.palette()
 		p.setColor(self.backgroundRole(),QColor(255,255,255))
 		self.setPalette(p)
@@ -1392,5 +1407,5 @@ def start_gui():
 	app              = QApplication(sys.argv)
 	app.setStyle('plastique')
 	main_menu_window = main_menu(app)
-	print("Opened GUI Window.")
+	print("Opened GUI Window.\n")
 	sys.exit(app.exec_())

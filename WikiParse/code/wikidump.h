@@ -70,7 +70,7 @@ class wikidump {
         vector<wikipage>    server_write_buffer;
 
     public:
-        wikidump(string &path, string &cutoff_date, string password);
+        wikidump(string &path, string &cutoff_date, string password, string host, string username, string port, string dbname);
         void connect_to_server();
 
         void read(bool build_keys=true);
