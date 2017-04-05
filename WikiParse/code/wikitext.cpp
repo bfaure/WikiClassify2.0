@@ -20,8 +20,8 @@ void wikitext::read_category() {
 void wikitext::read_talk() {
     decode_text(page_text);
 
-    target = "<!--";
-    endtarget = "-->";
+    string target = "<!--";
+    string endtarget = "-->";
     remove_between(page_text,target,endtarget);
 
     read_quality();
