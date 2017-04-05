@@ -33,6 +33,8 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 def download_wikidump(corpus_name, directory):
     url  = 'https://dumps.wikimedia.org/{0}/latest/{0}-latest-pages-meta-current.xml.bz2'.format(corpus_name)
+    # For now, since latest-pages-meta-current.xml.bz2 does not always exist
+    url = 'https://dumps.wikimedia.org/enwiki/20170320/enwiki-20170320-pages-meta-current.xml.bz2'
     file_path = download(url, directory)
     file_path = expand_bz2(file_path)
     return file_path
@@ -101,7 +103,6 @@ def expand_bz2(file_path):
 def parse_wikidump(dump_path, cutoff_date='20010115', password=None, version="simplewiki"):
     if password==None: password = raw_input("Database password: ")
 
-    dump_path = "WikiParse/data/corpora/"+version+"/data/"+version+"-latest-pages-meta-current.xml"
     compiled = True
     if compiled:
         try:
