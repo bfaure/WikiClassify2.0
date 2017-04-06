@@ -70,7 +70,7 @@ def download(url, directory):
                 total_length = response.headers.get('content-length')
                 megabytes = int(total_length)/1000000
                 sys.stdout.write(str(megabytes)+" MB\n")
-                
+
                 if total_length is not None:
                     dl = 0
                     total_length = int(total_length)
@@ -82,7 +82,7 @@ def download(url, directory):
                         for prog_index in range(25):
                             if prog_index<=num_items: progress_string+="-"
                             else: progress_string += " "
-                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done") 
+                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done")
                         sys.stdout.flush()
                     sys.stdout.write("\n")
                 else:
@@ -90,7 +90,7 @@ def download(url, directory):
         except:
             print("\t\tCould not download '%s'." % file_name)
     else:
-        print("\t\t'%s' already exists." % file_name)
+        print("\n\t\t'%s' already exists." % file_name)
     return file_path
 
 def expand_gz(directory):
@@ -106,7 +106,7 @@ def expand_gz(directory):
                             new_file.write(src.read())
                 except:
                     print("\t\tCould not expand file %s"%file_path)
-            
+
             return file_path[:-3]
     #else:
     #    print("\t\tFile already expanded.")
@@ -129,9 +129,9 @@ class word2vec(object):
             return [x[0] for x in self.model.most_similar(self.encode_words(text),topn=topn) if x!=text]
         except:
             return None
-        
+
     def get_outlier_word(self, text):
-        return self.model.doesnt_match(text)   
+        return self.model.doesnt_match(text)
 
     def get_word_analogy(self, x, y, z):
         return [x[0] for x in self.model.most_similar(positive=[self.encode_word(y),self.encode_word(z)],negative=[self.encode_word(x)])]
@@ -153,7 +153,7 @@ class word2vec(object):
 
         t = epoch_timer(epochs)
         for i in xrange(epochs):
-            
+
             t.start()
             print("\t\tEpoch %s..." % (i+1))
             self.model.train(corpus)
@@ -162,7 +162,7 @@ class word2vec(object):
         elapsed  = t.get_elapsed()
         print('\tTime elapsed: %0.2f hours' % (elapsed))
         #self.model.init_sims(replace=True)
-        
+
         print("\tSaving doc2vec model...")
         self.model.save(directory+'/word2vec.d2v')
 
@@ -188,7 +188,7 @@ class word2vec(object):
         print("\tLoading doc2vec model...")
         self.model = Doc2Vec.load(directory+'/word2vec.d2v')
         self.features = self.model.docvecs[0].shape[0]
-    
+
     # Encode/decode at word, words, and doc level
 
     def encode_word(self, word):

@@ -25,9 +25,20 @@ from pathfinder import get_queries, astar_path
 #                            Main function
 #-----------------------------------------------------------------------------#
 
-def get_encoder():
-    encoder_directory = 'WikiLearn/data/models/word2vec'
+def get_encoder(tsv_path, make_phrases, directory, features, context_window, min_count, negative, epochs):
     encoder = word2vec()
+    if not os.path.isfile(os.path.join(directory,'word2vec.d2v')):
+        encoder.build(features, context_window, min_count, negative)
+        documents  = gensim_corpus(tsv_path,directory,make_phrases)
+        encoder.train(documents, epochs)
+        encoder.save(directory)
+    else:
+        encoder.load(directory)
+    return encoder
+
+def get_google_encoder():
+    encoder = word2vec()
+    encoder_directory = 'WikiLearn/data/models/word2vec'
     encoder.load_pretrained(encoder_directory)
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
     return encoder
@@ -41,7 +52,7 @@ def main():
 
     dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
     parse_wikidump(dump_path)
-    encoder = get_encoder()
+    encoder = get_google_encoder()
 
     while True:
         algo = raw_input("\nSelect an activity:\nPath [P]\nJoin [j]\n> ")#\na: add\n> ")

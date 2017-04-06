@@ -16,7 +16,7 @@ except:
 from time import time
 from time import sleep
 
-from main import get_encoder
+from main import get_encoder, get_google_encoder
 from pathfinder import PriorityQueue, rectify_path, get_transition_cost, elem_t
 
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus, expand_bz2
@@ -898,7 +898,6 @@ class wikilearn_window(QWidget):
 
 	def init_vars(self):
 		# commented out region is the former code used to load our custom models
-		'''
 		global_point = self.mapToGlobal(self.rect().topLeft())
 		encoder_directory = 'WikiLearn/data/models/tokenizer'
 		if not os.path.isdir(encoder_directory):
@@ -913,19 +912,20 @@ class wikilearn_window(QWidget):
 
 		try:
 			self.text_encoder     = get_encoder('text.tsv',True,encoder_directory+"/text",300,10,5,20,10)
-			self.category_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
-			self.link_encoder     = get_encoder('links.tsv',False,encoder_directory+'/links',200,300,1,5,20)
-			self.doc_ids          = dict([x.strip().split('\t') for x in open('titles.tsv')])
+			#self.category_encoder = get_encoder('categories.tsv',False,encoder_directory+'/categories',200,300,1,5,20)
+			#self.link_encoder     = get_encoder('links.tsv',False,encoder_directory+'/links',200,300,1,5,20)
+			#self.doc_ids          = dict([x.strip().split('\t') for x in open('titles.tsv')])
 		except:
 			self.notification_gui.set_notification("Could not load encoders",global_point)
 			self.return_to_main_menu()
 			return False
-		'''
 
+		'''
 		# for loading google model...
 		encoder_directory = 'WikiLearn/data/models/word2vec'
-		self.text_encoder = get_encoder()
-		#self.text_encoder = None
+		self.text_encoder = get_google_encoder()
+		'''
+
 		return True
 
 	def init_ui(self):
