@@ -39,8 +39,8 @@ class wikidump {
         ofstream links;
         ofstream authors;
         ofstream domains;
-        //ofstream quality;
-        //ofstream importance;
+        ofstream quality;
+        ofstream importance;
         //ofstream problems;
         ofstream category_parents;
 
