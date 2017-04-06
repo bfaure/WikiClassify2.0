@@ -54,7 +54,6 @@ void wikitext::read_quality() {
 
 vector<string> importance_list{"low","mid","high","top"};
 void wikitext::read_importance() {
-    string importance;
     unsigned char importance_total = 0;
     unsigned char importance_count = 0;
     size_t template_location = 0;
