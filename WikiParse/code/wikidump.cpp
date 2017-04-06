@@ -369,7 +369,7 @@ void wikidump::save_page(wikipage &wp) {
 //        domains<<'\n';
     }
     if (wp.is_talk()) {
-        string title = wp.title.substr(6);
+        string title = wp.title.substr(5);
         if (title_map.find(title) != title_map.end()) {
             quality<<wp.id<<'\t';
             quality<<wp.quality<<'\n';
