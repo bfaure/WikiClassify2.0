@@ -375,9 +375,9 @@ void wikidump::save_page(wikipage &wp) {
         }
         if (title_map.find(title) != title_map.end()) {
             quality<<wp.id<<'\t';
-            quality<wp.quality<<'\n';
+            quality<<wp.quality<<'\n';
             importance<<wp.id<<'\t';
-            importance<wp.importance<<'\n';
+            importance<<wp.importance<<'\n';
         }
     }
 //    if (wp.is_category()) {
