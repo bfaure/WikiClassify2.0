@@ -52,10 +52,13 @@ void wikitext::read_quality() {
     }
 }
 
-vector<string> importance_list{"top","high","mid","low"};
+vector<string> importance_list{"low","mid","high","top"};
 void wikitext::read_importance() {
-    size_t template_location = page_text.find("WikiProject",0);
-    if (template_location!=string::npos) {
+    string importance;
+    unsigned char importance_total = 0;
+    unsigned char importance_count = 0;
+    size_t template_location = 0;
+    while((template_location = page_text.find("WikiProject",template_location))!=string::npos) {
         size_t tag_location = page_text.find("importance", template_location);
         if (tag_location!=string::npos) {
             size_t equal_location = page_text.find("=",tag_location);
@@ -67,9 +70,18 @@ void wikitext::read_importance() {
             importance = page_text.substr(equal_location+1,end_location-equal_location-1);
             importance = trim(importance);
         }
+        transform(importance.begin(), importance.end(), importance.begin(), ::tolower);
+        vector<string>::iterator it;
+        if ((it=find(importance_list.begin(),importance_list.end(), importance)) != importance_list.end()) {
+            importance_total += it-importance_list.begin();
+            importance_count++;
+        }
+        template_location++;
     }
-    transform(importance.begin(), importance.end(), importance.begin(), ::tolower);
-    if (find(begin(importance_list), end(importance_list), importance) == end(importance_list)) {
+    if (importance_count) {
+        importance = importance_list[(int)((float)importance_total/(float)importance_count+0.5)];
+    }
+    else {
         importance = "unknown";
     }
 }
