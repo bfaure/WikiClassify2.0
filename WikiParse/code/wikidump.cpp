@@ -368,6 +368,18 @@ void wikidump::save_page(wikipage &wp) {
 //        }
 //        domains<<'\n';
     }
+    if (wp.is_talk()) {
+        string title = wp.title.substr(6);
+        if (redirect_map.find(title) != redirect_map.end()) {
+            title = redirect_map[title];
+        }
+        if (title_map.find(title) != title_map.end()) {
+            quality<<wp.id<<'\t';
+            quality<wp.quality<<'\n';
+            importance<<wp.id<<'\t';
+            importance<wp.importance<<'\n';
+        }
+    }
 //    if (wp.is_category()) {
 //
 //        category_parents<<wp.id<<'\t';;
