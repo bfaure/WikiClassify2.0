@@ -69,8 +69,8 @@ void wikitext::read_importance() {
         }
     }
     transform(importance.begin(), importance.end(), importance.begin(), ::tolower);
-    if (find(begin(importance_list), end(importance_list), quality) == end(importance_list)) {
-        quality = "unknown";
+    if (find(begin(importance_list), end(importance_list), importance) == end(importance_list)) {
+        importance = "unknown";
     }
 }
 
