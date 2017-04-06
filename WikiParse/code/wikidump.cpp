@@ -209,8 +209,8 @@ void wikidump::connect_database() {
     links.open("links.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
     authors.open("authors.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
     domains.open("domains.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
-    //importance.open(output_directory+"/importance.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
-    //quality.open(output_directory+"/quality.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    importance.open(output_directory+"/importance.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
+    quality.open(output_directory+"/quality.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
     //problems.open(output_directory+"/problems.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
     category_parents.open("category_parents.tsv",ofstream::out|ofstream::trunc|ofstream::binary);
 }
