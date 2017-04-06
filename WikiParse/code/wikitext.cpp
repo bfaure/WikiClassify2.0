@@ -44,11 +44,11 @@ void wikitext::read_quality() {
             }
             quality = page_text.substr(equal_location+1,end_location-equal_location-1);
             quality = trim(quality);
-            transform(quality.begin(), quality.end(), quality.begin(), ::tolower);
-            if (find(begin(quality_list), end(quality_list), quality) == end(quality_list)) {
-                quality = "unknown";
-            }
         }
+    }
+    transform(quality.begin(), quality.end(), quality.begin(), ::tolower);
+    if (find(begin(quality_list), end(quality_list), quality) == end(quality_list)) {
+        quality = "unknown";
     }
 }
 
@@ -66,11 +66,11 @@ void wikitext::read_importance() {
             }
             importance = page_text.substr(equal_location+1,end_location-equal_location-1);
             importance = trim(importance);
-            transform(importance.begin(), importance.end(), importance.begin(), ::tolower);
-            if (find(begin(importance_list), end(importance_list), quality) == end(importance_list)) {
-                quality = "unknown";
-            }
         }
+    }
+    transform(importance.begin(), importance.end(), importance.begin(), ::tolower);
+    if (find(begin(importance_list), end(importance_list), quality) == end(importance_list)) {
+        quality = "unknown";
     }
 }
 
