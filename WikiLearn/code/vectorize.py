@@ -175,6 +175,12 @@ class word2vec(object):
         num_incorrect = sum([len(x['incorrect']) for x in acc])
         return float(num_correct)/(num_correct+num_incorrect)
 
+    def save_vocab(self, path):
+        vocab = model.vocab.keys()
+        with open(path, 'w+') as f:      
+            for i in xrange(0, len(vocab)):
+                f.write(vocab[i].encode('UTF-8') + '\n')
+
     def load_pretrained(self, directory, version='google'):
         if version == 'google':
             url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"

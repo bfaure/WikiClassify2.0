@@ -19,6 +19,7 @@ import math
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
 from WikiLearn.code.vectorize import word2vec
+from WikiLearn.code.classify  import vector_classifier
 
 from pathfinder import get_queries, astar_path
 
@@ -36,12 +37,44 @@ def get_encoder(tsv_path, make_phrases, directory, features, context_window, min
         encoder.load(directory)
     return encoder
 
-def get_google_encoder():
+def get_pretrained_encoder():
     encoder = word2vec()
     encoder_directory = 'WikiLearn/data/models/word2vec'
     encoder.load_pretrained(encoder_directory,'google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
     return encoder
+
+'''
+def train_classifier(encoder):
+    article_classes = {}
+    with open('quality.tsv') as f:
+        for line in f:
+            try:
+                article_id, article_quality = f.strip().split('\t')
+                try:
+                    article_classes[article_id]['quality'] = article_quality
+                except:
+                    article_classes[article_id] = {}
+                    article_classes[article_id]['quality'] = article_quality
+            except:
+                pass
+    with open('importance.tsv') as f:
+        for line in f:
+            try:
+                article_id, article_importance = f.strip().split('\t')
+                try:
+                    article_classes[article_id]['importance'] = article_importance
+                except:
+                    article_classes[article_id] = {}
+                    article_classes[article_id]['importance'] = article_importance
+            except:
+                pass
+    for article_id in article_classes.keys():
+        if 'quality' not in article_classes[article_id].keys():
+            article_classes[article_id]['quality'] = 'unknown'
+        if 'importance' not in article_classes[article_id].keys():
+            article_classes[article_id]['importance'] = 'unknown'
+'''
 
 def main():
 
@@ -52,7 +85,7 @@ def main():
 
     dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
     parse_wikidump(dump_path)
-    encoder = get_google_encoder()
+    encoder = get_pretrained_encoder()
 
     while True:
         algo = raw_input("\nSelect an activity:\nPath [P]\nJoin [j]\n> ")#\na: add\n> ")
