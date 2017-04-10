@@ -175,14 +175,15 @@ class word2vec(object):
         num_incorrect = sum([len(x['incorrect']) for x in acc])
         return float(num_correct)/(num_correct+num_incorrect)
 
-    def load_pretrained(self, directory):
-        url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"
-        path = download(url,directory)
-        path = expand_gz(directory)
-        #self.model = Word2Vec.load_word2vec_format(path, binary=True)
-        print("Loading model...")
-        self.model = KeyedVectors.load_word2vec_format(path,binary=True)
-        print("Loaded Pre-Trained Google Model")
+    def load_pretrained(self, directory, version='google'):
+        if version == 'google':
+            url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"
+            path = download(url,directory)
+            path = expand_gz(directory)
+            #self.model = Word2Vec.load_word2vec_format(path, binary=True)
+            print("Loading model...")
+            self.model = KeyedVectors.load_word2vec_format(path,binary=True)
+            print("Loaded Pre-Trained Google Model")
 
     def load(self, directory):
         print("\tLoading doc2vec model...")

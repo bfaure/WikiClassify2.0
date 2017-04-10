@@ -39,7 +39,7 @@ def get_encoder(tsv_path, make_phrases, directory, features, context_window, min
 def get_google_encoder():
     encoder = word2vec()
     encoder_directory = 'WikiLearn/data/models/word2vec'
-    encoder.load_pretrained(encoder_directory)
+    encoder.load_pretrained(encoder_directory,'google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
     return encoder
 
