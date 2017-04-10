@@ -46,6 +46,12 @@ def get_pretrained_encoder():
 
 '''
 def train_classifier(encoder):
+
+    # TODO:
+    # 1. Build matrix of document vectors X
+    # 2. Build corresponding matrix of classes y
+    # 3. Pass to vector_classifier.train, and save
+
     article_classes = {}
     with open('quality.tsv') as f:
         for line in f:
