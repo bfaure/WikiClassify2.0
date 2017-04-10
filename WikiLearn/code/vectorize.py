@@ -115,11 +115,14 @@ def expand_gz(directory):
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
-class word2vec(object):
+class doc2vec(object):
 
     def __init__(self):
         print('Initializing doc2vec encoder...')
         pass
+
+    def get_all_docvecs():
+        return np.array(self.model.docvecs)
 
     def get_nearest_doc(self, doc_id):
         return [x[0] for x in self.model.docvecs.most_similar(doc_id,topn=20)]
