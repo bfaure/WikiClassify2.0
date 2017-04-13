@@ -192,7 +192,7 @@ class doc2vec(object):
             #self.model = Word2Vec.load_word2vec_format(path, binary=True)
             print("Loading model...")
             self.model = KeyedVectors.load_word2vec_format(path,binary=True)
-            print("Loaded Pre-Trained Google Model")
+            print("Loaded pretrained %s model" % version)
 
     def load(self, directory):
         print("\tLoading doc2vec model...")

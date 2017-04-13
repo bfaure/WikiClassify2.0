@@ -18,7 +18,7 @@ import math
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
-from WikiLearn.code.vectorize import word2vec
+from WikiLearn.code.vectorize import doc2vec
 
 class elem_t:
     def __init__(self,value,parent=None,cost=None):
