@@ -63,13 +63,10 @@ def download(url, directory):
                             if prog_index<=num_items: progress_string+="-"
                             else: progress_string += " "
 
-                        dl_speed = dl/(time.time()-start_time) # bytes per second
-                        rem_size = total_length-dl             # bytes remaining 
-                        rem_secs = rem_size/dl_speed           # seconds for remaining portion
-                        
-                        rem_hours = int(rem_secs/3600)                 # hours remaining 
-                        rem_mins = int((rem_secs-(rem_hours*3600))/60) # minutes remaining 
-                        rem_secs = int(rem_secs-(rem_hours*3600)-(rem_mins*60)) # seconds remaining
+                        rem_secs = (total_length-dl)/(dl/(time.time()-start_time)) # total seconds remaining
+                        rem_hours = int(rem_secs/3600)                 
+                        rem_mins = int((rem_secs-(rem_hours*3600))/60) 
+                        rem_secs = int(rem_secs-(rem_hours*3600)-(rem_mins*60)) 
                         rem_time_str = "ETA: "+str(rem_hours)+"h "+str(rem_mins)+"m "+str(rem_secs)+"s"
 
                         sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done | "+rem_time_str+"  ")
