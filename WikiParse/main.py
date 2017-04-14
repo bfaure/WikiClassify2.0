@@ -4,7 +4,7 @@ from __future__ import print_function
 
 #                          Standard imports
 #-----------------------------------------------------------------------------#
-import os, requests, sys, random, re, tarfile, codecs, bz2
+import os, requests, sys, random, re, tarfile, codecs, bz2, time
 random.seed(0)
 reload(sys);
 sys.setdefaultencoding("utf-8")
@@ -49,6 +49,7 @@ def download(url, directory):
                 total_length = response.headers.get('content-length')
                 megabytes = int(total_length)/1000000
                 sys.stdout.write(str(megabytes)+" MB\n")
+                start_time = time.time()
 
                 if total_length is not None:
                     dl = 0
@@ -61,7 +62,17 @@ def download(url, directory):
                         for prog_index in range(25):
                             if prog_index<=num_items: progress_string+="-"
                             else: progress_string += " "
-                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done")
+
+                        dl_speed = dl/(time.time()-start_time) # bytes per second
+                        rem_size = total_length-dl             # bytes remaining 
+                        rem_secs = rem_size/dl_speed           # seconds for remaining portion
+                        
+                        rem_hours = int(rem_secs/3600)                 # hours remaining 
+                        rem_mins = int((rem_secs-(rem_hours*3600))/60) # minutes remaining 
+                        rem_secs = int(rem_secs-(rem_hours*3600)-(rem_mins*60)) # seconds remaining
+                        rem_time_str = "ETA: "+str(rem_hours)+"h "+str(rem_mins)+"m "+str(rem_secs)+"s"
+
+                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done | "+rem_time_str+"  ")
                         sys.stdout.flush()
                     sys.stdout.write("\n")
                 else:
@@ -123,6 +134,7 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
             call(["g++","--std=c++11","-O3"]+scripts+["-lpqxx","-lpq","-o","wikiparse.out"])
         except:
             return False
+
     if os.path.isfile('wikiparse.out'):
         if os.name == "nt":
             print("\tDetected Windows, altering command...")

@@ -97,11 +97,13 @@ def classify_importance(encoder):
 
 def main():
 
+    # command line argument to open the gui window
     if len(sys.argv)==2 and sys.argv[1] in ["-g","-gui"]:
         from interface import start_gui
         start_gui()
         return
 
+    # if the parsed wikidump is not present in repository
     if not os.path.isfile('text.tsv'):
         dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
         parse_wikidump(dump_path)

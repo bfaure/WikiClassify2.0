@@ -16,11 +16,13 @@ except:
 from time import time
 from time import sleep
 
-from main import get_encoder, get_google_encoder
+#from main import get_encoder, get_google_encoder
+from main import get_encoder
 from pathfinder import PriorityQueue, rectify_path, get_transition_cost, elem_t
 
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus, expand_bz2
-from WikiLearn.code.vectorize import word2vec
+#from WikiLearn.code.vectorize import word2vec
+from WikiLearn.code.vectorize import doc2vec
 
 try:
 	import psycopg2
