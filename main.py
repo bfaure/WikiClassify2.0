@@ -34,16 +34,27 @@ def get_encoder(tsv_path, make_phrases, directory, features, context_window, min
 
 def classify_quality(encoder, directory):
 
-    print('Parsing quality...')
+    sys.stdout.write('Parsing quality... ')
+    sys.stdout.flush()
+
     y = []
     ids = []
-    classes = {"fa":np.array([0,0,0,0,0,0,1],dtype=bool),\
-               "a":np.array([0,0,0,0,0,1,0],dtype=bool),\
-               "ga":np.array([0,0,0,0,1,0,0],dtype=bool),\
-               "b":np.array([0,0,0,1,0,0,0],dtype=bool),\
-               "c":np.array([0,0,1,0,0,0,0],dtype=bool),\
+    classes = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
+               "a"    :np.array([0,0,0,0,0,1,0],dtype=bool),\
+               "ga"   :np.array([0,0,0,0,1,0,0],dtype=bool),\
+               "b"    :np.array([0,0,0,1,0,0,0],dtype=bool),\
+               "c"    :np.array([0,0,1,0,0,0,0],dtype=bool),\
                "start":np.array([0,1,0,0,0,0,0],dtype=bool),\
-               "stub":np.array([1,0,0,0,0,0,0],dtype=bool)}
+               "stub" :np.array([1,0,0,0,0,0,0],dtype=bool)}
+
+    counts  = {"fa"   :0,\
+               "a"    :0,\
+               "ga"   :0,\
+               "b"    :0,\
+               "c"    :0,\
+               "start":0,\
+               "stub" :0,\
+               "unknown":0}
 
     with open('quality.tsv') as f:
         for line in f:
@@ -51,8 +62,13 @@ def classify_quality(encoder, directory):
                 article_id, article_quality = line.strip().split('\t')
                 y.append(classes[article_quality])
                 ids.append(article_id)
+                counts[article_quality]+=1
             except:
-                pass
+                counts["unknown"]+=1
+
+    sys.stdout.write(str(len(y))+" entries\n")
+    for key,value in counts.iteritems():
+        print("\t"+key+" - "+str(value)+" entries")
 
     y = np.array(y)
 
