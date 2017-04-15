@@ -111,6 +111,22 @@ def classify_importance(encoder):
     y = 
 '''
 
+def check_tsv_files(base_dir="."):
+    print("Checking .tsv files for corruption...")
+    all_items = os.listdir(base_dir)
+    for fname in all_items:
+        if os.path.isfile(fname):
+            if fname.find(".tsv")!=-1:
+                sys.stdout.write(fname+"... ")
+                sys.stdout.flush()
+                try:
+                    f = open(fname,"r")
+                    text = f.read()
+                    sys.stdout.write("okay\n")
+                except:
+                    sys.stdout.write("failure\n")
+                sys.stdout.flush()
+
 def main():
 
     # command line argument to open the gui window
@@ -124,12 +140,16 @@ def main():
         dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
         parse_wikidump(dump_path)
 
-    #encoder = doc2vec()
-    #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
-    #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+    validate_tsv_files()
+    return
 
-    encoder = None
-    classify_quality(encoder,'WikiLearn/data/models/classifier')
+    # load the pretrained google model
+    encoder = doc2vec()
+    encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
+    print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+
+    #encoder = None
+    #classify_quality(encoder,'WikiLearn/data/models/classifier')
 
     '''
     while True:

@@ -326,8 +326,10 @@ void wikidump::save_page(wikipage &wp)
     // if an actual article page
     if (wp.is_article()) 
     {
+        // write out article id and article text
         text<<wp.id<<'\t'<<wp.text<<'\n';
 
+        // write out article id and article categories
         categories<<wp.id<<'\t';;
         for (auto& category:wp.categories) {
             if (title_map.find(category) != title_map.end()) {
@@ -347,6 +349,7 @@ void wikidump::save_page(wikipage &wp)
         }
         links<<'\n';
 
+        // if currently connected to server and allowed to write a page
         if ( connected_to_server )
         {
             server_write_buffer.push_back(wp);

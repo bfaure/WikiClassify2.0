@@ -31,8 +31,12 @@ class vector_classifier(object):
         print("\tTraining classifier...")
         train_instances = int((1-test_ratio)*X.shape[0])
 
+        # train on the training samples (as many cpus as avail.)
         self.model  = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y[:train_instances])
+        
+        # score on the testing samples 
         self.scores = cross_val_score(self.model,X[train_instances:],y[train_instances:],cv=5)
+
         print("Accuracy: %0.1f%% (+/- %0.1f%%)" % (100*self.scores.mean(), 100*self.scores.std()*2))
         return self.scores.mean(), self.scores.std()*2
 
