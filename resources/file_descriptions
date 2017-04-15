@@ -1,0 +1,42 @@
+-----------------------------------------------------------------------------------------------
+Base Directory:
+
+authors.tsv (0B): 
+	First column = article ID, Second column = author strings separated by spaces
+
+categories.tsv (336MB): 
+	First column = article ID, Second column = List of category IDs (map to category string in titles.tsv)
+
+category_parents.tsv (0B):
+	First column = category ID, Second column = parent category ID
+
+domains.tsv (0B):
+	First column = article ID, Second column = website strings separated by spaces 
+
+importance.tsv (75MB):
+	First column = article ID, Second column = importance string (top,high,mid,low,unknown)
+
+links.tsv (1.6GB):
+	First column = article ID, Second column = List of link IDs (map to link string in titles.tsv)
+
+quality.tsv (76MB):
+	First column = article ID, Second column = quality string (fa,a,ga,b,c,start,stub,unknown)
+
+redirects.tsv (218MB):
+	First column = name of article, Second column = article ID of actual target 
+
+text.tsv (10.2GB):
+	First column = article ID, Second column = all text of article (string format)
+
+titles.tsv (1.2GB):
+	First column = article ID, Second column = article title (string)
+
+-----------------------------------------------------------------------------------------------
+WikiLearn/data/models/tokenizer:
+
+/text/word_list.tsv (1.4MB): 
+	First column = word ID, Second column = word (string), Third column = occurence count
+
+/links/word_list.tsv (1.4MB):
+	First column = link ID, Second column = 
+

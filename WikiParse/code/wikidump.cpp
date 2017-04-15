@@ -101,10 +101,12 @@ wikidump::wikidump(string &path, string &cutoff_date, string password, string ho
         connected_to_server = false;
     }
 
+    // open the specified dump (xml) file
     dump_input = ifstream(path,ifstream::binary);
     if (dump_input.is_open()){  dump_size = ifstream(path,ifstream::ate|ifstream::binary).tellg();  }
     else                     {  cout<<"Could not open dump! ("<<path<<")\n";  }
 
+    // save the specified cutoff date
     cutoff_year  = stoi(cutoff_date.substr(0,4));
     cutoff_month = stoi(cutoff_date.substr(4,2));
     cutoff_day   = stoi(cutoff_date.substr(6,2));
@@ -112,9 +114,8 @@ wikidump::wikidump(string &path, string &cutoff_date, string password, string ho
 
 void wikidump::read(bool build_keys)
 {
-
-    if (build_keys){  cout<<"\nBuilding keys...\n";  }
-    else           {  cout<<"\nReading dump...\n";  }
+    if (build_keys){  cout<<"\nBuilding keys...\n";  } // 
+    else           {  cout<<"\nReading dump...\n";   }
 
     articles_read = 0;
     unsigned long long last_articles_read = 0;
@@ -161,19 +162,21 @@ unsigned wikidump::save_buffer(const string &str, bool build_keys) {
     while (p1!=string::npos) {
         p1 += tag1.length();
         p2  = str.find(tag2, p1);
-        if (p2!=string::npos) {
-            if (build_keys) {
+        if (p2!=string::npos) 
+        {
+            // saving the title and redirect mappings 
+            if (build_keys) 
+            {   
                 wikipage wp(str.substr(p1, p2-p1));
-                if (wp.redirect.empty()) {
-                    title_map[wp.title] = wp.id;
-                }
-                else {
-                    redirect_map[wp.title] = wp.redirect;
-                }
+                if (wp.redirect.empty()){  title_map[wp.title] = wp.id;           }
+                else                    {  redirect_map[wp.title] = wp.redirect;  }
             }
-            else {
+            // saving the actual article contents
+            else 
+            {   
                 wikipage wp(str.substr(p1, p2-p1));
-                if (wp.is_after(cutoff_year, cutoff_month, cutoff_day)) {
+                if (wp.is_after(cutoff_year, cutoff_month, cutoff_day)) 
+                {
                     wp.read();
                     save_page(wp);
                 }
@@ -181,9 +184,7 @@ unsigned wikidump::save_buffer(const string &str, bool build_keys) {
             articles_read++;
             p1 = str.find(tag1, p2+tag2.length());
         }
-        else {
-            return p1-tag1.length();
-        }
+        else {  return p1-tag1.length();  }
     }
     return p2;
 }
@@ -320,9 +321,11 @@ void wikidump::server_write()
     }
 }
 
-void wikidump::save_page(wikipage &wp) {
-
-    if (wp.is_article()) {
+void wikidump::save_page(wikipage &wp) 
+{
+    // if an actual article page
+    if (wp.is_article()) 
+    {
         text<<wp.id<<'\t'<<wp.text<<'\n';
 
         categories<<wp.id<<'\t';;
@@ -368,7 +371,9 @@ void wikidump::save_page(wikipage &wp) {
 //        }
 //        domains<<'\n';
     }
-    if (wp.is_talk()) {
+    // if a talk page
+    if (wp.is_talk()) 
+    {
         string title = wp.title.substr(5);
         if (title_map.find(title) != title_map.end()) {
             quality<<wp.id<<'\t';
