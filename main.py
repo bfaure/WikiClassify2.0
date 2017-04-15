@@ -140,8 +140,7 @@ def main():
         dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
         parse_wikidump(dump_path)
 
-    validate_tsv_files()
-    return
+    #check_tsv_files()
 
     # load the pretrained google model
     encoder = doc2vec()
