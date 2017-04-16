@@ -166,8 +166,9 @@ class doc2vec(object):
         print('\tTime elapsed: %0.2f hours' % (elapsed))
         #self.model.init_sims(replace=True)
 
-        print("\tSaving doc2vec model...")
-        self.model.save(directory+'/word2vec.d2v')
+        if directory!=None:
+            print("\tSaving doc2vec model...")
+            self.model.save(directory+'/word2vec.d2v')
 
     def test(self):
         directory = "WikiLearn/data/tests/"

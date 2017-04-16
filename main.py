@@ -127,6 +127,27 @@ def check_tsv_files(base_dir="."):
                     sys.stdout.write("failure\n")
                 sys.stdout.flush()
 
+def get_dictionaries(model_dir='WikiLearn/data/models/doc2vec/'):
+    if model_dir[-1]!="/": model_dir += "/" 
+    text_documents,categories_documents,links_documents = None,None,None
+    
+    if os.path.isfile('text.tsv'):
+        print("Getting text dictionary...")
+        text_documents = gensim_corpus('text.tsv',model_dir+"text",make_phrases=True)
+    else: print("text.tsv not present, could not create text dictionary")
+    
+    if os.path.isfile('categories.tsv'):
+        print("Getting categories dictionary...")
+        categories_documents = gensim_corpus('categories.tsv',model_dir+"categories",make_phrases=False)
+    else: print("categories.tsv not present, could not create categories dictionary")
+    
+    if os.path.isfile('links.tsv'):
+        print("Getting links dictionary...")
+        links_documents = gensim_corpus('links.tsv',model_dir+"links",make_phrases=False)
+    else: print("links.tsv not present, could not create links dictionary")
+    
+    return text_documents,categories_documents,links_documents
+
 def main():
 
     # command line argument to open the gui window
@@ -140,11 +161,19 @@ def main():
         dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
         parse_wikidump(dump_path)
 
-    #check_tsv_files()
+    #check_tsv_files()    
 
     # load the pretrained google model
     encoder = doc2vec()
     encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
+    #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+
+    # get the text, categories, and links dictionaries
+    text,categories,links = get_dictionaries()
+
+    # train the google encoder on single epoch of text documents 
+    print("Training model on new data")
+    encoder.train(corpus=text, epochs=1)
     print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
 
     #encoder = None
