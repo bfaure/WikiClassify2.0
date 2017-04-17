@@ -185,6 +185,19 @@ class doc2vec(object):
             for i in xrange(0, len(vocab)):
                 f.write(vocab[i].encode('UTF-8') + '\n')
 
+    def intersect_pretrained(self, directory, version='google'):
+        if not hasattr(self,'model'): 
+            print("You must have a trained model before calling intersect_pretrained")
+            return 
+
+        if version == 'google':
+            url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"
+            path = download(url,directory)
+            path = expand_gz(directory)
+            print("Loading model...")
+            self.model.intersect_word2vec_format(path,binary=True)
+            print("Loaded pretrained %s model" % version)
+
     def load_pretrained(self, directory, version='google'):
         if version == 'google':
             url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"

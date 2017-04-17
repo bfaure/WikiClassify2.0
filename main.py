@@ -162,19 +162,26 @@ def main():
         parse_wikidump(dump_path)
 
     #check_tsv_files()    
+    text,categories,links = get_dictionaries('WikiLearn/data/models/simplewiki_model/')
 
-    # load the pretrained google model
     encoder = doc2vec()
-    encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
+    encoder.build()
+    encoder.train(corpus=text,epochs=1)
+    print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+
+    encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
+    print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+
+    #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
 
     # get the text, categories, and links dictionaries
-    text,categories,links = get_dictionaries()
+    #text,categories,links = get_dictionaries()
 
     # train the google encoder on single epoch of text documents 
-    print("Training model on new data")
-    encoder.train(corpus=text, epochs=1)
-    print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+    #print("Training model on new data")
+    #encoder.train(corpus=text, epochs=1)
+    #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
 
     #encoder = None
     #classify_quality(encoder,'WikiLearn/data/models/classifier')
