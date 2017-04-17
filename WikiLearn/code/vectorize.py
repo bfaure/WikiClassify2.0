@@ -126,6 +126,98 @@ def lowerize(directory, path):
     new_f.close()
     return directory+new_file
 
+#                             LDA encoder ** Untested w/ current updates
+#-----------------------------------------------------------------------------#
+
+class LDA(object):
+
+    def __init__(self, corpus, directory):
+        print("Initializing LDA model...")
+
+        self.corpus    = corpus
+        self.directory = directory
+
+        if not os.path.exists(self.directory):
+
+            # Create main model
+            self.build(features=5000)
+            self.train(epochs=1)
+            self.save()
+
+            # Create classifier
+            self.train_classifier()
+            self.save_classifier()
+
+        else:
+            self.load()
+            self.accuracy, self.precision = self.train_classifier()
+            #self.load_classifier()
+
+    # Model I/O
+
+    def build(self, features=5000):
+        print("\tBuilding LDA model...")
+        self.features = features
+
+    def train(self, epochs=1):
+        '''For Wikipedia, use at least 5k-10k topics
+        Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
+        print("\tTraining LDA model...")
+        self.model = LdaModel(corpus=self.corpus.bags, num_topics=self.features, id2word=self.corpus.get_word_map(), passes=epochs)
+
+    def save(self):
+        print("\tSaving LDA model...")
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        self.model.save(self.directory+'/LDA.model')
+
+    def load(self):
+        print("\tLoading LDA model...")
+        self.model = LdaModel.load(self.directory+'/LDA.model')
+        self.features = self.model.num_topics
+
+    def get_topics(self, words=20):
+        '''Returns all topics'''
+        topics = self.model.show_topics(num_topics=-1,num_words=words,formatted=False)
+        terms  = [y[0] for x in topics for y in x[1]]
+        return [terms[i:i+words] for i in xrange(0,len(terms),words)]
+
+    def train_classifier(self):
+        X = self.encode_docs(100000)
+        #y = self.corpus.get_doc_categories(100000)
+        self.classifier = vector_classifier(self.directory)
+        return self.classifier.train(X, y)
+
+    def save_classifier(self):
+        self.classifier.save()
+
+    def load_classifier(self):
+        self.classifier = vector_classifier(self.directory).load()
+
+    # Model methods
+
+    def encode_doc(self, doc):
+        return np.array([x[1] for x in self.model.get_document_topics(doc, minimum_probability=0.0)])
+
+    def encode_docs(self, limit=-1):
+        print("\tEncoding documents...")
+        vecs = []
+        times = []
+        for i, doc in enumerate(self.corpus.bags):
+            start = time.time()
+            vecs.append(self.encode_doc(doc))
+            if i == limit:
+                break
+
+            # Progress
+            times.append(time.time()-start)
+            if not i % (self.corpus.instances()//100):
+                remaining = sum(times)*(self.corpus.instances()-i-1)/len(times)/3600
+                print('\t\t%0.2f hours remaining...\n' % remaining)
+                times = times[-10000:]
+
+        return np.array(vecs)
+
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
