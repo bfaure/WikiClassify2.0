@@ -222,7 +222,7 @@ def main():
     #elif algo.lower() in ["add"]:
     #    word_algebra(encoder)
     '''
-    print("\nTotal time: "+str(time.time()-start_time)[:7]+" seconds")
+    print("\nTotal time: %0.2f seconds" % (time.time()-start_time))
 
 if __name__ == "__main__":
     main()

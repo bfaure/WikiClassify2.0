@@ -58,18 +58,18 @@ class epoch_timer(object):
     def get_elapsed(self):
         return sum(self.times)/3600.0
 
-def download(url, directory):
+def download(url, directory, show=True):
     if not os.path.isdir(directory): os.makedirs(directory)
     file_name = os.path.basename(urlparse(url)[2])
     file_path = os.path.join(directory, file_name)
-    sys.stdout.write("\tDownloading '%s'... " % file_name)
+    if show: sys.stdout.write("\tDownloading '%s'... " % file_name)
     if not os.path.isfile(file_path):
         try:
             with open(file_path, "wb") as f:
                 response = requests.get(url, stream=True)
                 total_length = response.headers.get('content-length')
                 megabytes = int(total_length)/1000000
-                sys.stdout.write(str(megabytes)+" MB\n")
+                if show: sys.stdout.write(str(megabytes)+" MB\n")
 
                 if total_length is not None:
                     dl = 0
@@ -82,15 +82,15 @@ def download(url, directory):
                         for prog_index in range(25):
                             if prog_index<=num_items: progress_string+="-"
                             else: progress_string += " "
-                        sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done")
-                        sys.stdout.flush()
-                    sys.stdout.write("\n")
+                        if show: sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done")
+                        if show: sys.stdout.flush()
+                    if show: sys.stdout.write("\n")
                 else:
                     f.write(response.content)
         except:
             print("\t\tCould not download '%s'." % file_name)
     else:
-        print("\n\t\t'%s' already exists." % file_name)
+        if show: print("\n\t\t'%s' already exists." % file_name)
     return file_path
 
 def expand_gz(directory):
@@ -111,6 +111,20 @@ def expand_gz(directory):
     #else:
     #    print("\t\tFile already expanded.")
     print("No gz files in directory.")
+
+def lowerize(directory, path):
+    if directory[-1]!="/": directory+="/"
+    file = path.split("/")[-1]
+    new_file = file.split(".")[0]+"-lower.txt"
+    if os.path.exists(directory+new_file): return directory+new_file
+    f = open(path,"r")
+    text = f.read()
+    new_text = text.lower()
+    f.close()
+    new_f = open(directory+new_file,"w")
+    new_f.write(new_text)
+    new_f.close()
+    return directory+new_file
 
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
@@ -149,22 +163,33 @@ class doc2vec(object):
 
     def train(self, corpus, epochs=10, directory=None, test=False):
         if directory!=None and directory[-1]!='/': directory+='/'
-        print("\t\tBuilding vocab...")
+        t_e = time.time()
+        sys.stdout.write("\t\tBuilding vocab... ")
+        sys.stdout.flush()
         self.model.build_vocab(corpus)
+        sys.stdout.write("%0.2f sec\n" % (time.time()-t_e))
 
         print("\tTraining doc2vec model...")
-
         t = epoch_timer(epochs)
         for i in xrange(epochs):
             t.start()
-            print("\t\tEpoch %s..." % (i+1))
+            t_e = time.time()
+            sys.stdout.write("\t\tEpoch %d... " % (i+1))
+            sys.stdout.flush()
             self.model.train(corpus)
+            sys.stdout.write("%0.2f sec\n" % (time.time()-t_e))
             t.stop()
 
-            if test: self.test()
+            if test: 
+                acc = self.test(lower=True,show=False)
+                print("\t\t\tModel Acc: \t%0.2f%%" % (100*acc))
+
             if directory!=None: 
-                print("\t\tSaving current model...")
+                t_e = time.time()
+                sys.stdout.write("\t\tSaving current model... ")
+                sys.stdout.flush()
                 self.model.save(directory+"/word2vec-(training-%d).d2v" % i)
+                sys.stdout.write("%0.2f sec\n" % (time.time()-t_e))
 
         elapsed  = t.get_elapsed()
         print('\tTime elapsed: %0.2f hours' % (elapsed))
@@ -174,16 +199,17 @@ class doc2vec(object):
             print("\tSaving doc2vec model...")
             self.model.save(directory+'/word2vec.d2v')
 
-    def test(self):
-        print("Testing model...")
+    def test(self,lower=False,show=True):
+        if show: print("Testing model...")
         directory = "WikiLearn/data/tests/"
         url = "https://raw.githubusercontent.com/nicholas-leonard/word2vec/master/questions-words.txt"
-        path = download(url,directory)
+        path = download(url,directory,show)
+        if lower: path = lowerize(directory,path)
         acc = self.model.accuracy(path, case_insensitive=True)
         num_correct = sum([len(x['correct']) for x in acc])
         num_incorrect = sum([len(x['incorrect']) for x in acc])
         acc = float(num_correct)/(num_correct+num_incorrect)
-        print("Model Accuracy: %0.2f%%" % (100*acc))
+        if show: print("Model Accuracy: %0.2f%%" % (100*acc))
         return acc
 
     def save_vocab(self, path):
