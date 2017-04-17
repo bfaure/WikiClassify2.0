@@ -148,7 +148,7 @@ class doc2vec(object):
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=7)
 
     def train(self, corpus, epochs=10, directory=None, test=False):
-
+        if directory!=None and directory[-1]!='/': directory+='/'
         print("\t\tBuilding vocab...")
         self.model.build_vocab(corpus)
 
@@ -160,15 +160,17 @@ class doc2vec(object):
             print("\t\tEpoch %s..." % (i+1))
             self.model.train(corpus)
             t.stop()
-            
+
             if test: self.test()
+            if directory!=None: 
+                print("\t\tSaving current model...")
+                self.model.save(directory+"/word2vec-(training-%d).d2v" % i)
 
         elapsed  = t.get_elapsed()
         print('\tTime elapsed: %0.2f hours' % (elapsed))
         #self.model.init_sims(replace=True)
 
         if directory!=None:
-            if directory[-1]!="/": directory += "/" 
             print("\tSaving doc2vec model...")
             self.model.save(directory+'/word2vec.d2v')
 
