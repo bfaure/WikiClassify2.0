@@ -168,10 +168,9 @@ def main():
     encoder = doc2vec()
     encoder.build(features=300,context_window=8,threads=6)
     encoder.train(corpus=text,epochs=100,directory='WikiLearn/data/models/doc2vec',test=True)
-    encoder.test()
 
     encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
-    encoder.test()
+    encoder.test(lower=True,show=True)
 
     #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))

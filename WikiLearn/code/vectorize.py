@@ -182,7 +182,7 @@ class doc2vec(object):
 
             if test: 
                 acc = self.test(lower=True,show=False)
-                print("\t\t\tModel Acc: \t%0.2f%%" % (100*acc))
+                print("\t\t\tModel Acc: \t%0.7f%%" % (100*acc))
 
             if directory!=None: 
                 t_e = time.time()
@@ -209,7 +209,7 @@ class doc2vec(object):
         num_correct = sum([len(x['correct']) for x in acc])
         num_incorrect = sum([len(x['incorrect']) for x in acc])
         acc = float(num_correct)/(num_correct+num_incorrect)
-        if show: print("Model Accuracy: %0.2f%%" % (100*acc))
+        if show: print("Model Accuracy: %0.7f%%" % (100*acc))
         return acc
 
     def save_vocab(self, path):
