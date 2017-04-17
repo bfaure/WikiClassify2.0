@@ -164,17 +164,19 @@ class doc2vec(object):
     def train(self, corpus, epochs=10, directory=None, test=False):
         if directory!=None and directory[-1]!='/': directory+='/'
 
+        # calcualte the effective size of training corpus given the skip_rate probability
         eff_size = corpus.document_size*corpus.skip_rate 
         print("\tEffective corpus size: %d MB" % int(eff_size/1000000))
 
-        pred_epoch_time = (3.49199*(10**-6)*eff_size)+142.112
-        print("\tPredicted epoch time: %0.2f sec" % pred_epoch_time)
+        # linear best fit line from wolfram alpha
+        pred_epoch_time = (3.94749*(10**-6)*eff_size)+125.886 
+        print("\tPredicted epoch time:  %0.1f sec" % pred_epoch_time)
 
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
         sys.stdout.flush()
         self.model.build_vocab(corpus)
-        sys.stdout.write("%0.2f sec\n" % (time.time()-t_e))
+        sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
 
         print("\tTraining doc2vec model...")
         t = epoch_timer(epochs)
@@ -184,7 +186,7 @@ class doc2vec(object):
             sys.stdout.write("\t\tEpoch %d... " % (i+1))
             sys.stdout.flush()
             self.model.train(corpus)
-            sys.stdout.write("%0.2f sec\n" % (time.time()-t_e))
+            sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
             t.stop()
 
             if test: 
@@ -196,7 +198,7 @@ class doc2vec(object):
                 sys.stdout.write("\t\tSaving current model... ")
                 sys.stdout.flush()
                 self.model.save(directory+"/word2vec-(training-%d).d2v" % i)
-                sys.stdout.write("%0.2f sec\n" % (time.time()-t_e))
+                sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
 
         elapsed  = t.get_elapsed()
         print('\tTime elapsed: %0.2f hours' % (elapsed))

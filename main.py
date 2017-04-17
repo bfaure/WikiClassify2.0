@@ -163,10 +163,10 @@ def main():
         parse_wikidump(dump_path)
 
     #check_tsv_files()    
-    text,categories,links = get_dictionaries('WikiLearn/data/models/doc2vec/', skip_rate=0.001)
+    text,categories,links = get_dictionaries('WikiLearn/data/models/doc2vec/', skip_rate=0.1)
 
     encoder = doc2vec()
-    encoder.build(features=300,context_window=8,threads=6)
+    encoder.build(features=300,context_window=8,threads=8)
     encoder.train(corpus=text,epochs=100,directory='WikiLearn/data/models/doc2vec',test=True)
 
     encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
