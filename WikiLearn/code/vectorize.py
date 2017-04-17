@@ -167,10 +167,12 @@ class doc2vec(object):
         #self.model.init_sims(replace=True)
 
         if directory!=None:
+            if directory[-1]!="/": directory += "/" 
             print("\tSaving doc2vec model...")
             self.model.save(directory+'/word2vec.d2v')
 
     def test(self):
+        print("Testing model...")
         directory = "WikiLearn/data/tests/"
         url = "https://raw.githubusercontent.com/nicholas-leonard/word2vec/master/questions-words.txt"
         path = download(url,directory)
@@ -186,19 +188,24 @@ class doc2vec(object):
                 f.write(vocab[i].encode('UTF-8') + '\n')
 
     def intersect_pretrained(self, directory, version='google'):
+        if directory[-1]!="/": directory += "/" 
+
         if not hasattr(self,'model'): 
             print("You must have a trained model before calling intersect_pretrained")
             return 
 
         if version == 'google':
+            print("Intersecting model with Google model...")
             url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"
             path = download(url,directory)
             path = expand_gz(directory)
-            print("Loading model...")
+            print("\tMerging...")
             self.model.intersect_word2vec_format(path,binary=True)
-            print("Loaded pretrained %s model" % version)
+            print("Merged model with %s model" % version)
 
     def load_pretrained(self, directory, version='google'):
+        if directory[-1]!="/": directory += "/" 
+
         if version == 'google':
             url = "https://s3.amazonaws.com/mordecai-geo/GoogleNews-vectors-negative300.bin.gz"
             path = download(url,directory)
@@ -209,6 +216,8 @@ class doc2vec(object):
             print("Loaded pretrained %s model" % version)
 
     def load(self, directory):
+        if directory[-1]!="/": directory += "/" 
+
         print("\tLoading doc2vec model...")
         self.model = Doc2Vec.load(directory+'/word2vec.d2v')
         self.features = self.model.docvecs[0].shape[0]

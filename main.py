@@ -149,6 +149,7 @@ def get_dictionaries(model_dir='WikiLearn/data/models/doc2vec/'):
     return text_documents,categories_documents,links_documents
 
 def main():
+    start_time = time.time()
 
     # command line argument to open the gui window
     if len(sys.argv)==2 and sys.argv[1] in ["-g","-gui"]:
@@ -162,15 +163,19 @@ def main():
         parse_wikidump(dump_path)
 
     #check_tsv_files()    
-    text,categories,links = get_dictionaries('WikiLearn/data/models/simplewiki_model/')
+    text,categories,links = get_dictionaries('WikiLearn/data/models/tokenizer/')
 
     encoder = doc2vec()
-    encoder.build()
-    encoder.train(corpus=text,epochs=1)
+    encoder.load(directory='WikiLearn/data/models/tokenizer/')
+    #encoder.build(features=300)
+    #encoder.train(corpus=text,epochs=1,directory='WikiLearn/data/models/tokenizer')
+
     print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
 
     encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
     print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+
+    print("\nTotal time: "+str(time.time()-start_time)[:7]+" seconds")
 
     #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
