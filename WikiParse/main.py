@@ -188,7 +188,7 @@ class text_corpus(object):
         with open(self.document_path,'rb') as fin:
             for line in fin:
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
-                    if np.random.rand() < 0.001:
+                    if np.random.rand() < 0.01:
                         i, doc = line.decode('utf-8',errors='replace').strip().split('\t')
                         yield i, doc
 
