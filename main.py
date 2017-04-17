@@ -13,7 +13,7 @@ import numpy as np
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
-from WikiLearn.code.vectorize import doc2vec
+from WikiLearn.code.vectorize import doc2vec, LDA
 from WikiLearn.code.classify  import vector_classifier
 
 from pathfinder import get_queries, astar_path
@@ -159,18 +159,34 @@ def main():
 
     # if the parsed wikidump is not present in repository
     if not os.path.isfile('text.tsv'):
+        # download (if not already present)
         dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
+        # parse the .xml file
         parse_wikidump(dump_path)
 
-    #check_tsv_files()    
+    # create dictionaries (load if already present)
     text,categories,links = get_dictionaries('WikiLearn/data/models/doc2vec/', skip_rate=0.1)
 
-    encoder = doc2vec()
-    encoder.build(features=300,context_window=8,threads=8)
-    encoder.train(corpus=text,epochs=100,directory='WikiLearn/data/models/doc2vec',test=True)
+    # settings for exeuction
+    doc2vec = False 
+    LDA     = False
 
-    encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
-    encoder.test(lower=True,show=True)
+    if doc2vec:
+        # create doc2vec object    
+        encoder = doc2vec()
+        # set model hyperparameters
+        encoder.build(features=300,context_window=8,threads=8)
+        # train model on text corpus
+        encoder.train(corpus=text,epochs=100,directory='WikiLearn/data/models/doc2vec',test=True)
+        # attempt to intersect model with pretrained google doc2vec
+        encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
+        # test the final resultant model
+        encoder.test(lower=True,show=True)
+
+    if LDA:
+        # create the LDA object 
+        encoder = LDA(corpus=text,directory='WikiLearn/data/models/LDA')
+
 
     #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))

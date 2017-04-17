@@ -167,8 +167,7 @@ class LDA(object):
 
     def save(self):
         print("\tSaving LDA model...")
-        if not os.path.exists(self.directory):
-            os.makedirs(self.directory)
+        if not os.path.exists(self.directory): os.makedirs(self.directory)
         self.model.save(self.directory+'/LDA.model')
 
     def load(self):
