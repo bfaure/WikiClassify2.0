@@ -166,16 +166,13 @@ def main():
     text,categories,links = get_dictionaries('WikiLearn/data/models/tokenizer/')
 
     encoder = doc2vec()
-    encoder.load(directory='WikiLearn/data/models/tokenizer/')
-    #encoder.build(features=300)
-    #encoder.train(corpus=text,epochs=1,directory='WikiLearn/data/models/tokenizer')
-
-    print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+    encoder.build(features=300)
+    encoder.train(corpus=text,epochs=5,directory='WikiLearn/data/models/tokenizer',test=True)
+    encoder.test()
 
     encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
-    print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
+    encoder.test()
 
-    print("\nTotal time: "+str(time.time()-start_time)[:7]+" seconds")
 
     #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
@@ -226,6 +223,7 @@ def main():
     #elif algo.lower() in ["add"]:
     #    word_algebra(encoder)
     '''
+    print("\nTotal time: "+str(time.time()-start_time)[:7]+" seconds")
 
 if __name__ == "__main__":
     main()

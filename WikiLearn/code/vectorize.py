@@ -147,7 +147,7 @@ class doc2vec(object):
         self.features = features
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=7)
 
-    def train(self, corpus, epochs=10, directory=None):
+    def train(self, corpus, epochs=10, directory=None, test=False):
 
         print("\t\tBuilding vocab...")
         self.model.build_vocab(corpus)
@@ -156,11 +156,12 @@ class doc2vec(object):
 
         t = epoch_timer(epochs)
         for i in xrange(epochs):
-
             t.start()
             print("\t\tEpoch %s..." % (i+1))
             self.model.train(corpus)
             t.stop()
+            
+            if test: self.test()
 
         elapsed  = t.get_elapsed()
         print('\tTime elapsed: %0.2f hours' % (elapsed))
@@ -179,7 +180,9 @@ class doc2vec(object):
         acc = self.model.accuracy(path, case_insensitive=True)
         num_correct = sum([len(x['correct']) for x in acc])
         num_incorrect = sum([len(x['incorrect']) for x in acc])
-        return float(num_correct)/(num_correct+num_incorrect)
+        acc = float(num_correct)/(num_correct+num_incorrect)
+        print("Model Accuracy: %0.2f%%" % (100*acc))
+        return acc
 
     def save_vocab(self, path):
         vocab = model.vocab.keys()
