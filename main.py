@@ -127,23 +127,23 @@ def check_tsv_files(base_dir="."):
                     sys.stdout.write("failure\n")
                 sys.stdout.flush()
 
-def get_dictionaries(model_dir='WikiLearn/data/models/doc2vec/'):
+def get_dictionaries(model_dir='WikiLearn/data/models/doc2vec/', skip_rate=1.0):
     if model_dir[-1]!="/": model_dir += "/" 
     text_documents,categories_documents,links_documents = None,None,None
     
     if os.path.isfile('text.tsv'):
         print("Getting text dictionary...")
-        text_documents = gensim_corpus('text.tsv',model_dir+"text",make_phrases=True)
+        text_documents = gensim_corpus('text.tsv',model_dir+"text",make_phrases=True, skip_rate=skip_rate)
     else: print("text.tsv not present, could not create text dictionary")
     
     if os.path.isfile('categories.tsv'):
         print("Getting categories dictionary...")
-        categories_documents = gensim_corpus('categories.tsv',model_dir+"categories",make_phrases=False)
+        categories_documents = gensim_corpus('categories.tsv',model_dir+"categories",make_phrases=False, skip_rate=skip_rate)
     else: print("categories.tsv not present, could not create categories dictionary")
     
     if os.path.isfile('links.tsv'):
         print("Getting links dictionary...")
-        links_documents = gensim_corpus('links.tsv',model_dir+"links",make_phrases=False)
+        links_documents = gensim_corpus('links.tsv',model_dir+"links",make_phrases=False, skip_rate=skip_rate)
     else: print("links.tsv not present, could not create links dictionary")
     
     return text_documents,categories_documents,links_documents
@@ -163,7 +163,7 @@ def main():
         parse_wikidump(dump_path)
 
     #check_tsv_files()    
-    text,categories,links = get_dictionaries('WikiLearn/data/models/doc2vec/')
+    text,categories,links = get_dictionaries('WikiLearn/data/models/doc2vec/', skip_rate=0.001)
 
     encoder = doc2vec()
     encoder.build(features=300,context_window=8,threads=6)

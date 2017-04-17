@@ -146,8 +146,8 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
         print("\tERROR: Could not find wikiparse.out")
         return False
 
-def gensim_corpus(tsv_path, directory, make_phrases=False,):
-    text = text_corpus(tsv_path)
+def gensim_corpus(tsv_path, directory, make_phrases=False, skip_rate=1.0):
+    text = text_corpus(tsv_path,skip_rate)
     if not os.path.isfile(directory+'/dictionary.dict'):
         text.train_dictionary()
         text.save_dictionary(directory)
@@ -167,8 +167,10 @@ def tokenize(text):
 
 class text_corpus(object):
 
-    def __init__(self, tsv_path):
+    def __init__(self, tsv_path, skip_rate=1.0):
+        self.skip_rate = skip_rate
         self.document_path = tsv_path
+        self.document_size = os.path.getsize(tsv_path)
         self.instances = sum(1 for line in open(tsv_path))
         self.bigram = Phraser(Phrases())
         self.trigram = Phraser(Phrases())
@@ -188,7 +190,7 @@ class text_corpus(object):
         with open(self.document_path,'rb') as fin:
             for line in fin:
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
-                    if np.random.rand() < 0.01:
+                    if np.random.rand() < self.skip_rate:
                         i, doc = line.decode('utf-8',errors='replace').strip().split('\t')
                         yield i, doc
 

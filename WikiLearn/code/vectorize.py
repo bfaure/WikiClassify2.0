@@ -163,6 +163,13 @@ class doc2vec(object):
 
     def train(self, corpus, epochs=10, directory=None, test=False):
         if directory!=None and directory[-1]!='/': directory+='/'
+
+        eff_size = corpus.document_size*corpus.skip_rate 
+        print("\tEffective corpus size: %d MB" % int(eff_size/1000000))
+
+        pred_epoch_time = (3.49199*(10**-6)*eff_size)+142.112
+        print("\tPredicted epoch time: %0.2f sec" % pred_epoch_time)
+
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
         sys.stdout.flush()
