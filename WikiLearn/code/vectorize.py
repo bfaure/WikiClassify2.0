@@ -141,11 +141,11 @@ class doc2vec(object):
 
     # Model I/O
 
-    def build(self, features=400, context_window=8, min_count=3, sample=1e-5, negative=5):
+    def build(self, features=400, context_window=8, min_count=3, sample=1e-5, negative=5, threads=7):
         print("\tBuilding doc2vec model...")
 
         self.features = features
-        self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=7)
+        self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=threads)
 
     def train(self, corpus, epochs=10, directory=None, test=False):
         if directory!=None and directory[-1]!='/': directory+='/'

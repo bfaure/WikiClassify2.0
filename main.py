@@ -163,16 +163,15 @@ def main():
         parse_wikidump(dump_path)
 
     #check_tsv_files()    
-    text,categories,links = get_dictionaries('WikiLearn/data/models/tokenizer/')
+    text,categories,links = get_dictionaries('WikiLearn/data/models/doc2vec/')
 
     encoder = doc2vec()
-    encoder.build(features=300)
-    encoder.train(corpus=text,epochs=5,directory='WikiLearn/data/models/tokenizer',test=True)
+    encoder.build(features=300,context_window=8,threads=6)
+    encoder.train(corpus=text,epochs=100,directory='WikiLearn/data/models/doc2vec',test=True)
     encoder.test()
 
     encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
     encoder.test()
-
 
     #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
