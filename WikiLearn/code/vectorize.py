@@ -139,8 +139,8 @@ class LDA(object):
 
         if not os.path.exists(self.directory):
             # Create main model
-            self.build(features=5000)
-            self.train(epochs=10)
+            self.build(features=500)
+            self.train(epochs=1)
             self.save()
 
         else:
@@ -157,7 +157,7 @@ class LDA(object):
         '''For Wikipedia, use at least 5k-10k topics
         Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
         print("\tTraining LDA model...")
-        self.model = LdaModel(corpus=self.corpus.bags(), id2word={v: k for k, v in self.corpus.dictionary.token2id.iteritems()}, num_topics=self.features, passes=epochs)
+        self.model = LdaModel(corpus=self.corpus.bags(), id2word=self.corpus.get_word_ids(), num_topics=self.features, passes=epochs)
 
     def save(self):
         print("\tSaving LDA model...")
@@ -187,6 +187,7 @@ class LDA(object):
         times = []
         for i, doc in enumerate(self.corpus.bags()):
             start = time.time()
+            print(np.max(self.encode_doc(doc)))
             vecs.append(self.encode_doc(doc))
 
             # Progress

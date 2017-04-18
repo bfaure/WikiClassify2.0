@@ -169,7 +169,8 @@ def main():
         if run_LDA:
             # create the LDA object 
             encoder = LDA(corpus=text_documents,directory='WikiLearn/data/models/LDA')
-            encoder.encode_docs()
+            for topic in encoder.get_topics():
+                print(' '.join(topic))
     else:
         print("text.tsv not present, could not create text dictionary")
     '''

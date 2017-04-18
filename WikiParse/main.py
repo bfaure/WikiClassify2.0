@@ -226,12 +226,18 @@ class text_corpus(object):
             print("\tBuilding dictionary...")
             self.dictionary = Dictionary(self.docs(read_all=True), prune_at=2000000)
             print("\tFiltering dictionary extremes...")
-            self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000)
+            self.dictionary.filter_extremes(no_below=3, no_above=0.3, keep_n=2000000)
             print("\tSaving dictionary...")
             self.dictionary.save(directory+'/dictionary.dict')
             self.dictionary.save_as_text(directory+'/word_list.tsv')
         else:
             self.load_dictionary(directory)
+
+    def get_word_ids(self):
+        word_list = set()
+        for doc in self.docs(read_all=True):
+            word_list.update(doc)
+        return dict(zip(range(len(word_list)),word_list))
 
     def load_dictionary(self, directory):
         print("\tLoading dictionary...")
