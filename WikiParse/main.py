@@ -245,12 +245,3 @@ class text_corpus(object):
     def load_dictionary(self, directory):
         print("\tLoading dictionary...")
         self.dictionary = Dictionary.load(directory+'/dictionary.dict')
-
-class bag_corpus(object):
-
-    def __init__(self, text_corpus):
-        self.text_corpus = text_corpus
-
-    def __iter__(self):
-        for doc in self.text_corpus.docs(n_examples=-1):
-            yield self.text_corpus.dictionary.doc2bow(doc)

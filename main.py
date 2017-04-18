@@ -13,7 +13,7 @@ import numpy as np
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
-from WikiLearn.code.vectorize import doc2vec, LDA
+from WikiLearn.code.vectorize import doc2vec
 from WikiLearn.code.classify  import vector_classifier
 
 from pathfinder import get_queries, astar_path
@@ -141,14 +141,12 @@ def main():
         print("Getting text iterator...")
 
         # settings for exeuction
-        run_doc2vec = False
-        run_LDA     = True
+        run_doc2vec = True
     
         if run_doc2vec:
 
             documents = text_corpus('text.tsv')
             documents.get_phraser("WikiLearn/data/models/tokenizer/text")
-            documents.get_dictionary("WikiLearn/data/models/tokenizer/text")
 
             # create doc2vec object    
             encoder = doc2vec()
@@ -158,16 +156,7 @@ def main():
             encoder.train(corpus=documents, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
             # test the final resultant model
             encoder.test(lower=True,show=True)
-    
-        if run_LDA:
 
-            documents = text_corpus('text.tsv')
-            documents.get_dictionary("WikiLearn/data/models/tokenizer/text", keep=5000)
-
-            # create the LDA object 
-            encoder = LDA(corpus=documents,directory='WikiLearn/data/models/LDA')
-            for topic in encoder.get_topics():
-                print(' '.join(topic))
     else:
         print("text.tsv not present, could not create text dictionary")
     '''
