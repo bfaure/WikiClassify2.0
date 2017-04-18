@@ -145,7 +145,7 @@ def main():
     
         if run_doc2vec:
 
-            documents = text_corpus('text.tsv', n_examples=1000)
+            documents = text_corpus('text.tsv', n_examples=100000)
             documents.get_phraser("WikiLearn/data/models/tokenizer/text")
 
             # create doc2vec object    
