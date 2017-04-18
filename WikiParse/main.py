@@ -148,9 +148,9 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
 
 def gensim_corpus(tsv_path, directory, make_phrases=False):
     text = text_corpus(tsv_path)
-    text.get_dictionary(directory)
     if make_phrases:
             text.get_phraser(directory)
+    text.get_dictionary(directory)
     return text
 
 #                      Tagged Document iterator
@@ -164,6 +164,7 @@ class text_corpus(object):
     def __init__(self, tsv_path, n_examples=100000):
         self.n_examples = n_examples
         self.document_path = tsv_path
+        self.fin = open(self.document_path,'rb')
         self.document_size = os.path.getsize(tsv_path)
         self.instances = sum(1 for line in open(tsv_path))
         self.bigram = Phraser(Phrases())
@@ -176,24 +177,33 @@ class text_corpus(object):
     def process(self, text):
         return self.trigram[self.bigram[tokenize(text)]]
 
-    def bags(self, read_all=False):
-        return bag_corpus(self, read_all)
+    def bags(self):
+        return bag_corpus(self)
 
-    def docs(self, read_all=False):
-        for _, doc in self.indexed_docs(read_all=read_all):
+    def docs(self, n_examples=100000):
+        for _, doc in self.indexed_docs(n_examples):
             yield self.process(doc)
 
-    def indexed_docs(self, read_all=False):
-        current_example = 0
-        with open(self.document_path,'rb') as fin:
-            for line in fin:
-                if (current_example < self.n_examples) or read_all:
-                    if line.strip().count('\t') == 1 and line.count(' ') > 1:
+    def indexed_docs(self, n_examples=-1):
+        if n_examples == -1:
+            with open(self.document_path,'rb') as fin:
+                for line in fin:
+                    try:
+                        i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
+                        yield i, doc
+                    except:
+                        pass
+        else:
+            current_example = 0
+            for line in self.fin:
+                if (current_example < self.n_examples):
+                    try:
                         i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
                         yield i,doc
+                    except:
+                        pass
                 else:
                     raise StopIteration
-                current_example += 1
 
     def get_phraser(self, directory, sensitivity=2):
 
@@ -202,29 +212,29 @@ class text_corpus(object):
 
         print("\t\tGetting bigram detector...")
         if not os.path.isfile(directory+'/bigrams.pkl'):
-            self.bigram = Phraser(Phrases(self.docs(read_all=True), min_count=2, threshold=sensitivity, max_vocab_size=2000000))
+            self.bigram = Phraser(Phrases(self.docs(n_examples=-1), min_count=2, threshold=sensitivity, max_vocab_size=2000000))
             self.bigram.save(directory+'/bigrams.pkl')
         else:
-            self.bigram  = Dictionary.load(directory+'/bigrams.pkl')
+            self.bigram  = Phraser.load(directory+'/bigrams.pkl')
 
         print("\t\tGetting trigram detector...")
         if not os.path.isfile(directory+'/trigrams.pkl'):
-            self.trigram = Phraser(Phrases(self.bigram[self.docs(read_all=True)], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
+            self.trigram = Phraser(Phrases(self.bigram[self.docs(n_examples=-1)], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
             self.trigram.save(directory+'/trigrams.pkl')
         else:
-            self.trigram = Dictionary.load(directory+'/trigrams.pkl')
+            self.trigram = Phraser.load(directory+'/trigrams.pkl')
 
     def load_phraser(self, directory):
         print("\tLoading gram detector...")
-        self.bigram  = Dictionary.load(directory+'/bigrams.pkl')
-        self.trigram = Dictionary.load(directory+'/trigrams.pkl')
+        self.bigram  = Phraser.load(directory+'/bigrams.pkl')
+        self.trigram = Phraser.load(directory+'/trigrams.pkl')
 
     def get_dictionary(self, directory):
         if not os.path.isdir(directory):
             os.makedirs(directory)
         if not os.path.isfile(directory+'/dictionary.dict'):
             print("\tBuilding dictionary...")
-            self.dictionary = Dictionary(self.docs(read_all=True), prune_at=2000000)
+            self.dictionary = Dictionary(self.docs(n_examples=-1), prune_at=2000000)
             print("\tFiltering dictionary extremes...")
             self.dictionary.filter_extremes(no_below=3, no_above=0.3, keep_n=2000000)
             print("\tSaving dictionary...")
@@ -235,7 +245,7 @@ class text_corpus(object):
 
     def get_word_ids(self):
         word_list = set()
-        for doc in self.docs(read_all=True):
+        for doc in self.docs(n_examples=-1):
             word_list.update(doc)
         return dict(zip(range(len(word_list)),word_list))
 
@@ -245,10 +255,9 @@ class text_corpus(object):
 
 class bag_corpus(object):
 
-    def __init__(self, text_corpus, read_all):
+    def __init__(self, text_corpus):
         self.text_corpus = text_corpus
-        self.read_all    = read_all
 
     def __iter__(self):
-        for doc in self.text_corpus.docs(self.read_all):
+        for doc in self.text_corpus.docs(n_examples=-1):
             yield self.text_corpus.dictionary.doc2bow(doc)
