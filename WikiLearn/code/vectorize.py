@@ -136,7 +136,7 @@ class LDA(object):
 
         self.corpus    = corpus
         self.directory = directory
-        '''
+
         if not os.path.exists(self.directory):
             # Create main model
             self.build(features=5000)
@@ -151,7 +151,7 @@ class LDA(object):
             self.load()
             self.accuracy, self.precision = self.train_classifier()
             #self.load_classifier()
-            '''
+
 
     # Model I/O
 
@@ -163,7 +163,7 @@ class LDA(object):
         '''For Wikipedia, use at least 5k-10k topics
         Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
         print("\tTraining LDA model...")
-        self.model = LdaModel(corpus=self.corpus.bags, num_topics=self.features, id2word=self.corpus.get_word_map(), passes=epochs)
+        self.model = LdaModel(corpus=self.corpus.docs(), num_topics=self.features, id2word=self.corpus.get_word_map(), passes=epochs)
 
     def save(self):
         print("\tSaving LDA model...")
@@ -202,7 +202,7 @@ class LDA(object):
         print("\tEncoding documents...")
         vecs = []
         times = []
-        for i, doc in enumerate(self.corpus.bags):
+        for i, doc in enumerate(self.corpus.docs()):
             start = time.time()
             vecs.append(self.encode_doc(doc))
             if i == limit:
