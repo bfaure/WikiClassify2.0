@@ -170,7 +170,7 @@ class doc2vec(object):
     def train(self, corpus, epochs=100, directory=None, test=False, stop_early=True, backup=False):
 
         # print out predicted times per epoch and for vocab construction
-        pred_epoch_time = (0.00759011*corpus.n_examples)+29.3673 
+        pred_epoch_time = (0.0151529*corpus.n_examples)+19.4414
         print("\tPredicted epoch time: %s" % make_seconds_pretty(pred_epoch_time))
         pred_vocab_time = (0.0110936*corpus.n_examples)+26.9508
         print("\tPredicted vocab time: %s" % make_seconds_pretty(pred_vocab_time))
