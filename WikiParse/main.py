@@ -179,21 +179,21 @@ class text_corpus(object):
     def bags(self):
         return bag_corpus(self)
 
-    def docs(self):
+    def docs(self, read_all=False):
+        current_example = 0
         for _, doc in self.indexed_docs():
-            yield self.process(doc)
+            if (current_example < self.n_examples-1) or read_all:
+                yield self.process(doc)
+            else:
+                raise StopIteration
+            current_example += 1
 
     def indexed_docs(self):
-        current_example=0
         with open(self.document_path,'rb') as fin:
             for line in fin:
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
                     i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
-                    if current_example < self.n_examples-1:
-                        yield i,doc
-                    else:
-                        raise StopIteration
-                current_example += 1
+                    yield i,doc
 
     def get_phraser(self, directory, sensitivity=2):
 
@@ -224,7 +224,7 @@ class text_corpus(object):
             os.makedirs(directory)
         if not os.path.isfile(directory+'/dictionary.dict'):
             print("\tBuilding dictionary...")
-            self.dictionary = Dictionary(self.docs(), prune_at=2000000)
+            self.dictionary = Dictionary(self.docs(read_all=True), prune_at=2000000)
             print("\tFiltering dictionary extremes...")
             self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000)
             print("\tSaving dictionary...")
