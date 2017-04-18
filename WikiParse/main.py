@@ -195,19 +195,19 @@ class text_corpus(object):
         if not os.path.isdir(directory):
             os.makedirs(directory)
 
-        print("\t\tTraining bigram detector...")
+        print("\t\tGetting bigram detector...")
         if not os.path.isfile(directory+'/bigrams.pkl'):
             self.bigram = Phraser(Phrases(self.docs(), min_count=2, threshold=sensitivity, max_vocab_size=2000000))
             self.bigram.save(directory+'/bigrams.pkl')
         else:
-            self.load_phraser(directory+'/bigrams.pkl')
+            self.bigram  = Dictionary.load(directory+'/bigrams.pkl')
 
-        print("\t\tTraining trigram detector...")
-        if not os.path.isfile(directory+'/bigrams.pkl'):
+        print("\t\tGetting trigram detector...")
+        if not os.path.isfile(directory+'/trigrams.pkl'):
             self.trigram = Phraser(Phrases(self.bigram[self.docs()], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
             self.trigram.save(directory+'/trigrams.pkl')
         else:
-            self.load_phraser(directory+'/trigrams.pkl')
+            self.trigram = Dictionary.load(directory+'/trigrams.pkl')
 
     def load_phraser(self, directory):
         print("\tLoading gram detector...")
