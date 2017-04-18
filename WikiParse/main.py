@@ -149,13 +149,11 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
 def gensim_corpus(tsv_path, directory, make_phrases=False):
     text = text_corpus(tsv_path)
     if not os.path.isfile(directory+'/dictionary.dict'):
-        text.train_dictionary()
-        text.save_dictionary(directory)
+        text.train_dictionary(directory)
     else:
         text.load_dictionary(directory)
     if make_phrases:
-            text.train_phraser()
-            text.save_phraser(directory)
+            text.train_phraser(directory)
     else:
         text.load_phraser(directory)
     return text
@@ -197,7 +195,7 @@ class text_corpus(object):
                     else:
                         raise StopIteration
 
-    def train_phraser(self, sensitivity=2):
+    def train_phraser(self, directory, sensitivity=2):
 
         if not os.path.isdir(directory):
             os.makedirs(directory)
@@ -217,13 +215,11 @@ class text_corpus(object):
         self.bigram  = Dictionary.load(directory+'/bigrams.pkl')
         self.trigram = Dictionary.load(directory+'/trigrams.pkl')
 
-    def train_dictionary(self):
+    def train_dictionary(self, directory):
         print("\tBuilding dictionary...")
         self.dictionary = Dictionary(self.docs(), prune_at=2000000)
         print("\tFiltering dictionary extremes...")
         self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000)
-
-    def save_dictionary(self, directory):
         print("\tSaving dictionary...")
         if not os.path.isdir(directory): os.makedirs(directory)
         self.dictionary.save(directory+'/dictionary.dict')
