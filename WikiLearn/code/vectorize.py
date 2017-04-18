@@ -157,18 +157,19 @@ class doc2vec(object):
 
     def build(self, features=400, context_window=8, min_count=3, sample=1e-5, negative=5, threads=7):
         print("\tBuilding doc2vec model...")
-
         self.features = features
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=threads)
 
-    def train(self, corpus, epochs=10, directory=None, test=False, stop_early=True):
+    def train(self, corpus, epochs=10, directory=None, test=False, stop_early=True, backup=False):
 
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
         sys.stdout.flush()
-        corpus.n_examples = -1
+
+        corpus.n_examples = corpus.n_examples*5 # increase articles for vocab construction
         self.model.build_vocab(corpus)
-        corpus.n_examples = 100000
+        corpus.n_examples = corpus.n_examples/5 # cut back down for per-epoch article count
+        
         sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
 
         last_acc = None 
@@ -181,16 +182,14 @@ class doc2vec(object):
             sys.stdout.flush()
             self.model.train(corpus)
             sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
-            t.stop()
 
             if test or stop_early: acc = self.test(lower=True,show=False)
-            if test: 
-                print("\t\t\tModel Acc: \t%0.7f%%" % (100*acc))
-                #print("\t\t\")
-
+            if test: print("\t\t\tModel Acc: \t%0.7f%%" % (100*acc))
             if stop_early:
                 if last_acc!=None and acc<last_acc: break
                 last_acc = acc 
+            if backup: self.model.save(os.path.join(directory,'word2vec-backup.d2v'))
+            t.stop()
 
         elapsed  = t.get_elapsed()
         print('\tTime elapsed: %0.2f hours' % (elapsed))

@@ -136,27 +136,40 @@ def main():
 
     # create dictionaries (load if already present)
     
-
     if os.path.isfile('text.tsv'):
-        print("Getting text iterator...")
 
         # settings for exeuction
         run_doc2vec = True
     
         if run_doc2vec:
 
-            documents = text_corpus('text.tsv', n_examples=100000)
-            documents.get_phraser("WikiLearn/data/models/tokenizer/text")
+            # training configuration
+            n_examples      = 50  # number of articles to consume per epoch 
+            features        = 400   # vector length
+            context_window  = 8     # words to analyze on either side of current word 
+            threads         = 8 #
+            epochs          = 100   # maximum number of epochs
+            print_epoch_acc = True  # print the accuracy after each epoch
+            stop_early      = True  # cut off training if accuracy falls 
+            backup          = True  # if true, model is saved after each epoch with "-backup" in filename
+            phraser_dir = "WikiLearn/data/models/tokenizer/text" # where to save/load phraser from
+            model_dir   = "WikiLearn/data/models/doc2vec" # where to save model
 
+            # print out launch config
+            print("\nSettings:    n_examples=%d | features=%d | context_window=%d | epochs=%d" % (n_examples,features,context_window,epochs))
+            print("phraser_dir: %s" % phraser_dir)
+            print("model_dir:   %s\n" % model_dir)
+
+            # create corpus object to allow for text tagging/iteration
+            documents = text_corpus('text.tsv', n_examples=n_examples)
+            # assemble bigram/trigrams from corpus
+            documents.get_phraser(phraser_dir)
             # create doc2vec object    
             encoder = doc2vec()
             # set model hyperparameters
-            encoder.build(features=400,context_window=8,threads=8)
+            encoder.build(features=features,context_window=context_window,threads=threads)
             # train model on text corpus
-            encoder.train(corpus=documents, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
-            # test the final resultant model
-            encoder.test(lower=True,show=True)
-
+            encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
     else:
         print("text.tsv not present, could not create text dictionary")
     '''

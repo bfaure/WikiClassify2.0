@@ -155,10 +155,11 @@ def tokenize(text):
 class text_corpus(object):
 
     def __init__(self, tsv_path, n_examples=100000):
+        print("Getting %s iterator..." % tsv_path)
         self.n_examples = n_examples
         self.document_path = tsv_path
         self.fin = open(self.document_path,'rb')
-        self.document_size = os.path.getsize(tsv_path)
+        #self.document_size = os.path.getsize(tsv_path)
         self.instances = sum(1 for line in open(tsv_path))
         self.bigram = Phraser(Phrases())
         self.trigram = Phraser(Phrases())
@@ -191,6 +192,7 @@ class text_corpus(object):
                 if (current_example < n_examples):
                     try:
                         i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
+                        current_example+=1
                         yield i,doc
                     except:
                         pass
