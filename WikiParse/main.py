@@ -164,16 +164,15 @@ class text_corpus(object):
         self.trigram = Phraser(Phrases())
 
     def __iter__(self):
-        for i, doc in self.indexed_docs():
+        for i, doc in self.indexed_docs(self.n_examples):
             yield TaggedDocument(self.process(doc),[i])
 
     def process(self, text):
         return self.trigram[self.bigram[tokenize(text)]]
 
-    def bags(self):
-        return bag_corpus(self)
-
-    def docs(self, n_examples=100000):
+    def docs(self, n_examples=None):
+        if n_examples == None:
+            n_examples = self.n_examples
         for _, doc in self.indexed_docs(n_examples):
             yield self.process(doc)
 
@@ -189,7 +188,7 @@ class text_corpus(object):
         else:
             current_example = 0
             for line in self.fin:
-                if (current_example < self.n_examples):
+                if (current_example < n_examples):
                     try:
                         i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
                         yield i,doc

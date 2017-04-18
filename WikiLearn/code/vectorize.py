@@ -166,7 +166,9 @@ class doc2vec(object):
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
         sys.stdout.flush()
+        corpus.n_examples = -1
         self.model.build_vocab(corpus)
+        corpus.n_examples = 100000
         sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
 
         last_acc = None 
