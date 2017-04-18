@@ -153,8 +153,8 @@ def main():
         text_documents = gensim_corpus('text.tsv',"WikiLearn/data/models/tokenizer/text",make_phrases=True)
 
         # settings for exeuction
-        run_doc2vec = True 
-        run_LDA     = False
+        run_doc2vec = False
+        run_LDA     = True
     
         if run_doc2vec:
             # create doc2vec object    
