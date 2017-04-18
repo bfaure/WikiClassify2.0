@@ -180,15 +180,13 @@ class LDA(object):
     def encode_doc(self, doc):
         return np.array([x[1] for x in self.model.get_document_topics(doc, minimum_probability=0.0)])
 
-    def encode_docs(self, limit=-1):
+    def encode_docs(self, n_examples=-1):
         print("\tEncoding documents...")
         vecs = []
         times = []
         for i, doc in enumerate(self.corpus.bags()):
             start = time.time()
             vecs.append(self.encode_doc(doc))
-            if i == limit:
-                break
 
             # Progress
             times.append(time.time()-start)

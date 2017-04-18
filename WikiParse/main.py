@@ -161,7 +161,7 @@ def tokenize(text):
 
 class text_corpus(object):
 
-    def __init__(self, tsv_path, n_examples=100000):
+    def __init__(self, tsv_path, n_examples=10):
         self.n_examples = n_examples
         self.document_path = tsv_path
         self.document_size = os.path.getsize(tsv_path)
@@ -176,8 +176,8 @@ class text_corpus(object):
     def process(self, text):
         return self.trigram[self.bigram[tokenize(text)]]
 
-    def bags(self):
-        return bag_corpus(self)
+    def bags(self, read_all=False):
+        return bag_corpus(self, read_all)
 
     def docs(self, read_all=False):
         for _, doc in self.indexed_docs(read_all=read_all):
@@ -238,9 +238,11 @@ class text_corpus(object):
         self.dictionary = Dictionary.load(directory+'/dictionary.dict')
 
 class bag_corpus(object):
-    def __init__(self, text_corpus):
+    
+    def __init__(self, text_corpus, read_all):
         self.text_corpus = text_corpus
-        pass
+        self.read_all    = read_all
+
     def __iter__(self):
-        for doc in self.text_corpus.docs():
+        for doc in self.text_corpus.docs(self.read_all):
             yield self.text_corpus.dictionary.doc2bow(doc)
