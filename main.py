@@ -151,7 +151,27 @@ def main():
     if os.path.isfile('text.tsv'):
         print("Getting text dictionary...")
         text_documents = gensim_corpus('text.tsv',model_dir+"text",make_phrases=True)
-    else: print("text.tsv not present, could not create text dictionary")
+
+
+        # settings for exeuction
+        doc2vec = False 
+        LDA     = True
+    
+        if doc2vec:
+            # create doc2vec object    
+            encoder = doc2vec()
+            # set model hyperparameters
+            encoder.build(features=400,context_window=8,threads=8)
+            # train model on text corpus
+            encoder.train(corpus=text_documents, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
+            # test the final resultant model
+            encoder.test(lower=True,show=True)
+    
+        if LDA:
+            # create the LDA object 
+            encoder = LDA(corpus=text_documents,directory='WikiLearn/data/models/LDA')
+    else:
+        print("text.tsv not present, could not create text dictionary")
     
     #if os.path.isfile('categories.tsv'):
     #    print("Getting categories dictionary...")
@@ -162,24 +182,6 @@ def main():
     #    print("Getting links dictionary...")
     #    links_documents = gensim_corpus('links.tsv',model_dir+"links",make_phrases=False)
     #else: print("links.tsv not present, could not create links dictionary")
-
-    # settings for exeuction
-    doc2vec = False 
-    LDA     = True
-
-    if doc2vec:
-        # create doc2vec object    
-        encoder = doc2vec()
-        # set model hyperparameters
-        encoder.build(features=400,context_window=8,threads=8)
-        # train model on text corpus
-        encoder.train(corpus=text_documents, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
-        # test the final resultant model
-        encoder.test(lower=True,show=True)
-
-    if LDA:
-        # create the LDA object 
-        encoder = LDA(corpus=text_documents,directory='WikiLearn/data/models/LDA')
 
     #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
