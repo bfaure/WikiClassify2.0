@@ -147,17 +147,10 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
         return False
 
 def gensim_corpus(tsv_path, directory, make_phrases=False):
-    text = text_corpus(tsv_path,skip_rate)
-    if not os.path.isfile(directory+'/dictionary.dict'):
-        text.train_dictionary()
-        text.save_dictionary(directory)
-    else:
-        text.load_dictionary(directory)
+    text = text_corpus(tsv_path)
+    text.get_dictionary(directory)
     if make_phrases:
-            text.train_phraser()
-            text.save_phraser(directory)
-    else:
-        text.load_phraser(directory)
+            text.get_phraser(directory)
     return text
 
 #                      Tagged Document iterator
@@ -169,7 +162,7 @@ def tokenize(text):
 class text_corpus(object):
 
     def __init__(self, tsv_path, n_examples=100000):
-        self.skip_rate = skip_rate
+        self.n_examples = n_examples
         self.document_path = tsv_path
         self.document_size = os.path.getsize(tsv_path)
         self.instances = sum(1 for line in open(tsv_path))
@@ -189,45 +182,51 @@ class text_corpus(object):
 
     def indexed_docs(self):
         with open(self.document_path,'rb') as fin:
-            for line in fin:
+            for j, line in enumerate(fin):
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
                     i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
-                    if (i % n_examples) < (n_examples-1):
+                    if (j % self.n_examples) < (self.n_examples-1):
                         yield i, doc
                     else:
                         raise StopIteration
 
-    def train_phraser(self, sensitivity=2):
+    def get_phraser(self, directory, sensitivity=2):
 
         if not os.path.isdir(directory):
             os.makedirs(directory)
 
-        print("\t\tTraining bigram detector...")
-        self.bigram         = Phraser(Phrases(self.docs(), min_count=2, threshold=sensitivity, max_vocab_size=2000000))
+        print("\t\tGetting bigram detector...")
         if not os.path.isfile(directory+'/bigrams.pkl'):
+            self.bigram = Phraser(Phrases(self.docs(), min_count=2, threshold=sensitivity, max_vocab_size=2000000))
             self.bigram.save(directory+'/bigrams.pkl')
+        else:
+            self.bigram  = Dictionary.load(directory+'/bigrams.pkl')
 
-        print("\t\tTraining trigram detector...")
-        self.trigram        = Phraser(Phrases(self.bigram[self.docs()], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
-        if not os.path.isfile(directory+'/bigrams.pkl'):
+        print("\t\tGetting trigram detector...")
+        if not os.path.isfile(directory+'/trigrams.pkl'):
+            self.trigram = Phraser(Phrases(self.bigram[self.docs()], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
             self.trigram.save(directory+'/trigrams.pkl')
+        else:
+            self.trigram = Dictionary.load(directory+'/trigrams.pkl')
 
     def load_phraser(self, directory):
         print("\tLoading gram detector...")
         self.bigram  = Dictionary.load(directory+'/bigrams.pkl')
         self.trigram = Dictionary.load(directory+'/trigrams.pkl')
 
-    def train_dictionary(self):
-        print("\tBuilding dictionary...")
-        self.dictionary = Dictionary(self.docs(), prune_at=2000000)
-        print("\tFiltering dictionary extremes...")
-        self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000)
-
-    def save_dictionary(self, directory):
-        print("\tSaving dictionary...")
-        if not os.path.isdir(directory): os.makedirs(directory)
-        self.dictionary.save(directory+'/dictionary.dict')
-        self.dictionary.save_as_text(directory+'/word_list.tsv')
+    def get_dictionary(self, directory):
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        if not os.path.isfile(directory+'/dictionary.dict'):
+            print("\tBuilding dictionary...")
+            self.dictionary = Dictionary(self.docs(), prune_at=2000000)
+            print("\tFiltering dictionary extremes...")
+            self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000)
+            print("\tSaving dictionary...")
+            self.dictionary.save(directory+'/dictionary.dict')
+            self.dictionary.save_as_text(directory+'/word_list.tsv')
+        else:
+            self.load_dictionary(directory)
 
     def load_dictionary(self, directory):
         print("\tLoading dictionary...")
