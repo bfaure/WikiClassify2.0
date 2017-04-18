@@ -215,14 +215,18 @@ class text_corpus(object):
         self.trigram = Dictionary.load(directory+'/trigrams.pkl')
 
     def get_dictionary(self, directory):
-        print("\tBuilding dictionary...")
-        self.dictionary = Dictionary(self.docs(), prune_at=2000000)
-        print("\tFiltering dictionary extremes...")
-        self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000)
-        print("\tSaving dictionary...")
-        if not os.path.isdir(directory): os.makedirs(directory)
-        self.dictionary.save(directory+'/dictionary.dict')
-        self.dictionary.save_as_text(directory+'/word_list.tsv')
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        if not os.path.isfile(directory+'/dictionary.dict'):
+            print("\tBuilding dictionary...")
+            self.dictionary = Dictionary(self.docs(), prune_at=2000000)
+            print("\tFiltering dictionary extremes...")
+            self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000)
+            print("\tSaving dictionary...")
+            self.dictionary.save(directory+'/dictionary.dict')
+            self.dictionary.save_as_text(directory+'/word_list.tsv')
+        else:
+            self.load_dictionary(directory)
 
     def load_dictionary(self, directory):
         print("\tLoading dictionary...")
