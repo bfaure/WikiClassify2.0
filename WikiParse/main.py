@@ -177,8 +177,7 @@ class text_corpus(object):
         return self.trigram[self.bigram[tokenize(text)]]
 
     def bags(self):
-        for doc in self.docs():
-            yield self.dictionary.doc2bow(doc)
+        return bag_corpus(self)
 
     def docs(self):
         for _, doc in self.indexed_docs():
@@ -237,3 +236,11 @@ class text_corpus(object):
     def load_dictionary(self, directory):
         print("\tLoading dictionary...")
         self.dictionary = Dictionary.load(directory+'/dictionary.dict')
+
+class bag_corpus(object):
+    def __init__(self, text_corpus):
+        self.text_corpus = text_corpus
+        pass
+    def __iter__(self):
+        for doc in self.text_corpus.docs():
+            yield self.text_corpus.dictionary.doc2bow(doc)
