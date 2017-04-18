@@ -144,7 +144,7 @@ def main():
         if run_doc2vec:
 
             # training configuration
-            n_examples      = 250  # number of articles to consume per epoch 
+            n_examples      = 200000 # number of articles to consume per epoch 
             features        = 400   # vector length
             context_window  = 8     # words to analyze on either side of current word 
             threads         = 8 #
@@ -152,7 +152,7 @@ def main():
             print_epoch_acc = True  # print the accuracy after each epoch
             stop_early      = True  # cut off training if accuracy falls 
             backup          = True  # if true, model is saved after each epoch with "-backup" in filename
-            phraser_dir = "WikiLearn/data/models/tokenizer/text" # where to save/load phraser from
+            phraser_dir = "WikiLearn/data/models/doc2vec/text" # where to save/load phraser from
             model_dir   = "WikiLearn/data/models/doc2vec" # where to save model
 
             # print out launch config

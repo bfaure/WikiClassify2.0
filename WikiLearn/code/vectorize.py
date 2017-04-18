@@ -162,6 +162,9 @@ class doc2vec(object):
 
     def train(self, corpus, epochs=100, directory=None, test=False, stop_early=True, backup=False):
 
+        pred_epoch_time = (0.0245761*corpus.n_examples)+7.07383 
+        print("\tPredicted epoch time: %0.1f sec" % pred_epoch_time)
+
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
         sys.stdout.flush()
@@ -169,9 +172,6 @@ class doc2vec(object):
         self.model.build_vocab(corpus)
         corpus.n_examples = corpus.n_examples/5 # cut back down for per-epoch article count
         sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
-
-        pred_epoch_time = (0.0245761*corpus.n_examples)+7.07383 
-        print("\tPredicted epoch time: %0.1f sec" % pred_epoch_time)
 
         last_acc = None 
         print("\tTraining doc2vec model...")
