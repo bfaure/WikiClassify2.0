@@ -169,7 +169,7 @@ def tokenize(text):
 class text_corpus(object):
 
     def __init__(self, tsv_path, n_examples=100000):
-        self.skip_rate = skip_rate
+        self.n_examples = n_examples
         self.document_path = tsv_path
         self.document_size = os.path.getsize(tsv_path)
         self.instances = sum(1 for line in open(tsv_path))
@@ -192,7 +192,7 @@ class text_corpus(object):
             for line in fin:
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
                     i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
-                    if (i % n_examples) < (n_examples-1):
+                    if (i % self.n_examples) < (self.n_examples-1):
                         yield i, doc
                     else:
                         raise StopIteration
