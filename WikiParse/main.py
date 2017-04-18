@@ -176,6 +176,10 @@ class text_corpus(object):
     def process(self, text):
         return self.trigram[self.bigram[tokenize(text)]]
 
+    def bags(self):
+        for doc in self.docs():
+            yield self.dictionary.doc2bow(doc)
+
     def docs(self):
         for _, doc in self.indexed_docs():
             yield self.process(doc)

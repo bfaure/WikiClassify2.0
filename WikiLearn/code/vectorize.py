@@ -163,7 +163,7 @@ class LDA(object):
         '''For Wikipedia, use at least 5k-10k topics
         Memory Considerations: 8 bytes * num_terms * num_topics * 3'''
         print("\tTraining LDA model...")
-        self.model = LdaModel(corpus=self.corpus.docs(), num_topics=self.features, id2word=self.corpus.get_word_map(), passes=epochs)
+        self.model = LdaModel(corpus=self.corpus.docs(), num_topics=self.features, passes=epochs)
 
     def save(self):
         print("\tSaving LDA model...")
