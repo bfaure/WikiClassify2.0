@@ -147,15 +147,14 @@ def main():
 
     # create dictionaries (load if already present)
     
-    
+    '''
     if os.path.isfile('text.tsv'):
         print("Getting text dictionary...")
         text_documents = gensim_corpus('text.tsv',model_dir+"text",make_phrases=True)
 
-
         # settings for exeuction
-        doc2vec = False 
-        LDA     = True
+        doc2vec = True 
+        LDA     = False
     
         if doc2vec:
             # create doc2vec object    
@@ -172,7 +171,13 @@ def main():
             encoder = LDA(corpus=text_documents,directory='WikiLearn/data/models/LDA')
     else:
         print("text.tsv not present, could not create text dictionary")
+    '''
+
+    model = doc2vec()
+    model.load('WikiLearn/data/models/doc2vec')
+    model.test(lower=True,show=True,normalize=True)
     
+
     #if os.path.isfile('categories.tsv'):
     #    print("Getting categories dictionary...")
     #    categories_documents = gensim_corpus('categories.tsv',model_dir+"categories",make_phrases=False)

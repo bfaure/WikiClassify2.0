@@ -252,7 +252,7 @@ class doc2vec(object):
         self.features = features
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=threads)
 
-    def train(self, corpus, epochs=10, directory=None, test=False):
+    def train(self, corpus, epochs=10, directory=None, test=False, stop_early=True):
         if directory!=None and directory[-1]!='/': directory+='/'
 
         # calcualte the effective size of training corpus given the skip_rate probability
@@ -269,6 +269,7 @@ class doc2vec(object):
         self.model.build_vocab(corpus)
         sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
 
+        last_acc = None 
         print("\tTraining doc2vec model...")
         t = epoch_timer(epochs)
         for i in xrange(epochs):
@@ -280,16 +281,14 @@ class doc2vec(object):
             sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
             t.stop()
 
+            if test or stop_early: acc = self.test(lower=True,show=False)
             if test: 
-                acc = self.test(lower=True,show=False)
                 print("\t\t\tModel Acc: \t%0.7f%%" % (100*acc))
+                #print("\t\t\")
 
-            if directory!=None: 
-                t_e = time.time()
-                sys.stdout.write("\t\tSaving current model... ")
-                sys.stdout.flush()
-                self.model.save(directory+"/word2vec-(training-%d).d2v" % i)
-                sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
+            if stop_early:
+                if last_acc!=None and acc<last_acc: break
+                last_acc = acc 
 
         elapsed  = t.get_elapsed()
         print('\tTime elapsed: %0.2f hours' % (elapsed))
@@ -299,7 +298,7 @@ class doc2vec(object):
             print("\tSaving doc2vec model...")
             self.model.save(directory+'/word2vec.d2v')
 
-    def test(self,lower=False,show=True):
+    def test(self,lower=False,show=True,normalize=True):
         if show: print("Testing model...")
         directory = "WikiLearn/data/tests/"
         url = "https://raw.githubusercontent.com/nicholas-leonard/word2vec/master/questions-words.txt"
