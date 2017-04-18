@@ -189,10 +189,10 @@ class text_corpus(object):
 
     def indexed_docs(self):
         with open(self.document_path,'rb') as fin:
-            for line in fin:
+            for j, line in enumerate(fin):
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
                     i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
-                    if (i % self.n_examples) < (self.n_examples-1):
+                    if (j % self.n_examples) < (self.n_examples-1):
                         yield i, doc
                     else:
                         raise StopIteration
