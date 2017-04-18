@@ -148,15 +148,15 @@ def main():
     # create dictionaries (load if already present)
     
     if os.path.isfile('text.tsv'):
-        print("Getting text dictionary...")
+        print("Getting text iterator...")
         text_documents = gensim_corpus('text.tsv',"WikiLearn/data/models/tokenizer/text",make_phrases=True)
 
 
         # settings for exeuction
-        doc2vec = False 
-        LDA     = True
+        run_doc2vec = False 
+        run_LDA     = True
     
-        if doc2vec:
+        if run_doc2vec:
             # create doc2vec object    
             encoder = doc2vec()
             # set model hyperparameters
@@ -166,7 +166,7 @@ def main():
             # test the final resultant model
             encoder.test(lower=True,show=True)
     
-        if LDA:
+        if run_LDA:
             # create the LDA object 
             encoder = LDA(corpus=text_documents,directory='WikiLearn/data/models/LDA')
     else:
