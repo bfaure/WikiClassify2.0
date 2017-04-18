@@ -171,9 +171,9 @@ class doc2vec(object):
 
         # print out predicted times per epoch and for vocab construction
         pred_epoch_time = (0.0245761*corpus.n_examples)+7.07383 
-        print("\tPredicted epoch time: %s sec" % make_seconds_pretty(pred_epoch_time))
+        print("\tPredicted epoch time: %s" % make_seconds_pretty(pred_epoch_time))
         pred_vocab_time = (0.0301788*corpus.n_examples)+1.90222
-        print("\tPredicted vocab time: %s sec" % make_seconds_pretty(pred_vocab_time))
+        print("\tPredicted vocab time: %s" % make_seconds_pretty(pred_vocab_time))
 
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
