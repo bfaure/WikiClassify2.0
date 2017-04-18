@@ -144,7 +144,7 @@ def main():
         if run_doc2vec:
 
             # training configuration
-            n_examples      = 50  # number of articles to consume per epoch 
+            n_examples      = 250  # number of articles to consume per epoch 
             features        = 400   # vector length
             context_window  = 8     # words to analyze on either side of current word 
             threads         = 8 #

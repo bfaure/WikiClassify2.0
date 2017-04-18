@@ -159,7 +159,6 @@ class text_corpus(object):
         self.n_examples = n_examples
         self.document_path = tsv_path
         self.fin = open(self.document_path,'rb')
-        #self.document_size = os.path.getsize(tsv_path)
         self.instances = sum(1 for line in open(tsv_path))
         self.bigram = Phraser(Phrases())
         self.trigram = Phraser(Phrases())
