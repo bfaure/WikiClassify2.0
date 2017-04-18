@@ -204,6 +204,8 @@ class doc2vec(object):
         #self.model.init_sims(replace=True)
 
         if directory!=None:
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
             print("\tSaving doc2vec model...")
             self.model.save(directory+'/word2vec.d2v')
 
