@@ -180,20 +180,20 @@ class text_corpus(object):
         return bag_corpus(self)
 
     def docs(self, read_all=False):
-        current_example = 0
-        for _, doc in self.indexed_docs():
-            if (current_example < self.n_examples-1) or read_all:
-                yield self.process(doc)
-            else:
-                raise StopIteration
-            current_example += 1
+        for _, doc in self.indexed_docs(read_all=read_all):
+            yield self.process(doc)
 
-    def indexed_docs(self):
+    def indexed_docs(self, read_all=False):
+        current_example = 0
         with open(self.document_path,'rb') as fin:
             for line in fin:
-                if line.strip().count('\t') == 1 and line.count(' ') > 1:
-                    i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
-                    yield i,doc
+                if (current_example < self.n_examples-1) or read_all:
+                    if line.strip().count('\t') == 1 and line.count(' ') > 1:
+                        i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
+                        yield i,doc
+                else:
+                    raise StopIteration
+                current_example += 1
 
     def get_phraser(self, directory, sensitivity=2):
 
