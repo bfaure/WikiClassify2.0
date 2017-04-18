@@ -162,15 +162,6 @@ class doc2vec(object):
         self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=threads)
 
     def train(self, corpus, epochs=10, directory=None, test=False, stop_early=True):
-        if directory!=None and directory[-1]!='/': directory+='/'
-
-        # calcualte the effective size of training corpus given the skip_rate probability
-        #eff_size = corpus.document_size*corpus.skip_rate 
-        #print("\tEffective corpus size: %d MB" % int(eff_size/1000000))
-
-        # linear best fit line from wolfram alpha
-        #pred_epoch_time = (3.94749*(10**-6)*eff_size)+125.886 
-        #print("\tPredicted epoch time:  %0.1f sec" % pred_epoch_time)
 
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
@@ -207,7 +198,7 @@ class doc2vec(object):
             if not os.path.isdir(directory):
                 os.makedirs(directory)
             print("\tSaving doc2vec model...")
-            self.model.save(directory+'/word2vec.d2v')
+            self.model.save(os.path.join(directory,'word2vec.d2v'))
 
     def test(self,lower=False,show=True):
         if show: print("Testing model...")
