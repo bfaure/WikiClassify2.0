@@ -161,7 +161,8 @@ class LDA(object):
 
     def save(self):
         print("\tSaving LDA model...")
-        if not os.path.exists(self.directory): os.makedirs(self.directory)
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
         self.model.save(self.directory+'/LDA.model')
 
     def load(self):
@@ -186,7 +187,6 @@ class LDA(object):
         times = []
         for i, doc in enumerate(self.corpus.bags()):
             start = time.time()
-            print(self.encode_doc(doc))
             vecs.append(self.encode_doc(doc))
 
             # Progress

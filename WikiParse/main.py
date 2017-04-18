@@ -161,7 +161,7 @@ def tokenize(text):
 
 class text_corpus(object):
 
-    def __init__(self, tsv_path, n_examples=10):
+    def __init__(self, tsv_path, n_examples=100000):
         self.n_examples = n_examples
         self.document_path = tsv_path
         self.document_size = os.path.getsize(tsv_path)
