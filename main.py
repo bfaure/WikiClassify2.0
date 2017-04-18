@@ -153,8 +153,8 @@ def main():
         text_documents = gensim_corpus('text.tsv',"WikiLearn/data/models/tokenizer/text",make_phrases=True)
 
         # settings for exeuction
-        doc2vec = True 
-        LDA     = False
+        run_doc2vec = True 
+        run_LDA     = False
     
         if run_doc2vec:
             # create doc2vec object    
@@ -202,7 +202,6 @@ def main():
     #encoder = None
     #classify_quality(encoder,'WikiLearn/data/models/classifier')
 
-    '''
     while True:
         algo = raw_input("\nSelect an activity:\nPath [P]\nJoin [j]\n> ")#\na: add\n> ")
         if algo.lower() in ["p",""]:

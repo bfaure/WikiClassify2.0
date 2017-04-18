@@ -181,14 +181,16 @@ class text_corpus(object):
             yield self.process(doc)
 
     def indexed_docs(self):
+        current_example=0
         with open(self.document_path,'rb') as fin:
-            for j, line in enumerate(fin):
+            for line in fin:
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
                     i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
-                    if (j % self.n_examples) < (self.n_examples-1):
-                        yield i, doc
+                    if current_example < self.n_examples-1:
+                        yield i,doc
                     else:
                         raise StopIteration
+                current_example += 1
 
     def get_phraser(self, directory, sensitivity=2):
 
