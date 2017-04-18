@@ -149,7 +149,7 @@ class LDA(object):
 
     # Model I/O
 
-    def build(self, features=5000):
+    def build(self, features=500):
         print("\tBuilding LDA model...")
         self.features = features
 
