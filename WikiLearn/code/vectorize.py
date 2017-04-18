@@ -126,6 +126,13 @@ def lowerize(directory, path):
     new_f.close()
     return directory+new_file
 
+def make_seconds_pretty(seconds):
+    rem_hours = int(seconds/3600)                 
+    rem_mins = int((seconds-(rem_hours*3600))/60) 
+    rem_secs = int(seconds-(rem_hours*3600)-(rem_mins*60)) 
+    time_str = str(rem_hours)+"h "+str(rem_mins)+"m "+str(rem_secs)+"s"
+    return time_str 
+
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
@@ -164,9 +171,9 @@ class doc2vec(object):
 
         # print out predicted times per epoch and for vocab construction
         pred_epoch_time = (0.0245761*corpus.n_examples)+7.07383 
-        print("\tPredicted epoch time: %0.1f sec" % pred_epoch_time)
+        print("\tPredicted epoch time: %s sec" % make_seconds_pretty(pred_epoch_time))
         pred_vocab_time = (0.0301788*corpus.n_examples)+1.90222
-        print("\tPredicted vocab time: %0.1f sec" % pred_vocab_time)
+        print("\tPredicted vocab time: %s sec" % make_seconds_pretty(pred_vocab_time))
 
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
