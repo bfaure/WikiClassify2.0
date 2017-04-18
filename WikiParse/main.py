@@ -146,17 +146,18 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
         print("\tERROR: Could not find wikiparse.out")
         return False
 
-def gensim_corpus(tsv_path, directory, make_phrases=False, skip_rate=1.0):
+def gensim_corpus(tsv_path, directory, make_phrases=False):
     text = text_corpus(tsv_path,skip_rate)
     if not os.path.isfile(directory+'/dictionary.dict'):
         text.train_dictionary()
         text.save_dictionary(directory)
-    else: text.load_dictionary(directory)
+    else:
+        text.load_dictionary(directory)
     if make_phrases:
-        if not os.path.isfile(directory+'/bigrams.pkl'):
             text.train_phraser()
             text.save_phraser(directory)
-        else: text.load_phraser(directory)
+    else:
+        text.load_phraser(directory)
     return text
 
 #                      Tagged Document iterator
@@ -167,7 +168,7 @@ def tokenize(text):
 
 class text_corpus(object):
 
-    def __init__(self, tsv_path, skip_rate=1.0):
+    def __init__(self, tsv_path, n_examples=100000):
         self.skip_rate = skip_rate
         self.document_path = tsv_path
         self.document_size = os.path.getsize(tsv_path)
@@ -190,21 +191,26 @@ class text_corpus(object):
         with open(self.document_path,'rb') as fin:
             for line in fin:
                 if line.strip().count('\t') == 1 and line.count(' ') > 1:
-                    if np.random.rand() < self.skip_rate:
-                        i, doc = line.decode('utf-8',errors='replace').strip().split('\t')
+                    i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
+                    if (i % n_examples) < (n_examples-1):
                         yield i, doc
+                    else:
+                        raise StopIteration
 
     def train_phraser(self, sensitivity=2):
-        print("\t\tTraining bigram detector...")
-        self.bigram         = Phraser(Phrases(self.docs(), min_count=5, threshold=sensitivity, max_vocab_size=2000000))
-        print("\t\tTraining trigram detector...")
-        self.trigram        = Phraser(Phrases(self.bigram[self.docs()], min_count=5, threshold=sensitivity, max_vocab_size=2000000))
 
-    def save_phraser(self, directory):
-        print("\tSaving gram detector...")
-        if not os.path.isdir(directory): os.makedirs(directory)
-        self.bigram.save(directory+'/bigrams.pkl')
-        self.trigram.save(directory+'/trigrams.pkl')
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+
+        print("\t\tTraining bigram detector...")
+        self.bigram         = Phraser(Phrases(self.docs(), min_count=2, threshold=sensitivity, max_vocab_size=2000000))
+        if not os.path.isfile(directory+'/bigrams.pkl'):
+            self.bigram.save(directory+'/bigrams.pkl')
+
+        print("\t\tTraining trigram detector...")
+        self.trigram        = Phraser(Phrases(self.bigram[self.docs()], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
+        if not os.path.isfile(directory+'/bigrams.pkl'):
+            self.trigram.save(directory+'/trigrams.pkl')
 
     def load_phraser(self, directory):
         print("\tLoading gram detector...")

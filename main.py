@@ -126,25 +126,6 @@ def check_tsv_files(base_dir="."):
                 except:
                     sys.stdout.write("failure\n")
                 sys.stdout.flush()
-
-def get_dictionaries(model_dir='WikiLearn/data/models/doc2vec/', skip_rate=1.0):
-    if model_dir[-1]!="/": model_dir += "/" 
-    text_documents,categories_documents,links_documents = None,None,None
-    
-    if os.path.isfile('text.tsv'):
-        print("Getting text dictionary...")
-        text_documents = gensim_corpus('text.tsv',model_dir+"text",make_phrases=True, skip_rate=skip_rate)
-    else: print("text.tsv not present, could not create text dictionary")
-    
-    if os.path.isfile('categories.tsv'):
-        print("Getting categories dictionary...")
-        categories_documents = gensim_corpus('categories.tsv',model_dir+"categories",make_phrases=False, skip_rate=skip_rate)
-    else: print("categories.tsv not present, could not create categories dictionary")
-    
-    if os.path.isfile('links.tsv'):
-        print("Getting links dictionary...")
-        links_documents = gensim_corpus('links.tsv',model_dir+"links",make_phrases=False, skip_rate=skip_rate)
-    else: print("links.tsv not present, could not create links dictionary")
     
     return text_documents,categories_documents,links_documents
 
@@ -158,35 +139,47 @@ def main():
         return
 
     # if the parsed wikidump is not present in repository
-    if not os.path.isfile('text.tsv'):
-        # download (if not already present)
-        dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
-        # parse the .xml file
-        parse_wikidump(dump_path)
+    #if not os.path.isfile('text.tsv'):
+    #    # download (if not already present)
+    #    dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
+    #    # parse the .xml file
+    #    parse_wikidump(dump_path)
 
     # create dictionaries (load if already present)
-    text,categories,links = get_dictionaries('WikiLearn/data/models/doc2vec/', skip_rate=0.1)
+    
+    
+    if os.path.isfile('text.tsv'):
+        print("Getting text dictionary...")
+        text_documents = gensim_corpus('text.tsv',model_dir+"text",make_phrases=True)
+    else: print("text.tsv not present, could not create text dictionary")
+    
+    #if os.path.isfile('categories.tsv'):
+    #    print("Getting categories dictionary...")
+    #    categories_documents = gensim_corpus('categories.tsv',model_dir+"categories",make_phrases=False)
+    #else: print("categories.tsv not present, could not create categories dictionary")
+    #
+    #if os.path.isfile('links.tsv'):
+    #    print("Getting links dictionary...")
+    #    links_documents = gensim_corpus('links.tsv',model_dir+"links",make_phrases=False)
+    #else: print("links.tsv not present, could not create links dictionary")
 
     # settings for exeuction
     doc2vec = False 
-    LDA     = False
+    LDA     = True
 
     if doc2vec:
         # create doc2vec object    
         encoder = doc2vec()
         # set model hyperparameters
-        encoder.build(features=300,context_window=8,threads=8)
+        encoder.build(features=400,context_window=8,threads=8)
         # train model on text corpus
-        encoder.train(corpus=text,epochs=100,directory='WikiLearn/data/models/doc2vec',test=True)
-        # attempt to intersect model with pretrained google doc2vec
-        encoder.intersect_pretrained('WikiLearn/data/models/doc2vec','google')
+        encoder.train(corpus=text, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
         # test the final resultant model
         encoder.test(lower=True,show=True)
 
     if LDA:
         # create the LDA object 
         encoder = LDA(corpus=text,directory='WikiLearn/data/models/LDA')
-
 
     #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))

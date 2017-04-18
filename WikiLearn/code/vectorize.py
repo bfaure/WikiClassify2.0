@@ -19,7 +19,7 @@ np.random.seed(0)
 from gensim.models.ldamodel import LdaModel
 from gensim.models import Doc2Vec
 from gensim.models import Word2Vec
-from gensim.models import KeyedVectors
+from gensim.models.keyedvectors import KeyedVectors
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
@@ -136,9 +136,8 @@ class LDA(object):
 
         self.corpus    = corpus
         self.directory = directory
-
+        '''
         if not os.path.exists(self.directory):
-
             # Create main model
             self.build(features=5000)
             self.train(epochs=1)
@@ -152,6 +151,7 @@ class LDA(object):
             self.load()
             self.accuracy, self.precision = self.train_classifier()
             #self.load_classifier()
+            '''
 
     # Model I/O
 
