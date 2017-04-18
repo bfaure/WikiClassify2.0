@@ -12,7 +12,7 @@ import numpy as np
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
-from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
+from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
 from WikiLearn.code.vectorize import doc2vec, LDA
 from WikiLearn.code.classify  import vector_classifier
 
@@ -20,17 +20,6 @@ from pathfinder import get_queries, astar_path
 
 #                            Main function
 #-----------------------------------------------------------------------------#
-
-def get_encoder(tsv_path, make_phrases, directory, features, context_window, min_count, negative, epochs):
-    encoder = doc2vec()
-    if not os.path.isfile(os.path.join(directory,'doc2vec.d2v')):
-        encoder.build(features, context_window, min_count, negative)
-        documents  = gensim_corpus(tsv_path,directory,make_phrases)
-        encoder.train(documents, epochs)
-        encoder.save(directory)
-    else:
-        encoder.load(directory)
-    return encoder
 
 def classify_quality(encoder, directory):
 
@@ -150,25 +139,34 @@ def main():
 
     if os.path.isfile('text.tsv'):
         print("Getting text iterator...")
-        text_documents = gensim_corpus('text.tsv',"WikiLearn/data/models/tokenizer/text",make_phrases=True)
 
         # settings for exeuction
         run_doc2vec = False
         run_LDA     = True
     
         if run_doc2vec:
+
+            documents = text_corpus('text.tsv')
+            documents.get_phraser("WikiLearn/data/models/tokenizer/text")
+            documents.get_dictionary("WikiLearn/data/models/tokenizer/text")
+
             # create doc2vec object    
             encoder = doc2vec()
             # set model hyperparameters
             encoder.build(features=400,context_window=8,threads=8)
             # train model on text corpus
-            encoder.train(corpus=text_documents, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
+            encoder.train(corpus=documents, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
             # test the final resultant model
             encoder.test(lower=True,show=True)
     
         if run_LDA:
+
+            documents = text_corpus('text.tsv')
+            documents.get_phraser("WikiLearn/data/models/tokenizer/text")
+            documents.get_dictionary("WikiLearn/data/models/tokenizer/text", keep=5000)
+
             # create the LDA object 
-            encoder = LDA(corpus=text_documents,directory='WikiLearn/data/models/LDA')
+            encoder = LDA(corpus=documents,directory='WikiLearn/data/models/LDA')
             for topic in encoder.get_topics():
                 print(' '.join(topic))
     else:

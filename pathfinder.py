@@ -17,7 +17,7 @@ import math
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
-from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus
+from WikiParse.main           import download_wikidump, parse_wikidump
 from WikiLearn.code.vectorize import doc2vec
 
 class elem_t:

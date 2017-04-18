@@ -146,13 +146,6 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
         print("\tERROR: Could not find wikiparse.out")
         return False
 
-def gensim_corpus(tsv_path, directory, make_phrases=False):
-    text = text_corpus(tsv_path)
-    if make_phrases:
-            text.get_phraser(directory)
-    text.get_dictionary(directory)
-    return text
-
 #                      Tagged Document iterator
 #-----------------------------------------------------------------------------#
 
@@ -229,14 +222,14 @@ class text_corpus(object):
         self.bigram  = Phraser.load(directory+'/bigrams.pkl')
         self.trigram = Phraser.load(directory+'/trigrams.pkl')
 
-    def get_dictionary(self, directory):
+    def get_dictionary(self, directory, keep=100000):
         if not os.path.isdir(directory):
             os.makedirs(directory)
         if not os.path.isfile(directory+'/dictionary.dict'):
             print("\tBuilding dictionary...")
             self.dictionary = Dictionary(self.docs(n_examples=-1), prune_at=2000000)
             print("\tFiltering dictionary extremes...")
-            self.dictionary.filter_extremes(no_below=3, no_above=0.5, keep_n=2000000)
+            self.dictionary.filter_extremes(no_below=3, no_above=0.5, keep_n=keep)
             print("\tSaving dictionary...")
             self.dictionary.save(directory+'/dictionary.dict')
             self.dictionary.save_as_text(directory+'/word_list.tsv')
