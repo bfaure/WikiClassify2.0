@@ -176,6 +176,10 @@ class text_corpus(object):
         for _, doc in self.indexed_docs(n_examples):
             yield self.process(doc)
 
+    def reset_docs(self):
+        self.fin.close()
+        self.fin = open(self.document_path,'rb')
+
     def indexed_docs(self, n_examples=-1):
         if n_examples == -1:
             with open(self.document_path,'rb') as fin:

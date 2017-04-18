@@ -181,6 +181,7 @@ class doc2vec(object):
         corpus.n_examples = corpus.n_examples*5 # increase articles for vocab construction
         self.model.build_vocab(corpus)
         corpus.n_examples = corpus.n_examples/5 # cut back down for per-epoch article count
+        corpus.reset_docs() # start the iterator back at the beginning of the file
         sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
 
         last_acc = None 

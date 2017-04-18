@@ -147,7 +147,7 @@ def main():
             n_examples      = 200000 # number of articles to consume per epoch 
             features        = 400   # vector length
             context_window  = 8     # words to analyze on either side of current word 
-            threads         = 8 #
+            threads         = 8     # number of worker threads during training
             epochs          = 100   # maximum number of epochs
             print_epoch_acc = True  # print the accuracy after each epoch
             stop_early      = True  # cut off training if accuracy falls 
