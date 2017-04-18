@@ -173,13 +173,13 @@ def main():
         # set model hyperparameters
         encoder.build(features=400,context_window=8,threads=8)
         # train model on text corpus
-        encoder.train(corpus=text, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
+        encoder.train(corpus=text_documents, epochs=10, directory='WikiLearn/data/models/doc2vec',test=True)
         # test the final resultant model
         encoder.test(lower=True,show=True)
 
     if LDA:
         # create the LDA object 
-        encoder = LDA(corpus=text,directory='WikiLearn/data/models/LDA')
+        encoder = LDA(corpus=text_documents,directory='WikiLearn/data/models/LDA')
 
     #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
     #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
