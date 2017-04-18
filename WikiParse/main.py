@@ -212,7 +212,7 @@ class text_corpus(object):
 
         print("\t\tGetting trigram detector...")
         if not os.path.isfile(directory+'/trigrams.pkl'):
-            self.trigram = Phraser(Phrases(self.bigram[self.docs(n_examples=-1)], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
+            self.trigram = Phraser(Phrases(self.bigram[self.docs(n_examples=-1)], min_count=2, threshold=sensitivity+1, max_vocab_size=2000000))
             self.trigram.save(directory+'/trigrams.pkl')
         else:
             self.trigram = Phraser.load(directory+'/trigrams.pkl')

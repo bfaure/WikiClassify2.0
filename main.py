@@ -162,7 +162,6 @@ def main():
         if run_LDA:
 
             documents = text_corpus('text.tsv')
-            documents.get_phraser("WikiLearn/data/models/tokenizer/text")
             documents.get_dictionary("WikiLearn/data/models/tokenizer/text", keep=5000)
 
             # create the LDA object 
