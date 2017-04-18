@@ -143,14 +143,8 @@ class LDA(object):
             self.train(epochs=1)
             self.save()
 
-            # Create classifier
-            self.train_classifier()
-            self.save_classifier()
-
         else:
             self.load()
-            self.accuracy, self.precision = self.train_classifier()
-            #self.load_classifier()
 
 
     # Model I/O
@@ -181,18 +175,6 @@ class LDA(object):
         terms  = [y[0] for x in topics for y in x[1]]
         return [terms[i:i+words] for i in xrange(0,len(terms),words)]
 
-    def train_classifier(self):
-        X = self.encode_docs(100000)
-        #y = self.corpus.get_doc_categories(100000)
-        self.classifier = vector_classifier(self.directory)
-        return self.classifier.train(X, y)
-
-    def save_classifier(self):
-        self.classifier.save()
-
-    def load_classifier(self):
-        self.classifier = vector_classifier(self.directory).load()
-
     # Model methods
 
     def encode_doc(self, doc):
@@ -210,8 +192,8 @@ class LDA(object):
 
             # Progress
             times.append(time.time()-start)
-            if not i % (self.corpus.instances()//100):
-                remaining = sum(times)*(self.corpus.instances()-i-1)/len(times)/3600
+            if not i % (self.corpus.instances//100):
+                remaining = sum(times)*(self.corpus.instances-i-1)/len(times)/3600
                 print('\t\t%0.2f hours remaining...\n' % remaining)
                 times = times[-10000:]
 
