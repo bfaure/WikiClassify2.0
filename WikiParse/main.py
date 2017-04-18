@@ -187,7 +187,7 @@ class text_corpus(object):
         current_example = 0
         with open(self.document_path,'rb') as fin:
             for line in fin:
-                if (current_example < self.n_examples-1) or read_all:
+                if (current_example < self.n_examples) or read_all:
                     if line.strip().count('\t') == 1 and line.count(' ') > 1:
                         i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
                         yield i,doc
@@ -202,14 +202,14 @@ class text_corpus(object):
 
         print("\t\tGetting bigram detector...")
         if not os.path.isfile(directory+'/bigrams.pkl'):
-            self.bigram = Phraser(Phrases(self.docs(), min_count=2, threshold=sensitivity, max_vocab_size=2000000))
+            self.bigram = Phraser(Phrases(self.docs(read_all=True), min_count=2, threshold=sensitivity, max_vocab_size=2000000))
             self.bigram.save(directory+'/bigrams.pkl')
         else:
             self.bigram  = Dictionary.load(directory+'/bigrams.pkl')
 
         print("\t\tGetting trigram detector...")
         if not os.path.isfile(directory+'/trigrams.pkl'):
-            self.trigram = Phraser(Phrases(self.bigram[self.docs()], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
+            self.trigram = Phraser(Phrases(self.bigram[self.docs(read_all=True)], min_count=2, threshold=sensitivity, max_vocab_size=2000000))
             self.trigram.save(directory+'/trigrams.pkl')
         else:
             self.trigram = Dictionary.load(directory+'/trigrams.pkl')
@@ -238,7 +238,7 @@ class text_corpus(object):
         self.dictionary = Dictionary.load(directory+'/dictionary.dict')
 
 class bag_corpus(object):
-    
+
     def __init__(self, text_corpus, read_all):
         self.text_corpus = text_corpus
         self.read_all    = read_all

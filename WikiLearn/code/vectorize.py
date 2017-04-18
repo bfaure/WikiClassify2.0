@@ -186,6 +186,7 @@ class LDA(object):
         times = []
         for i, doc in enumerate(self.corpus.bags()):
             start = time.time()
+            print(self.encode_doc(doc))
             vecs.append(self.encode_doc(doc))
 
             # Progress
