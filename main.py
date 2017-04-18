@@ -147,10 +147,9 @@ def main():
 
     # create dictionaries (load if already present)
     
-    
     if os.path.isfile('text.tsv'):
         print("Getting text dictionary...")
-        text_documents = gensim_corpus('text.tsv',model_dir+"text",make_phrases=True)
+        text_documents = gensim_corpus('text.tsv',"WikiLearn/data/models/tokenizer/text",make_phrases=True)
 
 
         # settings for exeuction

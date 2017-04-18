@@ -147,7 +147,7 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
         return False
 
 def gensim_corpus(tsv_path, directory, make_phrases=False):
-    text = text_corpus(tsv_path,skip_rate)
+    text = text_corpus(tsv_path)
     if not os.path.isfile(directory+'/dictionary.dict'):
         text.train_dictionary()
         text.save_dictionary(directory)
