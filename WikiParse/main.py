@@ -205,7 +205,7 @@ class text_corpus(object):
                 else:
                     raise StopIteration
 
-    def get_phraser(self, directory, sensitivity=2):
+    def get_phraser(self, directory, sensitivity=3):
 
         if not os.path.isdir(directory):
             os.makedirs(directory)
@@ -236,7 +236,7 @@ class text_corpus(object):
             print("\tBuilding dictionary...")
             self.dictionary = Dictionary(self.docs(n_examples=-1), prune_at=2000000)
             print("\tFiltering dictionary extremes...")
-            self.dictionary.filter_extremes(no_below=3, no_above=0.3, keep_n=2000000)
+            self.dictionary.filter_extremes(no_below=3, no_above=0.5, keep_n=2000000)
             print("\tSaving dictionary...")
             self.dictionary.save(directory+'/dictionary.dict')
             self.dictionary.save_as_text(directory+'/word_list.tsv')
