@@ -140,7 +140,7 @@ class LDA(object):
         if not os.path.exists(self.directory):
             # Create main model
             self.build(features=5000)
-            self.train(epochs=1)
+            self.train(epochs=10)
             self.save()
 
         else:
