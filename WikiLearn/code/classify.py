@@ -19,7 +19,7 @@ from sklearn.model_selection import cross_val_score
 
 class vector_classifier(object):
 
-    def __init__(self):
+    def __init__(self, multiclass=False):
         print("Initializing vector classifier...")
         
     def train(self, X, y, test_ratio=0.2):
@@ -32,7 +32,10 @@ class vector_classifier(object):
         train_instances = int((1-test_ratio)*X.shape[0])
 
         # train on the training samples (as many cpus as avail.)
-        self.model  = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y[:train_instances])
+        if multiclass:
+            self.model = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y[:train_instances])
+        else:
+            self.model = LogisticRegression().fit(X[:train_instances],y[:train_instances])
         
         # score on the testing samples 
         self.scores = cross_val_score(self.model,X[train_instances:],y[train_instances:],cv=5)
