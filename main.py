@@ -87,7 +87,7 @@ def classify_quality(encoder, directory):
         num_classified = 0
         for line in f:
             i+=1
-            sys.stdout.write("\rParsing Quality (%d/%d), %d in model" % (i,num_lines,len(x)))
+            sys.stdout.write("\rParsing Quality (%d|%d|%d), (model|class.|tot.)" % (len(x),num_classified,num_lines))
             sys.stdout.flush()
             try:
                 article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
@@ -173,7 +173,7 @@ def main():
         if run_doc2vec:
 
             # training configuration
-            n_examples      = 1000000 # number of articles to consume per epoch 
+            n_examples      = 1200000 # number of articles to consume per epoch 
             features        = 300   # vector length
             context_window  = 8     # words to analyze on either side of current word 
             threads         = 8     # number of worker threads during training
