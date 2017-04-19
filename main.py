@@ -266,7 +266,7 @@ def main():
             import subprocess 
             subprocess.Popen('python setup.py build_ext --inplace',shell=True).wait()
             from helpers import map_talk_to_real_ids
-            map_talk_to_real_ids("id_mapping2.tsv") 
+            map_talk_to_real_ids("id_mapping.tsv") 
 
     else:
         print("text.tsv not present, could not create text dictionary")

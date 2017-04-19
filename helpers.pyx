@@ -112,14 +112,17 @@ from bisect import bisect_left
 def get_row_id(row):
 	return int(row.split("\t")[0])
 
+print("\nReading titles.tsv...")
 title_map = open('titles.tsv','r').read().split("\n")
 rows = []
 for row in title_map:
 	items = row.split("\t")
 	if len(items)==2: rows.append(row)
-close(title_map)
+
+print("Sorting rows...")
 rows = sorted(rows,key=get_row_id)
 
+print("Splitting rows...")
 ids = []
 titles = []
 for r in rows:
@@ -128,28 +131,35 @@ for r in rows:
 	titles.append(items[1])
 
 def title_to_id(title):
+	return str(ids[titles.index(title)])
+	'''
 	for i in range(len(titles)):
 		if titles[i]==title:
 			id = str(ids[i])
 			del ids[i]
 			del titles[i]
 			return id
+	'''
 
 def binary_search(x,lo=0,hi=None):
 	hi = hi or len(ids)
 	pos = bisect_left(ids,x,lo,hi)
-	return (pos if pos!=hi and ids[pos]==x else -1)
+	return pos
+	#return (pos if pos!=hi and ids[pos]==x else -1)
 
 def id_to_title(id):
+	return titles[binary_search(id)]
+	'''
 	i = binary_search(id)
-	if i==-1:
-		print("here, error")
 	title = titles[i]
 	del titles[i]
 	del ids[i]
 	return title
+	'''
 
 def map_talk_to_real_ids(fname):
+	import time 
+	start_time = time.time()
 
 	output = open(fname,"w")
 	f = open("quality.tsv","r")
@@ -158,13 +168,13 @@ def map_talk_to_real_ids(fname):
 	for l in lines:
 		i+=1
 		talk_id = int(l.split("\t")[0])
-		talk_title = id_to_title(talk_id)
-		real_title = talk_title.replace("Talk:","")
-		real_id = title_to_id(real_title)
+		real_id = title_to_id(id_to_title(talk_id).replace("Talk:",""))
 		output.write(str(talk_id)+"\t"+str(real_id))
 		if i!=len(lines)-1: output.write("\n")
-		sys.stdout.write("\rProcessing (%d/%d)   "%(i,len(lines)))
+		sys.stdout.write("\rMapping (%d/%d) %0.2f/sec"%(i,len(lines),float(i/(time.time()-start_time))))
 		sys.stdout.flush()
+		#if (time.time()-start_time)>10: break
+
 	sys.stdout.write("\n")
 	output.close()
 
