@@ -30,7 +30,7 @@ void wikitext::read_talk() {
     //cout<<"Importance: "<<importance<<'\n';
 }
 
-vector<string> quality_list{"fa","a","ga","bplus","b","c","start","stub"};
+vector<string> quality_list{"fa","a","ga","b","c","start","stub"};
 void wikitext::read_quality() {
     size_t template_location = page_text.find("WikiProject",0);
     if (template_location!=string::npos) {
