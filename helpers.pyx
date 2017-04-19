@@ -130,32 +130,22 @@ for r in rows:
 	ids.append(int(items[0]))
 	titles.append(items[1])
 
+print("Creating dict...")
+title_idx_dict = {}
+k=-1
+for t in titles:
+	k+=1
+	title_idx_dict[t]=k
+
 def title_to_id(title):
-	return str(ids[titles.index(title)])
-	'''
-	for i in range(len(titles)):
-		if titles[i]==title:
-			id = str(ids[i])
-			del ids[i]
-			del titles[i]
-			return id
-	'''
+	try:    return str(ids[title_idx_dict[title]])
+	except: return None
 
 def binary_search(x,lo=0,hi=None):
-	hi = hi or len(ids)
-	pos = bisect_left(ids,x,lo,hi)
-	return pos
-	#return (pos if pos!=hi and ids[pos]==x else -1)
+	return bisect_left(ids,x,lo,hi or len(ids))
 
 def id_to_title(id):
 	return titles[binary_search(id)]
-	'''
-	i = binary_search(id)
-	title = titles[i]
-	del titles[i]
-	del ids[i]
-	return title
-	'''
 
 def map_talk_to_real_ids(fname):
 	import time 
@@ -169,11 +159,10 @@ def map_talk_to_real_ids(fname):
 		i+=1
 		talk_id = int(l.split("\t")[0])
 		real_id = title_to_id(id_to_title(talk_id).replace("Talk:",""))
-		output.write(str(talk_id)+"\t"+str(real_id))
+		if real_id!=None: output.write(str(talk_id)+"\t"+str(real_id))
 		if i!=len(lines)-1: output.write("\n")
 		sys.stdout.write("\rMapping (%d/%d) %0.2f/sec"%(i,len(lines),float(i/(time.time()-start_time))))
 		sys.stdout.flush()
-		#if (time.time()-start_time)>10: break
 
 	sys.stdout.write("\n")
 	output.close()
