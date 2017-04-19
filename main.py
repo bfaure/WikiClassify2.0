@@ -63,6 +63,7 @@ def classify_quality(encoder, directory):
     y = []
     x = []
     ids = []
+    """
     classes = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
                "a"    :np.array([0,0,0,0,0,1,0],dtype=bool),\
                "ga"   :np.array([0,0,0,0,1,0,0],dtype=bool),\
@@ -70,6 +71,14 @@ def classify_quality(encoder, directory):
                "c"    :np.array([0,0,1,0,0,0,0],dtype=bool),\
                "start":np.array([0,1,0,0,0,0,0],dtype=bool),\
                "stub" :np.array([1,0,0,0,0,0,0],dtype=bool)}
+    """
+    classes = {"fa"   :np.array([0],dtype=int),\
+               "a"    :np.array([1],dtype=int),\
+               "ga"   :np.array([2],dtype=int),\
+               "b"    :np.array([3],dtype=int),\
+               "c"    :np.array([4],dtype=int),\
+               "start":np.array([5],dtype=int),\
+               "stub" :np.array([6],dtype=int)}
 
     counts  = {"fa"   :0,\
                "a"    :0,\
@@ -111,7 +120,9 @@ def classify_quality(encoder, directory):
 
     X = np.array(x)
     y = np.array(y)
+    y = np.ravel(y)
     
+    '''
     print('Training classifier...')
     for i in [100,500,1000,5000,10000,50000,100000,500000,1000000]:
         classifier = vector_classifier()
@@ -119,6 +130,10 @@ def classify_quality(encoder, directory):
         classifier.train(X[:i+1], y[:i+1])
         print('Elapsed for %d: %0.2f' % (i,time.time()-t))
         classifier.save(directory)
+    '''
+    classifier = vector_classifier()
+    classifier.train(X,y)
+    classifier.save(directory)
 
 '''
 def classify_importance(encoder):
@@ -169,7 +184,7 @@ def main():
     if os.path.isfile('text.tsv'):
 
         # settings for exeuction
-        run_doc2vec = True
+        run_doc2vec = False
         if run_doc2vec:
 
             # training configuration
@@ -212,11 +227,12 @@ def main():
         train_classifier = True 
         if train_classifier:
 
-            #modl_d = "WikiLearn/data/models/old/5"
-            modl_d = "WikiLearn/data/models/doc2vec/large"
+            modl_d = "WikiLearn/data/models/old/5"
+            #modl_d = "WikiLearn/data/models/doc2vec/large"
             #modl_d = "WikiLearn/data/models/doc2vec"
             #clas_d = "WikiLearn/data/models/classifier/older"
-            clas_d = "WikiLearn/data/models/classifier/large"
+            clas_d = "WikiLearn/data/models/classifier/recent"
+            clas_d = "WikiLearn/data/models/classifier/mlp_old"
 
             encoder = doc2vec()
             encoder.load(modl_d)

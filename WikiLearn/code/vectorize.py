@@ -200,7 +200,9 @@ class doc2vec(object):
             if stop_early:
                 if last_acc!=None and acc<last_acc: break
                 last_acc = acc 
-            if backup: self.model.save(os.path.join(directory,'word2vec-backup.d2v'))
+            if backup and directory!=None:
+                if not os.path.isdir(directory): os.makedirs(directory)
+                self.model.save(os.path.join(directory,'word2vec-backup.d2v'))
             t.stop()
 
         elapsed  = t.get_elapsed()
