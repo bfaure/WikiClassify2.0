@@ -206,7 +206,7 @@ def main():
 
             # print out launch config
             print("\nphraser_dir: %s" % phraser_dir)
-            print("model_dir:   %s\n" % model_name.split("-").join(" | "))
+            print("model_dir:   %s\n" % (' | '.join(x for x in model_name.split("-"))))
 
             # create corpus object to allow for text tagging/iteration
             documents = text_corpus('text.tsv', n_examples=n_examples)
