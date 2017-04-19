@@ -26,46 +26,39 @@ from pathfinder import get_queries, astar_path
 #                            Main function
 #-----------------------------------------------------------------------------#
 
-def check_if_in_text(a_id,text_f):
-    for line in text_f:
-        if int(line.split("\t")[0])==int(a_id): return True 
-    return False
+def classify_quality(encoder, directory):
 
-title_map = open('titles.tsv','r').read().split("\n")
-def title_to_id(title):
-    i=-1
-    for l in title_map:
-        i+=1
-        if l.split("\t")[1].lower()==title.lower():
-            del title_map[i]
-            return l.split("\t")[0]
-    return "None"
+    from bisect import bisect_left
+    
+    def get_row_id(row):
+        return int(row.split("\t")[0])
 
-def id_to_title(id):
-    i=-1
-    for l in title_map:
-        i+=1
-        if str(l.split("\t")[0].lower())==(str(id).lower()):
-            del title_map[i]
-            return l.split("\t")[1]
-    return "None"
+    print("\nReading id_mapping.tsv...")
+    mapping = open("id_mapping.tsv",'r').read().split("\n")
+    rows = []
+    for row in mapping:
+        items = row.split("\t")
+        if len(items)==2: rows.append(row)
 
-quality_map = open('quality.tsv','r').read().split("\n")
-def id_to_quality(id):
-    i=-1
-    for l in quality_map:
-        i+=1
-        if str(l.split("\t")[0].lower())==(str(id).lower()):
-            del quality_map[i]
-            return l.split("\t")[1]
-    return "None"
+    print("Sorting rows...")
+    rows = sorted(rows,key=get_row_id)
 
-def talk_to_real_id(talk_page_id):
-    return title_to_id(id_to_title(int(talk_page_id)).replace("Talk:",""))
+    print("Splitting rows...")
+    ids_talk = []
+    ids_real = []
+    for r in rows:
+        items = r.split("\t")
+        ids_talk.append(int(items[0]))
+        ids_real.append(int(items[1]))
 
-def classify_quality(encoder, directory, documents=None):
+    print("Mapping size: %d"%len(ids_talk))
 
-    t_f = open("text.tsv","r")
+    def binary_search(query,lo=0,hi=None):
+        hi = hi or len(ids_talk)
+        return bisect_left(ids_talk,query,lo,hi)
+
+    def talk_to_real_id(talk_page_id):
+        return ids_real[binary_search(talk_page_id)]
 
     y = []
     x = []
@@ -85,23 +78,24 @@ def classify_quality(encoder, directory, documents=None):
                "c"    :0,\
                "start":0,\
                "stub" :0,\
-               "unknown":0}
+               "unknown/not_in_model":0}
 
-    print('Parsing quality... ')
+    num_lines = len(open("quality.tsv","r").read().split("\n"))
+    sys.stdout.write('Parsing quality ')
     with open('quality.tsv','r') as f:
         i=0
         num_classified = 0
         for line in f:
             i+=1
-            sys.stdout.write("\rLine: %d, Classified: %d, Classified & in model: %d   " % (i,num_classified,len(x)))
+            sys.stdout.write("\rParsing Quality (%d/%d), %d in model" % (i,num_lines,len(x)))
             sys.stdout.flush()
             try:
                 article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
 
                 qual_mapping = classes[article_quality]
+                real_article_id = talk_to_real_id(int(article_id))
                 num_classified+=1
 
-                real_article_id = talk_to_real_id(article_id)
                 doc_vector = encoder.model.docvecs[int(real_article_id)] 
 
                 x.append(doc_vector)
@@ -109,15 +103,11 @@ def classify_quality(encoder, directory, documents=None):
 
                 counts[article_quality]+=1
             except:
-                counts["unknown"]+=1
+                counts["unknown/not_in_model"]+=1
 
     sys.stdout.write("\n")
-
-    sys.stdout.write(str(len(y))+" entries\n")
     for key,value in counts.iteritems():
         print("\t"+key+" - "+str(value)+" entries")
-    print("\rFound %d classified articles" % len(y))
-    print("Found %d classified articles with docvecs" % len(x))
 
     X = np.array(x)
     y = np.array(y)
@@ -158,29 +148,6 @@ def classify_importance(encoder):
     y = 
 '''
 
-def check_tsv_files(base_dir="."):
-    print("Checking .tsv files for corruption...")
-    all_items = os.listdir(base_dir)
-    for fname in all_items:
-        if os.path.isfile(fname):
-            if fname.find(".tsv")!=-1:
-                sys.stdout.write(fname+"... ")
-                sys.stdout.flush()
-                try:
-                    f = open(fname,"r")
-                    text = f.read()
-                    sys.stdout.write("okay\n")
-                except:
-                    sys.stdout.write("failure\n")
-                sys.stdout.flush()
-    
-    return text_documents,categories_documents,links_documents
-
-def get_article_quality(art_id,qualities):
-    for l in qualities:
-        if l.split("\t")[0]==art_id: return l.split("\t")[1]
-    return None
-
 def main():
     start_time = time.time()
 
@@ -202,15 +169,15 @@ def main():
     if os.path.isfile('text.tsv'):
 
         # settings for exeuction
-        run_doc2vec = False
+        run_doc2vec = True
         if run_doc2vec:
 
             # training configuration
-            n_examples      = 5000000 # number of articles to consume per epoch 
-            features        = 400   # vector length
+            n_examples      = 1000000 # number of articles to consume per epoch 
+            features        = 300   # vector length
             context_window  = 8     # words to analyze on either side of current word 
             threads         = 8     # number of worker threads during training
-            epochs          = 100   # maximum number of epochs
+            epochs          = 1   # maximum number of epochs
             print_epoch_acc = True  # print the accuracy after each epoch
             stop_early      = True  # cut off training if accuracy falls 
             backup          = True  # if true, model is saved after each epoch with "-backup" in filename
@@ -242,24 +209,21 @@ def main():
             encoder.test(lower=True,show=True)
 
 
-        train_classifier = False 
+        train_classifier = True 
         if train_classifier:
 
             #modl_d = "WikiLearn/data/models/old/5"
-            modl_d = "WikiLearn/data/models/doc2vec"
-            clas_d = "WikiLearn/data/models/classifier/"
-            dict_d = "WikiLearn/data/models/doc2vec/text"
-
-            #documents = text_corpus('text.tsv',n_examples=200000)
-            #documents.get_phraser(dict_d)
+            modl_d = "WikiLearn/data/models/doc2vec/large"
+            #modl_d = "WikiLearn/data/models/doc2vec"
+            #clas_d = "WikiLearn/data/models/classifier/older"
+            clas_d = "WikiLearn/data/models/classifier/large"
 
             encoder = doc2vec()
             encoder.load(modl_d)
 
-            print("length: %d" % len(encoder.model.docvecs))
             classify_quality(encoder,clas_d)
 
-        map_talk_to_real = True 
+        map_talk_to_real = False 
         if map_talk_to_real:
 
             import Cython

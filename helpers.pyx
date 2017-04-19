@@ -163,6 +163,7 @@ def map_talk_to_real_ids(fname):
 		if i!=len(lines)-1: output.write("\n")
 		sys.stdout.write("\rMapping (%d/%d) %0.2f/sec"%(i,len(lines),float(i/(time.time()-start_time))))
 		sys.stdout.flush()
+		#if (time.time()-start_time)>10: break
 
 	sys.stdout.write("\n")
 	output.close()
