@@ -7,6 +7,8 @@ from __future__ import print_function
 import os, sys, time
 from shutil import rmtree
 
+# ensure sys.stdout isn't buffered (allows us to remove #sys.stdout.flush())
+sys.stdout = os.fdopen(sys.stdout.fileno(),'w',0) 
 
 import numpy as np
 
@@ -63,6 +65,7 @@ def classify_quality(encoder, directory):
     y = []
     x = []
     ids = []
+
     """
     classes = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
                "a"    :np.array([0,0,0,0,0,1,0],dtype=bool),\
@@ -97,7 +100,7 @@ def classify_quality(encoder, directory):
         for line in f:
             i+=1
             sys.stdout.write("\rParsing Quality (%d|%d|%d), (model|class.|tot.)" % (len(x),num_classified,num_lines))
-            sys.stdout.flush()
+            #sys.stdout.flush()
             try:
                 article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
 
@@ -122,7 +125,6 @@ def classify_quality(encoder, directory):
     y = np.array(y)
     y = np.ravel(y)
     
-    '''
     print('Training classifier...')
     for i in [100,500,1000,5000,10000,50000,100000,500000,1000000]:
         classifier = vector_classifier()
@@ -130,10 +132,10 @@ def classify_quality(encoder, directory):
         classifier.train(X[:i+1], y[:i+1])
         print('Elapsed for %d: %0.2f' % (i,time.time()-t))
         classifier.save(directory)
-    '''
-    classifier = vector_classifier()
-    classifier.train(X,y)
-    classifier.save(directory)
+    
+    #classifier = vector_classifier()
+    #classifier.train(X,y)
+    #classifier.save(directory)
 
 '''
 def classify_importance(encoder):
@@ -172,37 +174,39 @@ def main():
         start_gui()
         return
 
-    # if the parsed wikidump is not present in repository
-    #if not os.path.isfile('text.tsv'):
-    #    # download (if not already present)
-    #    dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
-    #    # parse the .xml file
-    #    parse_wikidump(dump_path)
+    require_datadump = False
+    if require_datadump:
+        if not os.path.isfile('text.tsv'):
+            # download (if not already present)
+            dump_path = download_wikidump('enwiki','WikiParse/data/corpora/enwiki/data')
+            # parse the .xml file
+            parse_wikidump(dump_path)
 
-    # create dictionaries (load if already present)
-    
+    # if we have a copy of the parsed datadump
     if os.path.isfile('text.tsv'):
 
         # settings for exeuction
-        run_doc2vec = False
+        run_doc2vec = True
         if run_doc2vec:
 
             # training configuration
-            n_examples      = 1200000 # number of articles to consume per epoch 
-            features        = 300   # vector length
-            context_window  = 8     # words to analyze on either side of current word 
-            threads         = 8     # number of worker threads during training
-            epochs          = 1   # maximum number of epochs
-            print_epoch_acc = True  # print the accuracy after each epoch
-            stop_early      = True  # cut off training if accuracy falls 
-            backup          = True  # if true, model is saved after each epoch with "-backup" in filename
-            phraser_dir = "WikiLearn/data/models/doc2vec/text" # where to save/load phraser from
-            model_dir   = "WikiLearn/data/models/doc2vec/large" # where to save model
+            n_examples      = 20000000 # number of articles to consume per epoch 
+            features        = 300      # vector length
+            context_window  = 8        # words to analyze on either side of current word 
+            threads         = 8        # number of worker threads during training
+            epochs          = 1        # maximum number of epochs
+            pass_per_epoch  = 1        # number of passes across corpus / epoch (gensim default:5)
+            print_epoch_acc = True     # print the accuracy after each epoch
+            stop_early      = True     # cut off training if accuracy falls 
+            backup          = True     # if true, model is saved after each epoch with "-backup" in filename
+
+            model_name  = "unix:%d-examples:%d-features:%d-window:%d-epochs:%d-ppe:%d" % (int(time.time()),n_examples,features,context_window,epochs,pass_per_epoch)
+            phraser_dir = 'WikiLearn/data/models/dictionary/text'         # where to save/load phraser from
+            model_dir   = "WikiLearn/data/models/doc2vec/%s" % model_name # where to save new doc2vec model
 
             # print out launch config
-            print("\nSettings:    n_examples=%d | features=%d | context_window=%d | epochs=%d" % (n_examples,features,context_window,epochs))
-            print("phraser_dir: %s" % phraser_dir)
-            print("model_dir:   %s\n" % model_dir)
+            print("\nphraser_dir: %s" % phraser_dir)
+            print("model_dir:   %s\n" % model_name.split("-").join(" | "))
 
             # create corpus object to allow for text tagging/iteration
             documents = text_corpus('text.tsv', n_examples=n_examples)
@@ -211,7 +215,7 @@ def main():
             # create doc2vec object    
             encoder = doc2vec()
             # set model hyperparameters
-            encoder.build(features=features,context_window=context_window,threads=threads)
+            encoder.build(features=features,context_window=context_window,threads=threads,iterations=pass_per_epoch)
             # train model on text corpus
             encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
 
@@ -224,7 +228,7 @@ def main():
             encoder.test(lower=True,show=True)
 
 
-        train_classifier = True 
+        train_classifier = False 
         if train_classifier:
 
             modl_d = "WikiLearn/data/models/old/5"

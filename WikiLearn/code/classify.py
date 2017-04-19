@@ -39,7 +39,7 @@ class vector_classifier(object):
         if self.classifier_type=="old":
             self.model = LogisticRegression().fit(X[:train_instances],y[:train_instances])
         if self.classifier_type=="mlp":
-            self.model = MLPClassifier().fit(X,y)
+            self.model = MLPClassifier(hidden_layer_sizes=(100,50,20,5)).fit(X,y)
 
         # score on the testing samples 
         self.scores = cross_val_score(self.model,X[train_instances:],y[train_instances:],cv=5)

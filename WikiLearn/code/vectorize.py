@@ -83,7 +83,6 @@ def download(url, directory, show=True):
                             if prog_index<=num_items: progress_string+="-"
                             else: progress_string += " "
                         if show: sys.stdout.write("\r\t\t["+progress_string+"] "+str(100.0*dl/total_length)[:4]+"% done")
-                        if show: sys.stdout.flush()
                     if show: sys.stdout.write("\n")
                 else:
                     f.write(response.content)
@@ -133,6 +132,12 @@ def make_seconds_pretty(seconds):
     time_str = str(rem_hours)+"h "+str(rem_mins)+"m "+str(rem_secs)+"s"
     return time_str 
 
+def print_predicted_times(num_examples,iterations_per_epoch):
+    pred_epoch_time = ((0.00888889*num_examples)-0.888889)*iterations_per_epoch
+    print("\tPredicted epoch time: %s" % make_seconds_pretty(pred_epoch_time))
+    pred_vocab_time = (0.00711111*num_examples)-0.111111
+    print("\tPredicted vocab time: %s" % make_seconds_pretty(pred_vocab_time))
+
 #                           Doc2vec encoder
 #-----------------------------------------------------------------------------#
 
@@ -162,55 +167,60 @@ class doc2vec(object):
 
     # Model I/O
 
-    def build(self, features=400, context_window=8, min_count=3, sample=1e-5, negative=5, threads=7):
+    def build(self, features=400, context_window=8, min_count=3, sample=1e-5, negative=5, threads=7, iterations=1):
         print("\tBuilding doc2vec model...")
         self.features = features
-        self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=threads)
+        self.iterations = iterations
+        self.model = Doc2Vec(min_count=min_count, size=features, window=context_window, sample=sample, negative=negative, workers=threads, iter=iterations)
 
     def train(self, corpus, epochs=100, directory=None, test=False, stop_early=True, backup=False):
 
+        # make target (saving) directory
+        if directory!=None and not os.path.isdir(directory): os.makedirs(directory)
+
         # print out predicted times per epoch and for vocab construction
-        pred_epoch_time = (0.0151529*corpus.n_examples)+19.4414
-        print("\tPredicted epoch time: %s" % make_seconds_pretty(pred_epoch_time))
-        pred_vocab_time = (0.0110936*corpus.n_examples)+26.9508
-        print("\tPredicted vocab time: %s" % make_seconds_pretty(pred_vocab_time))
+        print_predicted_times(corpus.n_examples,self.iterations)
 
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
-        sys.stdout.flush()
-        #corpus.n_examples = corpus.n_examples*5 # increase articles for vocab construction
         self.model.build_vocab(corpus)
-        #corpus.n_examples = corpus.n_examples/5 # cut back down for per-epoch article count
-        corpus.reset_docs() # start the iterator back at the beginning of the file
-        sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
+        corpus.reset_docs() # start iterator at beginning of corpus
+        sys.stdout.write("%s\n" % (make_seconds_pretty(time.time()-t_e)))
 
-        last_acc = None 
+        last_acc = None # track acc on last epoch
+        acc      = None # current epoch accuracy
+        t        = epoch_timer(epochs) # for predicting epoch times
+
         print("\tTraining doc2vec model...")
-        t = epoch_timer(epochs)
         for i in xrange(epochs):
+
+            # track time for epoch
             t.start()
             t_e = time.time()
             sys.stdout.write("\t\tEpoch %d... " % (i+1))
-            sys.stdout.flush()
+            
+            # perform "iter" passes over corpus (specified in build)
             self.model.train(corpus)
-            sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
 
-            if test or stop_early: acc = self.test(lower=True,show=False)
-            if test: print("\t\t\tModel Acc: \t%0.7f%%" % (100*acc))
-            if stop_early:
-                if last_acc!=None and acc<last_acc: break
-                last_acc = acc 
-            if backup and directory!=None:
-                if not os.path.isdir(directory): os.makedirs(directory)
-                self.model.save(os.path.join(directory,'word2vec-backup.d2v'))
+            # write out elapsed time
+            sys.stdout.write("%s\n" % (make_seconds_pretty(time.time()-t_e)))
+
+            # calculate accuracy
+            if test or stop_early: acc = self.test(lower=True,show=False) 
+            # print out model accuracy 
+            if test: print("\t\t\tModel Acc: \t%0.7f%%" % (100*acc)) 
+            # stop if getting worse
+            if stop_early and last_acc!=None and acc<last_acc: break 
+             # save backup
+            if backup and directory!=None: self.model.save(os.path.join(directory,'word2vec-backup.d2v'))
+            
             t.stop()
+            corpus.reset_docs() # start iterator at beginning of corpus
+            last_acc = acc # save current accuracy for comparison
 
-        elapsed  = t.get_elapsed()
-        print('\tTime elapsed: %0.2f hours' % (elapsed))
-        #self.model.init_sims(replace=True)
+        print('\tTime elapsed: %0.2f hours' % (t.get_elapsed()))
 
         if directory!=None:
-            if not os.path.isdir(directory): os.makedirs(directory)
             print("\tSaving doc2vec model...")
             self.model.save(os.path.join(directory,'word2vec.d2v'))
 
