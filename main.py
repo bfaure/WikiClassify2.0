@@ -10,6 +10,11 @@ from shutil import rmtree
 
 import numpy as np
 
+from matplotlib import pyplot as plt
+from matplotlib import cm
+from matplotlib import mlab as ml
+from matplotlib import colors
+
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
@@ -21,12 +26,49 @@ from pathfinder import get_queries, astar_path
 #                            Main function
 #-----------------------------------------------------------------------------#
 
-def classify_quality(encoder, directory):
+def check_if_in_text(a_id,text_f):
+    for line in text_f:
+        if int(line.split("\t")[0])==int(a_id): return True 
+    return False
 
-    sys.stdout.write('Parsing quality... ')
-    sys.stdout.flush()
+title_map = open('titles.tsv','r').read().split("\n")
+def title_to_id(title):
+    i=-1
+    for l in title_map:
+        i+=1
+        if l.split("\t")[1].lower()==title.lower():
+            del title_map[i]
+            return l.split("\t")[0]
+    return "None"
+
+def id_to_title(id):
+    i=-1
+    for l in title_map:
+        i+=1
+        if str(l.split("\t")[0].lower())==(str(id).lower()):
+            del title_map[i]
+            return l.split("\t")[1]
+    return "None"
+
+quality_map = open('quality.tsv','r').read().split("\n")
+def id_to_quality(id):
+    i=-1
+    for l in quality_map:
+        i+=1
+        if str(l.split("\t")[0].lower())==(str(id).lower()):
+            del quality_map[i]
+            return l.split("\t")[1]
+    return "None"
+
+def talk_to_real_id(talk_page_id):
+    return title_to_id(id_to_title(int(talk_page_id)).replace("Talk:",""))
+
+def classify_quality(encoder, directory, documents=None):
+
+    t_f = open("text.tsv","r")
 
     y = []
+    x = []
     ids = []
     classes = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
                "a"    :np.array([0,0,0,0,0,1,0],dtype=bool),\
@@ -45,32 +87,48 @@ def classify_quality(encoder, directory):
                "stub" :0,\
                "unknown":0}
 
-    with open('quality.tsv') as f:
+    print('Parsing quality... ')
+    with open('quality.tsv','r') as f:
+        i=0
+        num_classified = 0
         for line in f:
+            i+=1
+            sys.stdout.write("\rLine: %d, Classified: %d, Classified & in model: %d   " % (i,num_classified,len(x)))
+            sys.stdout.flush()
             try:
-                article_id, article_quality = line.strip().split('\t')
-                y.append(classes[article_quality])
-                ids.append(article_id)
+                article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
+
+                qual_mapping = classes[article_quality]
+                num_classified+=1
+
+                real_article_id = talk_to_real_id(article_id)
+                doc_vector = encoder.model.docvecs[int(real_article_id)] 
+
+                x.append(doc_vector)
+                y.append(qual_mapping)
+
                 counts[article_quality]+=1
             except:
                 counts["unknown"]+=1
 
+    sys.stdout.write("\n")
+
     sys.stdout.write(str(len(y))+" entries\n")
     for key,value in counts.iteritems():
         print("\t"+key+" - "+str(value)+" entries")
+    print("\rFound %d classified articles" % len(y))
+    print("Found %d classified articles with docvecs" % len(x))
 
+    X = np.array(x)
     y = np.array(y)
-
-    print('Parsing vectors...')
-    X = np.random.randn(y.shape[0],100)
-
+    
     print('Training classifier...')
     for i in [100,500,1000,5000,10000,50000,100000,500000,1000000]:
         classifier = vector_classifier()
         t = time.time()
         classifier.train(X[:i+1], y[:i+1])
         print('Elapsed for %d: %0.2f' % (i,time.time()-t))
-        #classifier.save(directory)
+        classifier.save(directory)
 
 '''
 def classify_importance(encoder):
@@ -118,6 +176,11 @@ def check_tsv_files(base_dir="."):
     
     return text_documents,categories_documents,links_documents
 
+def get_article_quality(art_id,qualities):
+    for l in qualities:
+        if l.split("\t")[0]==art_id: return l.split("\t")[1]
+    return None
+
 def main():
     start_time = time.time()
 
@@ -139,12 +202,11 @@ def main():
     if os.path.isfile('text.tsv'):
 
         # settings for exeuction
-        run_doc2vec = True
-    
+        run_doc2vec = False
         if run_doc2vec:
 
             # training configuration
-            n_examples      = 200000 # number of articles to consume per epoch 
+            n_examples      = 5000000 # number of articles to consume per epoch 
             features        = 400   # vector length
             context_window  = 8     # words to analyze on either side of current word 
             threads         = 8     # number of worker threads during training
@@ -153,7 +215,7 @@ def main():
             stop_early      = True  # cut off training if accuracy falls 
             backup          = True  # if true, model is saved after each epoch with "-backup" in filename
             phraser_dir = "WikiLearn/data/models/doc2vec/text" # where to save/load phraser from
-            model_dir   = "WikiLearn/data/models/doc2vec" # where to save model
+            model_dir   = "WikiLearn/data/models/doc2vec/large" # where to save model
 
             # print out launch config
             print("\nSettings:    n_examples=%d | features=%d | context_window=%d | epochs=%d" % (n_examples,features,context_window,epochs))
@@ -170,74 +232,48 @@ def main():
             encoder.build(features=features,context_window=context_window,threads=threads)
             # train model on text corpus
             encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
+
+
+        test = False
+        if test:
+            model_dir = "WikiLearn/data/models/old/5"
+            encoder = doc2vec()
+            encoder.load(model_dir)
+            encoder.test(lower=True,show=True)
+
+
+        train_classifier = False 
+        if train_classifier:
+
+            #modl_d = "WikiLearn/data/models/old/5"
+            modl_d = "WikiLearn/data/models/doc2vec"
+            clas_d = "WikiLearn/data/models/classifier/"
+            dict_d = "WikiLearn/data/models/doc2vec/text"
+
+            #documents = text_corpus('text.tsv',n_examples=200000)
+            #documents.get_phraser(dict_d)
+
+            encoder = doc2vec()
+            encoder.load(modl_d)
+
+            print("length: %d" % len(encoder.model.docvecs))
+            classify_quality(encoder,clas_d)
+
+        map_talk_to_real = True 
+        if map_talk_to_real:
+
+            import Cython
+            import subprocess 
+            subprocess.Popen('python setup.py build_ext --inplace',shell=True).wait()
+            from helpers import map_talk_to_real_ids
+            map_talk_to_real_ids("id_mapping2.tsv") 
+
     else:
         print("text.tsv not present, could not create text dictionary")
-    '''
 
-    model = doc2vec()
-    model.load('WikiLearn/data/models/doc2vec')
-    model.test(lower=True,show=True,normalize=True)
-    
-
-    #if os.path.isfile('categories.tsv'):
-    #    print("Getting categories dictionary...")
-    #    categories_documents = gensim_corpus('categories.tsv',model_dir+"categories",make_phrases=False)
-    #else: print("categories.tsv not present, could not create categories dictionary")
-    #
-    #if os.path.isfile('links.tsv'):
-    #    print("Getting links dictionary...")
-    #    links_documents = gensim_corpus('links.tsv',model_dir+"links",make_phrases=False)
-    #else: print("links.tsv not present, could not create links dictionary")
-
-    #encoder.load_pretrained('WikiLearn/data/models/doc2vec','google')
-    #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
-
-    # get the text, categories, and links dictionaries
-    #text,categories,links = get_dictionaries()
-
-    # train the google encoder on single epoch of text documents 
-    #print("Training model on new data")
-    #encoder.train(corpus=text, epochs=1)
-    #print("Model Accuracy: %0.2f%%" % (100*encoder.test()))
-
-    #encoder = None
-    #classify_quality(encoder,'WikiLearn/data/models/classifier')
-
-    while True:
-        algo = raw_input("\nSelect an activity:\nPath [P]\nJoin [j]\n> ")#\na: add\n> ")
-        if algo.lower() in ["p",""]:
-            algo = 'p'
-            break
-        elif algo.lower() in ["j"]:
-            break
-    if algo == 'p':
-        while True:
-            queries = get_queries(encoder,n=2)
-            if queries:
-                path = astar_path(queries[0],queries[1],encoder)
-                if all([i.isdigit() for i in path]):
-                    for item in path:
-                        print(doc_ids[item])
-                else:
-                    for item in path:
-                        print(item)
-                print('='*41)
-    elif algo == 'j':
-        while True:
-            queries = get_queries(encoder)
-            try:
-                middle_word = encoder.model.most_similar(queries,topn=1)[0][0]
-                print((' '*64)+'\r',end='\r')
-                print('\n'+('='*41))
-                #print(" + ".join([doc_ids[q] for q in queries])+" = "+doc_ids[middle_word]+"\n")
-                print(" + ".join(q for q in queries)+" = "+middle_word)
-                print('='*41)
-            except:
-                print('One of the words does not occur!')
-    #elif algo.lower() in ["add"]:
-    #    word_algebra(encoder)
-    '''
     print("\nTotal time: %0.2f seconds" % (time.time()-start_time))
 
 if __name__ == "__main__":
     main()
+
+

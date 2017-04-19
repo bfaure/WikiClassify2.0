@@ -178,9 +178,9 @@ class doc2vec(object):
         t_e = time.time()
         sys.stdout.write("\t\tBuilding vocab... ")
         sys.stdout.flush()
-        corpus.n_examples = corpus.n_examples*5 # increase articles for vocab construction
+        #corpus.n_examples = corpus.n_examples*5 # increase articles for vocab construction
         self.model.build_vocab(corpus)
-        corpus.n_examples = corpus.n_examples/5 # cut back down for per-epoch article count
+        #corpus.n_examples = corpus.n_examples/5 # cut back down for per-epoch article count
         corpus.reset_docs() # start the iterator back at the beginning of the file
         sys.stdout.write("%0.1f sec\n" % (time.time()-t_e))
 
@@ -208,8 +208,7 @@ class doc2vec(object):
         #self.model.init_sims(replace=True)
 
         if directory!=None:
-            if not os.path.isdir(directory):
-                os.makedirs(directory)
+            if not os.path.isdir(directory): os.makedirs(directory)
             print("\tSaving doc2vec model...")
             self.model.save(os.path.join(directory,'word2vec.d2v'))
 
