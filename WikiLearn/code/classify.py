@@ -14,14 +14,16 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.externals import joblib
 from sklearn.model_selection import cross_val_score
+from sklearn.metrics import confusion_matrix
 
 #                            Linear classifier
 #-----------------------------------------------------------------------------#
 
 class vector_classifier(object):
 
-    def __init__(self, classifier_type="multiclass"):
+    def __init__(self, class_names=None, classifier_type="mlp"):
         self.classifier_type = classifier_type
+        self.class_names = class_names
         print("Initializing vector classifier...")
         
     def train(self, X, y, test_ratio=0.2):
@@ -43,8 +45,14 @@ class vector_classifier(object):
 
         # score on the testing samples 
         self.scores = cross_val_score(self.model,X[train_instances:],y[train_instances:],cv=5)
-
         print("Accuracy: %0.1f%% (+/- %0.1f%%)" % (100*self.scores.mean(), 100*self.scores.std()*2))
+
+        if self.class_names!=None and self.classifier_type!="multiclass":
+            print("Plotting confusion matrix...")
+            y_test = y[train_instances:]
+            y_pred = self.model.predict(X[train_instances:])
+            plot_confusion_matrix(y_test,y_pred,self.class_names,normalize=True)
+
         return self.scores.mean(), self.scores.std()*2
 
     def save(self, directory):

@@ -276,11 +276,11 @@ class doc2vec(object):
             print("Loaded pretrained %s model" % version)
 
     def load(self, directory):
-        if directory[-1]!="/": directory += "/" 
-
-        print("\tLoading doc2vec model...")
-        self.model = Doc2Vec.load(directory+'/word2vec.d2v')
+        sys.stdout.write("\tLoading doc2vec model... ")
+        start_time = time.time()
+        self.model = Doc2Vec.load(os.path.join(directory,'word2vec.d2v'))
         self.features = self.model.docvecs[0].shape[0]
+        sys.stdout.write("%0.2f sec\n" % (time.time()-start_time))
 
     # Encode/decode at word, words, and doc level
 

@@ -83,6 +83,8 @@ def classify_quality(encoder, directory):
                "start":np.array([5],dtype=int),\
                "stub" :np.array([6],dtype=int)}
 
+    class_names = ["fa","a","ga","b","c","start","stub"]
+
     counts  = {"fa"   :0,\
                "a"    :0,\
                "ga"   :0,\
@@ -126,15 +128,12 @@ def classify_quality(encoder, directory):
     
     print('Training classifier...')
     for i in [100,500,1000,5000,10000,50000,100000,500000,1000000,10000000]:
-        classifier = vector_classifier()
+        classifier = vector_classifier(class_names=class_names,classifier_type="logistic")
         t = time.time()
         classifier.train(X[:i+1], y[:i+1])
         print('Elapsed for %d: %0.2f' % (i,time.time()-t))
         classifier.save(directory)
     
-    #classifier = vector_classifier()
-    #classifier.train(X,y)
-    #classifier.save(directory)
 
 '''
 def classify_importance(encoder):
