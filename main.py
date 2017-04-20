@@ -7,7 +7,7 @@ from __future__ import print_function
 import os, sys, time
 from shutil import rmtree
 
-# ensure sys.stdout isn't buffered (allows us to remove #sys.stdout.flush())
+# enforce auto-flushing of stdout on every write
 sys.stdout = os.fdopen(sys.stdout.fileno(),'w',0) 
 
 import numpy as np
@@ -185,6 +185,7 @@ def main():
     # if we have a copy of the parsed datadump
     if os.path.isfile('text.tsv'):
 
+
         # after parser is run, use this to map the article ids (talk ids) in quality.tsv 
         # to the article ids (real article ids) in text.tsv, saved in id_mapping.tsv
         map_talk_to_real = False 
@@ -194,6 +195,7 @@ def main():
             subprocess.Popen('python setup.py build_ext --inplace',shell=True).wait()
             from helpers import map_talk_to_real_ids
             map_talk_to_real_ids("id_mapping.tsv")         
+
 
         # trains a new Doc2Vec encoder on the contents of text.tsv
         run_doc2vec = False
@@ -232,7 +234,7 @@ def main():
 
         # after Doc2Vec has created vector encodings, this trains on those
         # mappings using the quality.tsv data as the output
-        train_quality_classifier = True 
+        train_quality_classifier = False 
         if train_quality_classifier:
             print("WORK IN PROGRESS!!!")
             return
@@ -242,6 +244,161 @@ def main():
             encoder = doc2vec()
             encoder.load(modl_d)
             classify_quality(encoder,clas_d)
+
+
+        # after the data has been pushed to the server, we need to run a 2nd pass
+        # to add all of the quality and importance attributes
+        push_quality_importance = False 
+        if push_quality_importance:
+            
+            if not os.path.isfile("id_mapping.tsv"):
+                print("File id_mapping.tsv must be present to perform this task")
+                return
+
+            if not os.path.isfile("quality.tsv"):
+                print("File quality.tsv must be present to perform this task")
+                return
+
+            if not os.path.isfile("importance.tsv"):
+                print("File importance.tsv must be present to perform this task")
+                return
+
+            import psycopg2
+            from psycopg2 import connect
+            from bisect import bisect_left
+
+            # connecting to database
+            username = "waynesun95"
+            host = "aa9qiuq51j8l7b.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
+            port = "5432"
+            dbname = "ebdb"
+            password = raw_input("Enter server password: ")
+
+            sys.stdout.write("Trying to connect... ")
+            try:
+                server_conn = connect("user="+username+" host="+host+" port="+port+" password="+password+" dbname="+dbname)
+            except:
+                sys.stdout.write("failure\n")
+                return
+            sys.stdout.write("success\n")
+
+            # getting all ids in the database
+            cursor = server_conn.cursor()
+            command = "SELECT id FROM articles"
+
+            sys.stdout.write("Requesting all article ids... ")
+            try:
+                cursor.execute(command)
+                data = cursor.fetchall()
+            except:
+                sys.stdout.write("failure\n")
+                return
+            sys.stdout.write("success\n")
+            cursor.close()
+
+            if data is not None:
+                num_rows = len(data)
+                if num_rows==0:
+                    print("Table is empty!")
+                    return
+                print("Found %d rows in table" % num_rows)
+            else:
+                print("Data received is None!")
+                return 
+
+            # returns the real id for a given .tsv file row
+            def get_real_id(row):
+                return int(row.split("\t")[1])
+
+            # opening the id_mapping.tsv file 
+            print("Reading id_mapping.tsv...")
+            id_mapping = open("id_mapping.tsv","r").read().split("\n")
+            rows = []
+            for row in id_mapping:
+                items = row.split("\t")
+                if len(items)==2: rows.append(row)
+            print("Sorting id mappings by real id...")
+            rows = sorted(rows,key=get_real_id)
+            print("Splitting id mappings...")
+            ids_talk = []
+            ids_real = []
+            for r in rows:
+                items = r.split("\t")
+                ids_talk.append(int(items[0]))
+                ids_real.append(int(items[1]))
+
+            # returns index of input query in ids_real list
+            def binary_search(query,lo=0,hi=None):
+                hi = hi or len(ids_real)
+                return bisect_left(ids_real,query,lo,hi)
+
+            # returns the talk page id for a given real page id
+            def real_to_talk_id(real_page_id):
+                return ids_talk[binary_search(real_page_id)]
+
+            # opening the quality.tsv file
+            print("Reading quality.tsv...")
+            qual_mapping = open("quality.tsv","r").read().split("\n")
+            q_rows = []
+            for row in qual_mapping:
+                items = row.split("\t")
+                if len(items)==2: q_rows.append(row)
+
+            # opening the importance.tsv file 
+            print("Reading importance.tsv...")
+            imp_mapping = open("importance.tsv","r").read().split("\n")
+            i_rows = []
+            for row in imp_mapping:
+                items = row.split("\t")
+                if len(items)==2: i_rows.append(row)
+
+            print("Creating quality,importance dictionary...")
+            qual_imp_dict = {}
+            for c_q,c_i in zip(q_rows,i_rows):
+                cur_id,quality = c_q.split("\t")
+                o_id,importance = c_i.split("\t")
+                if cur_id!=o_id:
+                    print("ERROR")
+                    return
+                qual_imp_dict[str(cur_id)] = [quality,importance] 
+
+            # returns the quality for a given real_article_id
+            def get_quality_importance(real_article_id):
+                talk_id = str(real_to_talk_id(real_article_id))
+                return qual_imp_dict[talk_id]
+
+            # iterate over all real ids in the server 
+            sys.stdout.write("Processing...")
+            seen_ids = []
+            resp_qual = []
+            resp_imp = []
+            i=0
+            for r in data:
+                i+=1
+                sys.stdout.write("\rProcessing (%d/%d)   " % (i,num_rows))
+                cur_id = r[0]
+                qual,imp = get_quality_importance(cur_id)
+                seen_ids.append(str(cur_id))
+                resp_qual.append(str(qual))
+                resp_imp.append(str(imp))
+            sys.stdout.write("\n")
+
+            # creating string to
+            #command = "UPDATE articles as a set "
+            # TODO: make the update buffered
+
+            # sending all of the qualities and importances to the server
+            sys.stdout.write("Sending to server...")
+            for i in range(len(seen_ids)):
+                cursor = server_conn.cursor()
+                command = "UPDATE articles SET quality = \'"+resp_qual[i]+"\', importance = \'"+resp_imp[i]+"\' "
+                command += "WHERE id = "+seen_ids[i]+";"
+                cursor.execute(command)
+                sys.stdout.write("\rSending to server (%d/%d)   " % (i,len(seen_ids)))
+                cursor.close()
+            server_conn.commit()
+            sys.stdout.write("\n")
+            print("Done")
 
     else:
         print("text.tsv not present, could not create text dictionary")

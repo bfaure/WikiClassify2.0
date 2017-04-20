@@ -5,6 +5,10 @@ from __future__ import print_function
 #                          Standard imports
 #-----------------------------------------------------------------------------#
 import os, time, datetime, sys, gzip, requests
+
+# enforce auto-flushing of stdout on every write
+sys.stdout = os.fdopen(sys.stdout.fileno(),'w',0)
+
 import random
 random.seed(0)
 
@@ -135,7 +139,7 @@ def make_seconds_pretty(seconds):
 def print_predicted_times(num_examples,iterations_per_epoch):
     pred_epoch_time = ((0.00888889*num_examples)-0.888889)*iterations_per_epoch
     print("\tPredicted epoch time: %s" % make_seconds_pretty(pred_epoch_time))
-    pred_vocab_time = (0.00711111*num_examples)-0.111111
+    pred_vocab_time = (0.000482206*num_examples)+36.3375
     print("\tPredicted vocab time: %s" % make_seconds_pretty(pred_vocab_time))
 
 #                           Doc2vec encoder
