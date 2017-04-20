@@ -66,7 +66,7 @@ def classify_quality(encoder, directory):
     x = []
     ids = []
 
-    """
+    
     classes = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
                "a"    :np.array([0,0,0,0,0,1,0],dtype=bool),\
                "ga"   :np.array([0,0,0,0,1,0,0],dtype=bool),\
@@ -74,6 +74,7 @@ def classify_quality(encoder, directory):
                "c"    :np.array([0,0,1,0,0,0,0],dtype=bool),\
                "start":np.array([0,1,0,0,0,0,0],dtype=bool),\
                "stub" :np.array([1,0,0,0,0,0,0],dtype=bool)}
+    
     """
     classes = {"fa"   :np.array([0],dtype=int),\
                "a"    :np.array([1],dtype=int),\
@@ -82,6 +83,7 @@ def classify_quality(encoder, directory):
                "c"    :np.array([4],dtype=int),\
                "start":np.array([5],dtype=int),\
                "stub" :np.array([6],dtype=int)}
+    """
 
     class_names = ["fa","a","ga","b","c","start","stub"]
 
@@ -124,11 +126,11 @@ def classify_quality(encoder, directory):
 
     X = np.array(x)
     y = np.array(y)
-    y = np.ravel(y)
+    #y = np.ravel(y) # not needed for multiclass
     
     print('Training classifier...')
     for i in [100,500,1000,5000,10000,50000,100000,500000,len(x)]:
-        classifier = vector_classifier(class_names=class_names,classifier_type="logistic")
+        classifier = vector_classifier(class_names=class_names)
         t = time.time()
         classifier.train(X[:i+1], y[:i+1])
         print('Elapsed for %d: %0.2f' % (i,time.time()-t))

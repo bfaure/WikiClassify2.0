@@ -27,7 +27,7 @@ from matplotlib import colors
 
 class vector_classifier(object):
 
-    def __init__(self, class_names=None, classifier_type="mlp"):
+    def __init__(self, class_names=None, classifier_type="multiclass_logistic"):
         self.classifier_type = classifier_type
         self.class_names = class_names
         print("Initializing vector classifier...")
@@ -44,10 +44,15 @@ class vector_classifier(object):
         # train on the training samples (as many cpus as avail.)
         if self.classifier_type=="multiclass":
             self.model = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y[:train_instances])
+        
         if self.classifier_type=="logistic":
             self.model = LogisticRegression(penalty='l2',solver='sag').fit(X[:train_instances],y[:train_instances])
+        
         if self.classifier_type=="mlp":
             self.model = MLPClassifier(hidden_layer_sizes=(100,50,20,5)).fit(X[:train_instances],y[:train_instances])
+
+        if self.classifier_type=="multiclass_logistic":
+            self.model = LogisticRegression(OneVsRestClassifier(LogisticRegression(penalty='l2',solver='sag'),n_jobs=-1).fit(X[:train_instances],y[:train_instances]))
 
         # score on the testing samples 
         self.scores = cross_val_score(self.model,X[train_instances:],y[train_instances:],cv=5)
