@@ -127,7 +127,7 @@ def classify_quality(encoder, directory):
     y = np.ravel(y)
     
     print('Training classifier...')
-    for i in [100,500,1000,5000,10000,50000,100000,500000,1000000,10000000]:
+    for i in [100,500,1000,5000,10000,50000,100000,500000,len(x)]:
         classifier = vector_classifier(class_names=class_names,classifier_type="logistic")
         t = time.time()
         classifier.train(X[:i+1], y[:i+1])
