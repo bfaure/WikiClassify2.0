@@ -196,7 +196,7 @@ def main():
             map_talk_to_real_ids("id_mapping.tsv")         
 
         # trains a new Doc2Vec encoder on the contents of text.tsv
-        run_doc2vec = True
+        run_doc2vec = False
         if run_doc2vec:
 
             # training configuration
@@ -232,8 +232,11 @@ def main():
 
         # after Doc2Vec has created vector encodings, this trains on those
         # mappings using the quality.tsv data as the output
-        train_quality_classifier = False 
+        train_quality_classifier = True 
         if train_quality_classifier:
+            print("WORK IN PROGRESS!!!")
+            return
+            encoder_dir = 'Wikilearn/data/models/doc2vec/xxxx'
             modl_d = "WikiLearn/data/models/old/5"
             clas_d = "WikiLearn/data/models/classifier/recent"
             encoder = doc2vec()
