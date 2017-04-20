@@ -137,7 +137,7 @@ def make_seconds_pretty(seconds):
     return time_str 
 
 def print_predicted_times(num_examples,iterations_per_epoch):
-    pred_epoch_time = ((0.00888889*num_examples)-0.888889)*iterations_per_epoch
+    pred_epoch_time = ((0.000651817*num_examples)+44.4022)*iterations_per_epoch
     print("\tPredicted epoch time: %s" % make_seconds_pretty(pred_epoch_time))
     pred_vocab_time = (0.000482206*num_examples)+36.3375
     print("\tPredicted vocab time: %s" % make_seconds_pretty(pred_vocab_time))

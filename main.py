@@ -358,7 +358,7 @@ def main():
                 cur_id,quality = c_q.split("\t")
                 o_id,importance = c_i.split("\t")
                 if cur_id!=o_id:
-                    print("ERROR")
+                    print("ERROR: cur_id!=o_id")
                     return
                 qual_imp_dict[str(cur_id)] = [quality,importance] 
 
@@ -373,18 +373,20 @@ def main():
             resp_qual = []
             resp_imp = []
             i=0
+            dropped=0
             for r in data:
                 i+=1
                 sys.stdout.write("\rProcessing (%d/%d)   " % (i,num_rows))
                 cur_id = r[0]
-                qual,imp = get_quality_importance(cur_id)
-                seen_ids.append(str(cur_id))
-                resp_qual.append(str(qual))
-                resp_imp.append(str(imp))
+                try:
+                    qual,imp = get_quality_importance(cur_id)
+                    seen_ids.append(str(cur_id))
+                    resp_qual.append(str(qual))
+                    resp_imp.append(str(imp))
+                except: dropped+=1
             sys.stdout.write("\n")
+            if dropped>0: print("Dropped %d articles due to error" % dropped)
 
-            # creating string to
-            #command = "UPDATE articles as a set "
             # TODO: make the update buffered
 
             # sending all of the qualities and importances to the server
