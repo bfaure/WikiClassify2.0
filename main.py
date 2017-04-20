@@ -185,7 +185,17 @@ def main():
     # if we have a copy of the parsed datadump
     if os.path.isfile('text.tsv'):
 
-        # settings for exeuction
+        # after parser is run, use this to map the article ids (talk ids) in quality.tsv 
+        # to the article ids (real article ids) in text.tsv, saved in id_mapping.tsv
+        map_talk_to_real = False 
+        if map_talk_to_real:
+            import Cython
+            import subprocess 
+            subprocess.Popen('python setup.py build_ext --inplace',shell=True).wait()
+            from helpers import map_talk_to_real_ids
+            map_talk_to_real_ids("id_mapping.tsv")         
+
+        # trains a new Doc2Vec encoder on the contents of text.tsv
         run_doc2vec = True
         if run_doc2vec:
 
@@ -220,37 +230,15 @@ def main():
             encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
 
 
-        test = False
-        if test:
-            model_dir = "WikiLearn/data/models/old/5"
-            encoder = doc2vec()
-            encoder.load(model_dir)
-            encoder.test(lower=True,show=True)
-
-
-        train_classifier = False 
-        if train_classifier:
-
+        # after Doc2Vec has created vector encodings, this trains on those
+        # mappings using the quality.tsv data as the output
+        train_quality_classifier = False 
+        if train_quality_classifier:
             modl_d = "WikiLearn/data/models/old/5"
-            #modl_d = "WikiLearn/data/models/doc2vec/large"
-            #modl_d = "WikiLearn/data/models/doc2vec"
-            #clas_d = "WikiLearn/data/models/classifier/older"
             clas_d = "WikiLearn/data/models/classifier/recent"
-            clas_d = "WikiLearn/data/models/classifier/mlp_old"
-
             encoder = doc2vec()
             encoder.load(modl_d)
-
             classify_quality(encoder,clas_d)
-
-        map_talk_to_real = False 
-        if map_talk_to_real:
-
-            import Cython
-            import subprocess 
-            subprocess.Popen('python setup.py build_ext --inplace',shell=True).wait()
-            from helpers import map_talk_to_real_ids
-            map_talk_to_real_ids("id_mapping.tsv") 
 
     else:
         print("text.tsv not present, could not create text dictionary")
