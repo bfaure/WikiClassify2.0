@@ -84,11 +84,12 @@ void wikipage::read_redirect() {
 }
 
 void wikipage::read_timestamp() {
-    string timestamp;
-    parse(dump_page, "<timestamp>", "</timestamp>", timestamp);
-    year  = timestamp.substr(0,4);
-    month = timestamp.substr(5,2);
-    day   = timestamp.substr(8,2);
+    string parsed_ts;
+    parse(dump_page, "<timestamp>", "</timestamp>", parsed_ts);
+    year  = parsed_ts.substr(0,4);
+    month = parsed_ts.substr(5,2);
+    day   = parsed_ts.substr(8,2);
+    timestamp = parsed_ts.substr(0,10)+" "+parsed_ts.substr(11,8)+".000000";
 }
 
 void wikipage::read_text() {

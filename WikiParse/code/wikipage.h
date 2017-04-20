@@ -72,6 +72,8 @@ class wikipage {
         string         month;
         string         day;
         string         text;
+        string         timestamp;
+        
         string         importance;
         string         quality;
         vector<string> categories; 

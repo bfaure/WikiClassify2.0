@@ -105,7 +105,7 @@ def expand_bz2(file_path):
         print("\t\tFile already expanded.")
     return file_path[:-4]
 
-def parse_wikidump(dump_path, cutoff_date='20010115', creds=None):
+def parse_wikidump(dump_path, cutoff_date='20010115', creds=None, version=None):
     #if password==None: password = raw_input("Database password: ")
 
     if creds is not None:

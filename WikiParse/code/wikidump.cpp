@@ -85,7 +85,7 @@ wikidump::wikidump(string &path, string &cutoff_date, string password, string ho
 
         server_capacity             = 10000000000; // 10 GB
         replace_server_duplicates   = false; // dont replace duplicates
-        server_write_buffer_size    = 100; // write to server after this many read
+        server_write_buffer_size    = 10000; // write to server after this many read
         maximum_server_writes       = 2; // maximum number of buffers to write to server
         num_sent_to_server          = 0; // number of articles sent to server
         num_server_writes           = 0; // number of server writes executed
@@ -263,12 +263,15 @@ void wikidump::server_write()
         replace_target(cited_authors,"\'","&squot");
 
         // set temporary quality and importance
-        string quality = "Example Quality";
-        string importance = "Example Importance";
+        string quality = "N/A";
+        string importance = "N/A";
 
         // set temporary timestamps
-        string created_at = "2017-03-06 20:13:56.603726";
-        string updated_at = "2017-03-06 20:13:56.603726";
+        string updated_at = wp.timestamp;
+        string created_at = wp.timestamp; // for now, wipe clean
+
+        //string created_at = "2017-03-06 20:13:56.603726";
+        //string updated_at = "2017-03-06 20:13:56.603726";
 
         // set slug item
         string slug = wp.title;
@@ -385,14 +388,14 @@ void wikidump::save_page(wikipage &wp)
             importance<<wp.importance<<'\n';
         }
     }
-//    if (wp.is_category()) {
-//
-//        category_parents<<wp.id<<'\t';;
-//        for (auto& category:wp.categories) {
-//            if (title_map.find(category) != title_map.end()) {
-//                category_parents<<title_map[category]<<"\n";
-//            }
-//        }
-//        categories<<'\n';
-//    }
+    if (wp.is_category()) {
+
+        category_parents<<wp.id<<'\t';;
+        for (auto& category:wp.categories) {
+            if (title_map.find(category) != title_map.end()) {
+                category_parents<<title_map[category]<<"\n";
+            }
+        }
+        categories<<'\n';
+    }
 }

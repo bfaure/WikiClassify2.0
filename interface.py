@@ -17,10 +17,10 @@ from time import time
 from time import sleep
 
 #from main import get_encoder, get_google_encoder
-from main import get_encoder
+#from main import get_encoder
 from pathfinder import PriorityQueue, rectify_path, get_transition_cost, elem_t
 
-from WikiParse.main           import download_wikidump, parse_wikidump, gensim_corpus, expand_bz2
+from WikiParse.main           import download_wikidump, parse_wikidump, expand_bz2 #,gensim_corpus
 #from WikiLearn.code.vectorize import word2vec
 from WikiLearn.code.vectorize import doc2vec
 
@@ -94,7 +94,6 @@ class credentials_window(QWidget):
 
 	def init_vars(self):
 		self.username = "waynesun95"
-		#self.host     = "aa1bkwdd6xv6rol.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
 		self.host 	  = "aa9qiuq51j8l7b.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
 		self.port     = "5432"
 		self.dbname   = "ebdb"
@@ -590,8 +589,9 @@ class parser_worker(QThread):
 		parsed = parse_wikidump(dump_path,creds=self.creds,version=dump_source)
 
 		if self.retrain and parsed:
-			encoder_directory = 'WikiLearn/data/models/tokenizer'
-			get_encoder()
+			pass
+			#encoder_directory = 'WikiLearn/data/models/tokenizer'
+			#get_encoder()
 
 		self.done_parsing.emit()
 
@@ -725,7 +725,6 @@ class wikiparse_window(QWidget):
 		src = str(self.source_input.currentText())
 		if self.redownload_check.isChecked():
 			if os.path.isdir("WikiParse/data/corpora/"+src): rmtree("WikiParse/data/corpora/"+src)
-			#if os.path.isdir("WikiParse/data"): rmtree("WikiParse/data")
 
 		self.worker 			= parser_worker(self)
 		self.worker.source 		= src
