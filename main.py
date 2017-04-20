@@ -100,7 +100,6 @@ def classify_quality(encoder, directory):
         for line in f:
             i+=1
             sys.stdout.write("\rParsing Quality (%d|%d|%d), (model|class.|tot.)" % (len(x),num_classified,num_lines))
-            #sys.stdout.flush()
             try:
                 article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
 
@@ -126,7 +125,7 @@ def classify_quality(encoder, directory):
     y = np.ravel(y)
     
     print('Training classifier...')
-    for i in [100,500,1000,5000,10000,50000,100000,500000,1000000]:
+    for i in [100,500,1000,5000,10000,50000,100000,500000,1000000,10000000]:
         classifier = vector_classifier()
         t = time.time()
         classifier.train(X[:i+1], y[:i+1])
@@ -164,6 +163,20 @@ def classify_importance(encoder):
     X = encoder.get_all_docvecs()
     y = 
 '''
+
+# returns the most recent trained model (according to naming scheme)
+def get_most_recent_model(directory):
+    model_dirs = os.listdir(directory)
+    most_recent_model_dir = ""
+    most_recent_model_time = 0 
+    for m in model_dirs:
+        try:
+            cur_time = int(m.split("-")[0].split(":")[1])
+            if cur_time>most_recent_model_time:
+                most_recent_model_dir = m 
+                most_recent_model_time = cur_time 
+        except: continue
+    return os.path.join(directory,most_recent_model_dir)
 
 def main():
     start_time = time.time()
@@ -234,17 +247,14 @@ def main():
 
         # after Doc2Vec has created vector encodings, this trains on those
         # mappings using the quality.tsv data as the output
-        train_quality_classifier = False 
+        train_quality_classifier = True 
         if train_quality_classifier:
-            print("WORK IN PROGRESS!!!")
-            return
-            encoder_dir = 'Wikilearn/data/models/doc2vec/xxxx'
-            modl_d = "WikiLearn/data/models/old/5"
-            clas_d = "WikiLearn/data/models/classifier/recent"
+            #print("WORK IN PROGRESS!!!")
+            model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
+            classifier_dir = "WikiLearn/data/models/classifier/recent"
             encoder = doc2vec()
-            encoder.load(modl_d)
-            classify_quality(encoder,clas_d)
-
+            encoder.load(model_dir)
+            classify_quality(encoder,classifier_dir)
 
         # after the data has been pushed to the server, we need to run a 2nd pass
         # to add all of the quality and importance attributes
