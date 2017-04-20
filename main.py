@@ -194,7 +194,7 @@ def main():
             features        = 300      # vector length
             context_window  = 8        # words to analyze on either side of current word 
             threads         = 8        # number of worker threads during training
-            epochs          = 1        # maximum number of epochs
+            epochs          = 20       # maximum number of epochs
             pass_per_epoch  = 1        # number of passes across corpus / epoch (gensim default:5)
             print_epoch_acc = True     # print the accuracy after each epoch
             stop_early      = True     # cut off training if accuracy falls 
