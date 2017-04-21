@@ -32,32 +32,66 @@ class vector_classifier(object):
         self.class_names = class_names
         print("Initializing vector classifier...")
         
-    def train(self, X, y, test_ratio=0.2):
+    def train(self, X, y_int, y_hot, test_ratio=0.2):
 
         print("\tShuffling arrays...")
         p = np.random.permutation(X.shape[0])
-        X,y = X[p], y[p]
+        X,y_int,y_hot = X[p],y_int[p],y_hot[p]
 
         print("\tTraining classifier...")
         train_instances = int((1-test_ratio)*X.shape[0])
 
         # train on the training samples (as many cpus as avail.)
         if self.classifier_type=="multiclass":
-            self.model = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y[:train_instances])
+            self.model = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y_hot[:train_instances])
         
         if self.classifier_type=="logistic":
-            self.model = LogisticRegression(penalty='l2',solver='sag').fit(X[:train_instances],y[:train_instances])
+            self.model = LogisticRegression(penalty='l2',solver='sag').fit(X[:train_instances],y_int[:train_instances])
         
         if self.classifier_type=="mlp":
-            self.model = MLPClassifier(hidden_layer_sizes=(100,50,20,5)).fit(X[:train_instances],y[:train_instances])
+            self.model = MLPClassifier(hidden_layer_sizes=(100,50,20,5)).fit(X[:train_instances],y_int[:train_instances])
 
         if self.classifier_type=="multiclass_logistic":
-            self.model = LogisticRegression(OneVsRestClassifier(LogisticRegression(penalty='l2',solver='sag'),n_jobs=-1).fit(X[:train_instances],y[:train_instances]))
 
+            layer1 = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y_hot[:train_instances])
+            layer1_output = layer1.predict_proba(X[:train_instances])
+
+            layer2 = MLPClassifier(hidden_layer_sizes=(3,3)).fit(layer1_output,y_int[:train_instances])
+            layer2_output = layer2.predict_proba(X[:train_instances])
+
+            output_layer = LogisticRegression().fit(layer2_output,y_int[:train_instances])
+
+            #self.model = LogisticRegression(OneVsRestClassifier(LogisticRegression(penalty='l2',solver='sag'),n_jobs=-1).fit(X[:train_instances],y_hot[:train_instances]))
+
+        if self.classifier_type=="multiclass_logistic":
+            l1_pred = layer1.predict_proba(X[train_instances:])
+            l2_pred = layer2.predict_proba(l1_pred)
+            o_pred = output_layer.predict(l2_pred)
+
+            #m1_pred = m1.predict_proba(X[train_instances:])
+            #m2_pred = m2.predict(m1_pred)
+
+            num_correct = 0
+            for p,a in zip(o_pred,y_int[train_instances:]):
+                if p==a: num_correct+=1
+
+            print("Accuracy %0.1f%%" % (100.0*float(num_correct)/float(len(m2_pred))))
+
+            print("Plotting confusion matrix...")
+            y_test = y_int[train_instances:]
+            y_pred = o_pred 
+            plot_confusion_matrix(y_test,y_pred,self.class_names,train_instances,normalize=True)
+            return
+
+
+
+        elif self.classifier_type=="multiclass":
+            self.scores = cross_val_score(self.model,X[train_instances:],y_hot[train_instances:],cv=5)
+        else:
+            self.scores = cross_val_score(self.model,X[train_instances:],y_int[train_instances:],cv=5)
+            
         # score on the testing samples 
-        self.scores = cross_val_score(self.model,X[train_instances:],y[train_instances:],cv=5)
         print("Accuracy: %0.1f%% (+/- %0.1f%%)" % (100*self.scores.mean(), 100*self.scores.std()*2))
-
         if self.class_names!=None and self.classifier_type!="multiclass":
             print("Plotting confusion matrix...")
             y_test = y[train_instances:]
@@ -70,7 +104,8 @@ class vector_classifier(object):
         print("\tSaving classifier model...")
         if not os.path.exists(directory):
             os.makedirs(directory)
-        joblib.dump(self.model,directory+'/classifier.pkl') 
+        if hasattr(self,'model'): joblib.dump(self.model,directory+'/classifier.pkl') 
+        else: print("no model, cant save")
 
     def load(self):
         print("\tLoading classifier model...")
