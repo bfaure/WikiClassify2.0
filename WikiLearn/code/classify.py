@@ -25,41 +25,60 @@ from matplotlib import colors
 #                            Linear classifier
 #-----------------------------------------------------------------------------#
 
+def make_one_hot(y):
+    one_hot = np.zeros((1, y.size, np.max(y)))
+    one_hot[0, np.arange(y.size), y] = 1
+    return one_hot
+
+#class vector_classifier_keras(object):
+#    def __init__(self, class_names=None):
+#        self.class_names = class_names
+#        
+#    def train(self, X, y, test_ratio=0.2):
+#        self.model = Sequential()
+#	    self.model.add(Dense(4, input_dim=4, kernel_initializer='normal', activation='relu'))
+#	    self.model.add(Dense(3, kernel_initializer='normal', activation='sigmoid'))
+#	    # Compile model
+#	    self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+#	    return model
+        
 class vector_classifier(object):
 
     def __init__(self, class_names=None, classifier_type="multiclass_logistic"):
+        print("Initializing vector classifier...")
         self.classifier_type = classifier_type
         self.class_names = class_names
-        print("Initializing vector classifier...")
         
-    def train(self, X, y_int, y_hot, test_ratio=0.2):
+    def train(self, X, y, test_ratio=0.2):
 
         print("\tShuffling arrays...")
         p = np.random.permutation(X.shape[0])
-        X,y_int,y_hot = X[p],y_int[p],y_hot[p]
+        X, y = X[p], y[p]
 
         print("\tTraining classifier...")
         train_instances = int((1-test_ratio)*X.shape[0])
 
         # train on the training samples (as many cpus as avail.)
-        if self.classifier_type=="multiclass":
+        if self.classifier_type=="multiclass":        
+            y_hot = make_one_hot(y)
             self.model = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y_hot[:train_instances])
         
         if self.classifier_type=="logistic":
-            self.model = LogisticRegression(penalty='l2',solver='sag').fit(X[:train_instances],y_int[:train_instances])
+            self.model = LogisticRegression(penalty='l2',solver='sag').fit(X[:train_instances],y[:train_instances])
         
         if self.classifier_type=="mlp":
-            self.model = MLPClassifier(hidden_layer_sizes=(100,50,20,5)).fit(X[:train_instances],y_int[:train_instances])
+            self.model = MLPClassifier(hidden_layer_sizes=(100,50,20,5)).fit(X[:train_instances],y[:train_instances])
 
         if self.classifier_type=="multiclass_logistic":
-
+        
+            y_hot = make_one_hot(y)
             layer1 = OneVsRestClassifier(LogisticRegression(),n_jobs=-1).fit(X[:train_instances],y_hot[:train_instances])
             layer1_output = layer1.predict_proba(X[:train_instances])
 
-            layer2 = MLPClassifier(hidden_layer_sizes=(3,3)).fit(layer1_output,y_int[:train_instances])
+            layer2 = MLPClassifier(hidden_layer_sizes=(3,3)).fit(layer1_output,y[:train_instances])
             layer2_output = layer2.predict_proba(X[:train_instances])
 
-            output_layer = LogisticRegression().fit(layer2_output,y_int[:train_instances])
+            output_layer = LogisticRegression().fit(layer2_output,y[:train_instances])
 
             #self.model = LogisticRegression(OneVsRestClassifier(LogisticRegression(penalty='l2',solver='sag'),n_jobs=-1).fit(X[:train_instances],y_hot[:train_instances]))
 
@@ -85,9 +104,11 @@ class vector_classifier(object):
 
 
 
-        elif self.classifier_type=="multiclass":
+        elif self.classifier_type=="multiclass":        
+            y_hot = make_one_hot(y)
             self.scores = cross_val_score(self.model,X[train_instances:],y_hot[train_instances:],cv=5)
-        else:
+        else:        
+            y_hot = make_one_hot(y)
             self.scores = cross_val_score(self.model,X[train_instances:],y_int[train_instances:],cv=5)
             
         # score on the testing samples 
