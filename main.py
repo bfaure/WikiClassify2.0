@@ -66,88 +66,20 @@ def classify_quality(encoder, directory):
     def talk_to_real_id(talk_page_id):
         return ids_real[binary_search(talk_page_id)]
 
-    y_hot = []
-    y_int = []
+    y = []
     x = []
     ids = []
-
-    '''
-    classes_onehot = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
-               "a"    :np.array([0,0,0,0,0,1,0],dtype=bool),\
-               "ga"   :np.array([0,0,0,0,1,0,0],dtype=bool),\
-               "b"    :np.array([0,0,0,1,0,0,0],dtype=bool),\
-               "c"    :np.array([0,0,1,0,0,0,0],dtype=bool),\
-               "start":np.array([0,1,0,0,0,0,0],dtype=bool),\
-               "stub" :np.array([1,0,0,0,0,0,0],dtype=bool)}
     
-    
-    classes_int = {"fa"   :np.array([0],dtype=int),\
-               "a"    :np.array([1],dtype=int),\
-               "ga"   :np.array([2],dtype=int),\
-               "b"    :np.array([3],dtype=int),\
-               "c"    :np.array([4],dtype=int),\
-               "start":np.array([5],dtype=int),\
-               "stub" :np.array([6],dtype=int)}
-    
-
-    class_names = ["fa","a","ga","b","c","start","stub"]
-
-    counts  = {"fa"   :0,\
-               "a"    :0,\
-               "ga"   :0,\
-               "b"    :0,\
-               "c"    :0,\
-               "start":0,\
-               "stub" :0,\
-               "unknown/not_in_model":0}
-    '''
-
-    """
-    classes_onehot = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
-               "ga"   :np.array([0,0,0,0,1,0,0],dtype=bool),\
-               "b"    :np.array([0,0,0,1,0,0,0],dtype=bool),\
-               "c"    :np.array([0,0,1,0,0,0,0],dtype=bool),\
-               "start":np.array([0,1,0,0,0,0,0],dtype=bool),\
-               "stub" :np.array([1,0,0,0,0,0,0],dtype=bool)}
-    
-    
-    classes_int = {"fa"   :np.array([0],dtype=int),\
-               "ga"   :np.array([2],dtype=int),\
-               "b"    :np.array([3],dtype=int),\
-               "c"    :np.array([4],dtype=int),\
-               "start":np.array([5],dtype=int),\
-               "stub" :np.array([6],dtype=int)}
-    
-
-    class_names = ["fa","ga","b","c","start","stub"]
-
-    counts  = {"fa"   :0,\
-               "ga"   :0,\
-               "b"    :0,\
-               "c"    :0,\
-               "start":0,\
-               "stub" :0,\
-               "unknown/not_in_model":0}
-    """
-
-
-    classes_onehot = {"fa"   :np.array([0,0,1],dtype=bool),\
-               "c"    :np.array([0,1,0],dtype=bool),\
-               "stub" :np.array([1,0,0],dtype=bool)}
-    
-    
-    classes_int = {"fa"   :np.array([0],dtype=int),\
-               "c"    :np.array([1],dtype=int),\
+    classes = {"fa":np.array([0],dtype=int),\
+               "a":np.array([0],dtype=int),\
+               "ga":np.array([0],dtype=int),\
+               "bplus":np.array([0],dtype=int),\
+               "b":np.array([0],dtype=int),\
+               "c":np.array([1],dtype=int),\
+               "start":np.array([2],dtype=int),\
                "stub" :np.array([2],dtype=int)}
 
-    class_names = ["fa","c","stub"]
-
-    counts  = {"fa"   :0,\
-               "c"    :0,\
-               "stub" :0,\
-               "unknown/not_in_model":0}
-
-    max_items = 10000000
+    class_names = ["good","mid","poor"]
 
     num_lines = len(open("quality.tsv","r").read().split("\n"))
     sys.stdout.write('Parsing quality ')
@@ -160,26 +92,16 @@ def classify_quality(encoder, directory):
             try:
                 article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
 
-                # fa/a/ga/b
-                if article_quality=="a": article_quality="fa"
-                if article_quality=="ga": article_quality="fa"
-                if article_quality=="b": article_quality="fa"
-
-                if article_quality=="start": article_quality="c"
-
                 #qual_mapping = classes[article_quality]
-                qual_hot = classes_onehot[article_quality]
-                qual_int = classes_int[article_quality]
+                qual = classes[article_quality]
 
                 real_article_id = talk_to_real_id(int(article_id))
                 num_classified+=1
 
                 doc_vector = encoder.model.docvecs[int(real_article_id)] 
 
-                if counts[article_quality]<max_items:
-                    x.append(doc_vector)
-                    y_hot.append(qual_hot)
-                    y_int.append(qual_int)
+                x.append(doc_vector)
+                y.append(qual)
 
                 counts[article_quality]+=1
             except:
@@ -190,246 +112,12 @@ def classify_quality(encoder, directory):
         print("\t"+key+" - "+str(value)+" entries")
 
     X = np.array(x)
-    y_int = np.ravel(np.array(y_int))
-    y_hot = np.array(y_hot)
+    y = np.ravel(np.array(y))
     
     classifier = vector_classifier(class_names=class_names)
     t = time.time()
-    classifier.train(X, y_int, y_hot)
+    classifier.train(X, y)
     print('Elapsed for %d: %0.2f' % (i,time.time()-t))
-
-    '''
-    print('Training classifier...')
-    for i in [100,500,1000,5000,10000,50000,100000,500000,len(x)]:
-        classifier = vector_classifier(class_names=class_names)
-        t = time.time()
-        classifier.train(X[:i+1], y_int[:i+1], y_hot[:i+1])
-        print('Elapsed for %d: %0.2f' % (i,time.time()-t))
-        classifier.save(directory)
-    '''
-
-'''
-def classify_importance(encoder):
-    importance = []
-    importance_ids = []
-    print('Parsing importance...')
-    with open('importance.tsv') as f:
-        for line in f:
-            try:
-                article_id, article_importance = line.strip().split('\t')
-                try:
-                    article_classes[article_id]['importance'] = article_importance
-                except:
-                    article_classes[article_id] = {}
-                    article_classes[article_id]['importance'] = article_importance
-            except:
-                pass
-    for article_id in article_classes.keys():
-        if 'quality' not in article_classes[article_id].keys():
-            article_classes[article_id]['quality'] = 'unknown'
-        if 'importance' not in article_classes[article_id].keys():
-            article_classes[article_id]['importance'] = 'unknown'
-
-    print(article_classes)
-
-    X = encoder.get_all_docvecs()
-    y = 
-'''
-
-def classify_quality_keras(encoder, directory):
-
-    from bisect import bisect_left
-    
-    def get_row_id(row):
-        return int(row.split("\t")[0])
-
-    print("\nReading id_mapping.tsv...")
-    mapping = open("id_mapping.tsv",'r').read().split("\n")
-    rows = []
-    for row in mapping:
-        items = row.split("\t")
-        if len(items)==2: rows.append(row)
-
-    print("Sorting rows...")
-    rows = sorted(rows,key=get_row_id)
-
-    print("Splitting rows...")
-    ids_talk = []
-    ids_real = []
-    for r in rows:
-        items = r.split("\t")
-        ids_talk.append(int(items[0]))
-        ids_real.append(int(items[1]))
-
-    print("Mapping size: %d"%len(ids_talk))
-
-    def binary_search(query,lo=0,hi=None):
-        hi = hi or len(ids_talk)
-        return bisect_left(ids_talk,query,lo,hi)
-
-    def talk_to_real_id(talk_page_id):
-        return ids_real[binary_search(talk_page_id)]
-
-    y_hot = []
-    y_int = []
-    x = []
-    ids = []
-
-    '''
-    classes_onehot = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
-               "a"    :np.array([0,0,0,0,0,1,0],dtype=bool),\
-               "ga"   :np.array([0,0,0,0,1,0,0],dtype=bool),\
-               "b"    :np.array([0,0,0,1,0,0,0],dtype=bool),\
-               "c"    :np.array([0,0,1,0,0,0,0],dtype=bool),\
-               "start":np.array([0,1,0,0,0,0,0],dtype=bool),\
-               "stub" :np.array([1,0,0,0,0,0,0],dtype=bool)}
-    
-    
-    classes_int = {"fa"   :np.array([0],dtype=int),\
-               "a"    :np.array([1],dtype=int),\
-               "ga"   :np.array([2],dtype=int),\
-               "b"    :np.array([3],dtype=int),\
-               "c"    :np.array([4],dtype=int),\
-               "start":np.array([5],dtype=int),\
-               "stub" :np.array([6],dtype=int)}
-    
-
-    class_names = ["fa","a","ga","b","c","start","stub"]
-
-    counts  = {"fa"   :0,\
-               "a"    :0,\
-               "ga"   :0,\
-               "b"    :0,\
-               "c"    :0,\
-               "start":0,\
-               "stub" :0,\
-               "unknown/not_in_model":0}
-    '''
-
-    """
-    classes_onehot = {"fa"   :np.array([0,0,0,0,0,0,1],dtype=bool),\
-               "ga"   :np.array([0,0,0,0,1,0,0],dtype=bool),\
-               "b"    :np.array([0,0,0,1,0,0,0],dtype=bool),\
-               "c"    :np.array([0,0,1,0,0,0,0],dtype=bool),\
-               "start":np.array([0,1,0,0,0,0,0],dtype=bool),\
-               "stub" :np.array([1,0,0,0,0,0,0],dtype=bool)}
-    
-    
-    classes_int = {"fa"   :np.array([0],dtype=int),\
-               "ga"   :np.array([2],dtype=int),\
-               "b"    :np.array([3],dtype=int),\
-               "c"    :np.array([4],dtype=int),\
-               "start":np.array([5],dtype=int),\
-               "stub" :np.array([6],dtype=int)}
-    
-
-    class_names = ["fa","ga","b","c","start","stub"]
-
-    counts  = {"fa"   :0,\
-               "ga"   :0,\
-               "b"    :0,\
-               "c"    :0,\
-               "start":0,\
-               "stub" :0,\
-               "unknown/not_in_model":0}
-    """
-
-
-    classes_onehot = {"fa"   :np.array([0,0,1],dtype=bool),\
-               "c"    :np.array([0,1,0],dtype=bool),\
-               "stub" :np.array([1,0,0],dtype=bool)}
-    
-    
-    classes_int = {"fa"   :np.array([0],dtype=int),\
-               "c"    :np.array([1],dtype=int),\
-               "stub" :np.array([2],dtype=int)}
-
-    class_names = ["fa","c","stub"]
-
-    counts  = {"fa"   :0,\
-               "c"    :0,\
-               "stub" :0,\
-               "unknown/not_in_model":0}
-
-    max_items = 50000
-
-    num_lines = len(open("quality.tsv","r").read().split("\n"))
-    sys.stdout.write('Parsing quality ')
-    with open('quality.tsv','r') as f:
-        i=0
-        num_classified = 0
-        for line in f:
-            i+=1
-            sys.stdout.write("\rParsing Quality (%d|%d|%d), (model|class.|tot.)" % (len(x),num_classified,num_lines))
-            try:
-                article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
-
-                # fa/a/ga/b
-                if article_quality=="a": article_quality="fa"
-                if article_quality=="ga": article_quality="fa"
-                if article_quality=="b": article_quality="fa"
-
-                if article_quality=="start": article_quality="c"
-
-                #qual_mapping = classes[article_quality]
-                qual_hot = classes_onehot[article_quality]
-                qual_int = classes_int[article_quality]
-
-                real_article_id = talk_to_real_id(int(article_id))
-                num_classified+=1
-
-                doc_vector = encoder.model.docvecs[int(real_article_id)] 
-
-                if counts[article_quality]<max_items:
-                    x.append(doc_vector)
-                    y_hot.append(qual_hot)
-                    y_int.append(qual_int)
-
-                counts[article_quality]+=1
-
-            except:
-                counts["unknown/not_in_model"]+=1
-
-    sys.stdout.write("\n")
-    for key,value in counts.iteritems():
-        print("\t"+key+" - "+str(value)+" entries")
-
-    X = np.array(x)
-    y_int = np.ravel(np.array(y_int))
-    y_hot = np.array(y_hot)
-    
-    print("Building model...")
-    model = Sequential()
-    model.add(Dense(64,activation='relu',input_dim=300))
-    model.add(Dropout(0.5))
-    model.add(Dense(64,activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(3,activation='softmax')) # output layer
-
-    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-
-    print("Compiling model...")
-    model.compile( loss='categorical_crossentropy',
-                   optimizer=sgd,
-                   metrics=['accuracy'])
-    
-    print("Fitting model...")
-    model.fit( X, y_hot,
-               epochs=5,
-               batch_size=128)
-
-    print("Evaluating model...")
-    score = model.evaluate(X[:100],y_hot[:100], batch_size=10)
-
-    print("\nAccuracy: %0.5f" % score[1])
-
-    print("\nModel testing...")
-
-    while True:
-        sentence = raw_input("Enter sentence (exit): ")
-        if sentence=="exit": return
-        docvec = encoder.model.infer_vector(sentence.split())
-        print(model.predict(docvec,batch_size=1,verbose=1))
 
 # returns the most recent trained model (according to naming scheme)
 def get_most_recent_model(directory):
