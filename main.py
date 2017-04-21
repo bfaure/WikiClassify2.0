@@ -33,39 +33,7 @@ from pathfinder import get_queries, astar_path
 #-----------------------------------------------------------------------------#
 
 def classify_quality(encoder, directory):
-
-    from bisect import bisect_left
     
-    def get_row_id(row):
-        return int(row.split("\t")[0])
-
-    print("\nReading id_mapping.tsv...")
-    mapping = open("id_mapping.tsv",'r').read().split("\n")
-    rows = []
-    for row in mapping:
-        items = row.split("\t")
-        if len(items)==2: rows.append(row)
-
-    print("Sorting rows...")
-    rows = sorted(rows,key=get_row_id)
-
-    print("Splitting rows...")
-    ids_talk = []
-    ids_real = []
-    for r in rows:
-        items = r.split("\t")
-        ids_talk.append(int(items[0]))
-        ids_real.append(int(items[1]))
-
-    print("Mapping size: %d"%len(ids_talk))
-
-    def binary_search(query,lo=0,hi=None):
-        hi = hi or len(ids_talk)
-        return bisect_left(ids_talk,query,lo,hi)
-
-    def talk_to_real_id(talk_page_id):
-        return ids_real[binary_search(talk_page_id)]
-
     y = []
     x = []
     ids = []
