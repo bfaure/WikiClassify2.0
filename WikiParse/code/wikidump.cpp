@@ -381,10 +381,12 @@ void wikidump::save_page(wikipage &wp)
     if (wp.is_talk()) 
     {
         string title = wp.title.substr(5);
-        if (title_map.find(title) != title_map.end()) {
-            quality<<wp.id<<'\t';
+        map<string, unsigned>::iterator it;
+        if ((it=title_map.find(title)) != title_map.end()) {
+            string article_id = to_string(it->second);
+            quality<<article_id<<'\t';
             quality<<wp.quality<<'\n';
-            importance<<wp.id<<'\t';
+            importance<<article_id<<'\t';
             importance<<wp.importance<<'\n';
         }
     }
