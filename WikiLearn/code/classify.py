@@ -30,17 +30,43 @@ def make_one_hot(y):
     one_hot[0, np.arange(y.size), y] = 1
     return one_hot
 
-#class vector_classifier_keras(object):
-#    def __init__(self, class_names=None):
-#        self.class_names = class_names
-#        
-#    def train(self, X, y, test_ratio=0.2):
-#        self.model = Sequential()
-#	    self.model.add(Dense(4, input_dim=4, kernel_initializer='normal', activation='relu'))
-#	    self.model.add(Dense(3, kernel_initializer='normal', activation='sigmoid'))
-#	    # Compile model
-#	    self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-#	    return model
+class vector_classifier_keras(object):
+    def __init__(self, class_names=None):
+        self.class_names = class_names
+        
+    def train(self, X, y, test_ratio=0.2):
+        print("Building model...")
+        model = Sequential()
+        model.add(Dense(64,activation='relu',input_dim=300))
+        model.add(Dropout(0.5))
+        model.add(Dense(64,activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(3,activation='softmax')) # output layer
+    
+        sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    
+        print("Compiling model...")
+        model.compile( loss='categorical_crossentropy',
+                       optimizer=sgd,
+                       metrics=['accuracy'])
+        
+        print("Fitting model...")
+        model.fit( X, y_hot,
+                   epochs=5,
+                   batch_size=128)
+    
+        print("Evaluating model...")
+        score = model.evaluate(X[:100],y_hot[:100], batch_size=10)
+    
+        print("\nAccuracy: %0.5f" % score[1])
+    
+        print("\nModel testing...")
+    
+        while True:
+            sentence = raw_input("Enter sentence (exit): ")
+            if sentence=="exit": return
+            docvec = encoder.model.infer_vector(sentence.split())
+            print(model.predict(docvec,batch_size=1,verbose=1))
         
 class vector_classifier(object):
 
