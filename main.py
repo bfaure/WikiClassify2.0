@@ -25,7 +25,7 @@ from keras.optimizers import SGD
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
 from WikiLearn.code.vectorize import doc2vec
-from WikiLearn.code.classify  import vector_classifier
+from WikiLearn.code.classify  import vector_classifier_keras
 
 from pathfinder import get_queries, astar_path
 
@@ -114,7 +114,7 @@ def classify_quality(encoder, directory):
     X = np.array(x)
     y = np.ravel(np.array(y))
     
-    classifier = vector_classifier(class_names=class_names)
+    classifier = vector_classifier_keras(class_names=class_names)
     t = time.time()
     classifier.train(X, y)
     print('Elapsed for %d: %0.2f' % (i,time.time()-t))
