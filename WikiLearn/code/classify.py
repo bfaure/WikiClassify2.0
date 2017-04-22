@@ -28,7 +28,7 @@ from keras.layers import Dense,Activation,Dropout
 from keras.layers import Embedding,LSTM
 from keras.optimizers import SGD
 
-DEFAULT_BATCH_SIZE = 2000
+DEFAULT_BATCH_SIZE = 20
 DEFAULT_EPOCHS = 100
 
 #                            Linear classifier
@@ -76,7 +76,7 @@ class vector_classifier_keras(object):
         model.add(Activation('sigmoid'))
 
         if load_file!=None: model.load_weights(load_file)
-        cbks = [callbacks.EarlyStopping(monitor='val_loss', patience=10)]
+        cbks = [callbacks.EarlyStopping(monitor='val_loss', patience=3)]
         if self.save_path!=None:
             cbks.append(callbacks.ModelCheckpoint(filepath=self.save_path, monitor='val_loss', save_best_only=True))
 
