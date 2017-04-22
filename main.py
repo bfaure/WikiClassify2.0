@@ -33,7 +33,7 @@ def classify_quality(encoder=None, directory=None, sequence=False):
     y = []
     x = []
     ids = []
-    
+
     classes = {"fa":np.array([0],dtype=int),\
                "a":np.array([0],dtype=int),\
                "ga":np.array([0],dtype=int),\
@@ -68,8 +68,8 @@ def classify_quality(encoder=None, directory=None, sequence=False):
 
         ####
         max_quality_dict_size    = 100000 # if -1, no limit, o.w. total articles limited to this
-        min_sentence_length_char = 50 # trim any sentences with less than this many characters
-        sentence_length_words    = 10 # exact number of words per sentence
+        min_sentence_length_char = 60 # trim any sentences with less than this many characters
+        sentence_length_words    = 8 # exact number of words per sentence
         print_sentences          = 0 # approx number of sentences to print during sentence encoding
         sentences_per_category   = 2000 # exact number of sentences to load in as training set
 
@@ -80,6 +80,13 @@ def classify_quality(encoder=None, directory=None, sequence=False):
 
         epochs = None        # if None, defaults to whats set in classify.py
         batch_size = None    # if None, defaults to whats set in classify.py
+
+        # concatenate all words in doc to single sequence of maximum length 'document_max_num_words'
+        treat_each_doc_as_single_sentence = True 
+        if treat_each_doc_as_single_sentence:
+            document_max_num_words = 1000
+            drop_sentence_on_dropped_word = False
+
         ####
 
         sys.stdout.write("Words/Sentence:    \t%d\n"%sentence_length_words)
@@ -140,6 +147,10 @@ def classify_quality(encoder=None, directory=None, sequence=False):
             if counts[qual_map]>=sentences_per_category:  continue
 
             article_sentences = article_contents.split(". ")
+            if treat_each_doc_as_single_sentence:
+                doc_idx = 0
+                full_doc = []
+
             for a in article_sentences:
                 if len(a)<min_sentence_length_char: continue 
 
@@ -163,8 +174,13 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                 if len(sentence_words)>=sentence_length_words:
                     for w in sentence_words:
                         try: 
-                            word_vecs.append(encoder.model[w.lower()])
+                            word_vec = encoder.model[w.lower()]
+                            if not treat_each_doc_as_single_sentence:
+                                word_vecs.append(word_vec)
+                            else:
+                                full_doc[doc_idx] = 
                             cur_sentence_length+=len(w)
+                            
                         except: 
                             if drop_sentence_on_dropped_word:
                                 cur_sentence_length=0
