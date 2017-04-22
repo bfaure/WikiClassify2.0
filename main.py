@@ -84,9 +84,11 @@ def classify_quality(encoder=None, directory=None, sequence=False):
         # concatenate all words in doc to single sequence of maximum length 'document_max_num_words'
         treat_each_doc_as_single_sentence = True 
         if treat_each_doc_as_single_sentence:
-            document_max_num_words = 200
+            document_max_num_words        = 800
             drop_sentence_on_dropped_word = False
-            docs_per_category = 1000
+            docs_per_category             = 1000
+            batch_size                    = 10
+            document_min_num_words        = 500
         ####
 
         sys.stdout.write("Words/Sentence:    \t%d\n"%sentence_length_words)
@@ -122,7 +124,11 @@ def classify_quality(encoder=None, directory=None, sequence=False):
 
         done_loading = False
         num_categories = len(class_names)
+
         approx_planned_sentences = num_categories*sentences_per_category 
+        if treat_each_doc_as_single_sentence:
+            approx_planned_sentences = num_categories*docs_per_category
+
         f = open("text.tsv","r")
         i=0
         enc_start_time = time.time()
@@ -144,17 +150,20 @@ def classify_quality(encoder=None, directory=None, sequence=False):
 
             qual_map = class_dict[str(qual[0])]
 
-            if counts[qual_map]>=sentences_per_category:  continue
+            if not treat_each_doc_as_single_sentence and counts[qual_map]>=sentences_per_category:  continue
             if treat_each_doc_as_single_sentence and counts[qual_map]>=docs_per_category: continue
 
             article_sentences = article_contents.split(". ")
             if treat_each_doc_as_single_sentence:
                 full_doc = []
+                full_doc_str = []
                 doc_arr = np.zeros(shape=(document_max_num_words,300)).astype(float)
 
             for a in article_sentences:
                 if len(a)<min_sentence_length_char and not treat_each_doc_as_single_sentence: 
                     continue 
+
+                if treat_each_doc_as_single_sentence and len(full_doc)>=document_max_num_words: continue
 
                 cleaned_a = a.replace(","," ").replace("(","").replace(")","")
                 cleaned_a = cleaned_a.replace("&nbsp;","").replace("   "," ")
@@ -178,7 +187,9 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                         try: 
                             word_vec = encoder.model[w.lower()]
                             if not treat_each_doc_as_single_sentence: word_vecs.append(word_vec)
-                            else: full_doc.append(word_vec)
+                            else: 
+                                full_doc.append(word_vec)
+                                full_doc_str.append(w)
                             cur_sentence_length+=len(w)
                             
                         except: 
@@ -204,6 +215,10 @@ def classify_quality(encoder=None, directory=None, sequence=False):
             if done_loading: break
             
             if treat_each_doc_as_single_sentence:
+                if len(full_doc)<document_min_num_words: continue 
+                if random.randint(0,approx_planned_sentences)<print_sentences:
+                    sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],''.join(e+" " for e in full_doc_str)))
+
                 for q in range(len(full_doc)):
                     if q==document_max_num_words: break
                     doc_arr[q,:] = full_doc[q]

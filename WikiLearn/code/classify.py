@@ -28,7 +28,7 @@ from keras.layers import Dense,Activation,Dropout
 from keras.layers import Embedding,LSTM
 from keras.optimizers import SGD
 
-DEFAULT_BATCH_SIZE = 20
+DEFAULT_BATCH_SIZE = 1000
 DEFAULT_EPOCHS = 100
 
 #                            Linear classifier
