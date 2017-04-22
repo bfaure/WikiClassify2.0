@@ -4,22 +4,13 @@ from __future__ import print_function
 
 #                          Standard imports
 #-----------------------------------------------------------------------------#
-import os, sys, time
+import os, sys, time, random
 from shutil import rmtree
 
 # enforce auto-flushing of stdout on every write
 sys.stdout = os.fdopen(sys.stdout.fileno(),'w',0) 
 
 import numpy as np
-
-from matplotlib import pyplot as plt
-from matplotlib import cm
-from matplotlib import mlab as ml
-from matplotlib import colors
-
-from keras.models import Sequential
-from keras.layers import Dense,Activation,Dropout
-from keras.optimizers import SGD
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
@@ -32,7 +23,12 @@ from pathfinder import get_queries, astar_path
 #                            Main function
 #-----------------------------------------------------------------------------#
 
-def classify_quality(encoder, directory):
+def classify_quality(encoder=None, directory=None, sequence=False):
+
+    func_str = "Classifying quality"
+    if sequence: func_str+=" by word-vector sequences (sentences)..."
+    else: func_str+=" by doc-vectors"
+    print("\n%s\n" % func_str)
     
     y = []
     x = []
@@ -49,44 +45,188 @@ def classify_quality(encoder, directory):
 
     class_names = ["good","mid","poor"]
 
-    num_lines = len(open("quality.tsv","r").read().split("\n"))
-    sys.stdout.write('Parsing quality ')
-    with open('quality.tsv','r') as f:
+    counts  = {"good"   :0,\
+               "mid"    :0,\
+               "poor" :0,\
+               "unknown/not_in_model":0}
+
+    class_dict = {  "0": "good",\
+                    "1": "mid",\
+                    "2": "poor"}
+
+    class_pretty = { "good": "\'good\'",\
+                     "mid": "\'mid\' ",\
+                     "poor": "\'poor\'"}
+
+    class_str = ""
+    for c in class_names:
+        class_str+=c
+        if class_names.index(c)!=len(class_names)-1: class_str+=" | "
+    sys.stdout.write("\nClasses:\t\t%s\n"% (class_str))
+
+    if sequence:
+
+        ####
+        max_quality_dict_size    = 10000000 # if -1, no limit, o.w. total articles limited to this
+        min_sentence_length_char = 28 # trim any sentences with less than this many characters
+        sentence_length_words    = 20 # exact number of words per sentence
+        print_sentences          = 10 # approx number of sentences to print during sentence encoding
+        sentences_per_category   = 50000 # exact number of sentences to load in as training set
+
+        drop_sentence_on_dropped_word = True # drop the whole sentence if one of its words isnt in model,
+                                             # if false: drop just the word
+        
+        epochs = None        # if None, defaults to whats set in classify.py
+        batch_size = None    # if None, defaults to whats set in classify.py
+        ####
+
+        sys.stdout.write("Words/Sentence:    \t%d\n"%sentence_length_words)
+        sys.stdout.write("Min. Char/Sentence:\t%d\n"%min_sentence_length_char)
+        sys.stdout.write("Sentences/Class:   \t%d\n\n"%sentences_per_category)
+        sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
+        sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
+
+        num_lines = len(open("quality.tsv","r").read().split("\n"))
+        qf = open("quality.tsv","r")
         i=0
-        num_classified = 0
-        for line in f:
+        qualities = {}
+        for line in qf:
             i+=1
-            sys.stdout.write("\rParsing Quality (%d|%d|%d), (model|class.|tot.)" % (len(x),num_classified,num_lines))
+            if max_quality_dict_size!=-1 and i>max_quality_dict_size: break
+            sys.stdout.write("\rCreating quality dict (%d/%d)"%(i,num_lines))
             try:
                 article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
-
-                #qual_mapping = classes[article_quality]
-                qual = classes[article_quality]
-
-                real_article_id = talk_to_real_id(int(article_id))
-                num_classified+=1
-
-                doc_vector = encoder.model.docvecs[int(real_article_id)] 
-
-                x.append(doc_vector)
-                y.append(qual)
-
-                counts[article_quality]+=1
+                qualities[article_id] = article_quality
             except:
-                counts["unknown/not_in_model"]+=1
+                i+=-1
+                continue
+
+        sys.stdout.write("\nEncoding english sentences to vector sequences...\n")
+        qf.close()
+
+        done_loading = False
+        num_categories = len(class_names)
+        approx_planned_sentences = num_categories*sentences_per_category 
+        f = open("text.tsv","r")
+        i=0
+        num_loaded=0
+        for line in f:
+            i+=1
+            percent_done = "%0.1f%%" % (100.0*float(num_loaded)/float(approx_planned_sentences))
+            perc_loaded = "%0.1f%%" % (100.0 *float(i)/13119700.0)
+            sys.stdout.write("\rEncoding sentence-vectors: %s done (%d/%d) | %s total "% (percent_done,num_loaded,approx_planned_sentences,perc_loaded))
+            sys.stdout.flush()
+            try:
+                article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
+            except: continue
+                
+            try: qual = classes[qualities[article_id]]
+            except: 
+                counts['unknown/not_in_model'] +=1
+                continue
+
+            qual_map = class_dict[str(qual[0])]
+
+            if counts[qual_map]>=sentences_per_category:  continue
+
+            article_sentences = article_contents.split(".")
+            for a in article_sentences:
+                if len(a)<min_sentence_length_char: continue 
+
+                cleaned_a = a.replace(","," ").replace("(","").replace(")","")
+                cleaned_a = cleaned_a.replace("&nbsp;"," ").replace("   "," ")
+                cleaned_a = cleaned_a.replace("  "," ").lower()
+                sentence_words = cleaned_a.split(" ")
+
+                word_vecs = []
+                cur_sentence_length = 0
+                if len(sentence_words)>=sentence_length_words:
+                    for w in sentence_words:
+                        try: 
+                            word_vecs.append(encoder.model[w.lower()])
+                            cur_sentence_length+=len(w)
+                        except: 
+                            if drop_sentence_on_dropped_word:
+                                word_vecs = []
+                                break
+                            else: continue
+
+                if cur_sentence_length<min_sentence_length_char: continue
+
+                if len(word_vecs)==sentence_length_words: 
+                    if random.randint(0,approx_planned_sentences)<print_sentences:
+                        sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],cleaned_a))
+
+                    x.append(word_vecs[:sentence_length_words])
+                    y.append(qual)
+                    counts[qual_map]+=1
+                    num_loaded+=1
+
+                    if min(counts["good"],counts["mid"],counts["poor"])>=sentences_per_category: 
+                        done_loading = True
+                        break
+                    if counts[qual_map]==sentences_per_category: break
+
+            if done_loading: break
+
+        sys.stdout.write("\n")
+        del qualities
+
+    else:
+        num_lines = len(open("quality.tsv","r").read().split("\n"))
+        sys.stdout.write('Parsing quality ')
+        with open('quality.tsv','r') as f:
+            i=0
+            num_classified = 0
+            for line in f:
+                i+=1
+                sys.stdout.write("\rParsing Quality: (%d|%d|%d), (model|class.|tot.)" % (len(x),num_classified,num_lines))
+                try:
+                    article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
+
+                    qual = classes[article_quality]
+                    num_classified+=1
+
+                    doc_vector = encoder.model.docvecs[int(article_id)] 
+                    x.append(doc_vector)
+                    y.append(qual)
+
+                    if qual==0: counts["good"] +=1
+                    if qual==1: counts["mid"]  +=1
+                    if qual==2: counts["poor"] +=1
+                except:
+                    counts["unknown/not_in_model"]+=1
 
     sys.stdout.write("\n")
+    
+    '''
     for key,value in counts.iteritems():
         print("\t"+key+" - "+str(value)+" entries")
+    '''
 
-    X = np.array(x)
-    y = np.ravel(np.array(y))
-    
     classifier = vector_classifier_keras(class_names=class_names)
-    t = time.time()
-    classifier.train(X, y)
+    y = np.ravel(np.array(y))
+
+    if sequence:
+        X = np.array(x)
+        t = time.time()
+        classifier.train_seq(X,y,epochs=epochs,batch_size=batch_size)        
+    else:
+        X = np.array(x)
+        t = time.time()
+        classifier.train(X,y)    
+
     print('Elapsed for %d: %0.2f' % (i,time.time()-t))
 
+    '''
+    print("\nEnter sentences to test model (q to quit)...")
+    while True:
+        sentence = raw_input("> ")
+        if sentence=="q": return
+        docvec = np.ravel(self.encoder.model.infer_vector(sentence.split()))
+        print(model.predict(docvec,batch_size=1,verbose=1))
+    '''
+        
 # returns the most recent trained model (according to naming scheme)
 def get_most_recent_model(directory):
     model_dirs = os.listdir(directory)
@@ -120,7 +260,6 @@ def main():
 
     # if we have a copy of the parsed datadump
     if os.path.isfile('text.tsv'):
-
 
         # after parser is run, use this to map the article ids (talk ids) in quality.tsv 
         # to the article ids (real article ids) in text.tsv, saved in id_mapping.tsv
@@ -167,22 +306,22 @@ def main():
             # train model on text corpus
             encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
 
-
         # after Doc2Vec has created vector encodings, this trains on those
         # mappings using the quality.tsv data as the output
         train_quality_classifier = True 
         if train_quality_classifier:
             
-            model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
+            #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
+            #model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding model on ssd for faster load
+            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
-            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding model on ssd for faster load
 
             classifier_dir = "WikiLearn/data/models/classifier/recent" # directory to save classifier to
             encoder = doc2vec()
             encoder.load(model_dir)
 
             #classify_quality(encoder,classifier_dir)
-            classify_quality_keras(encoder,classifier_dir)
+            classify_quality(encoder=encoder,directory=classifier_dir,sequence=True)
 
         # after the data has been pushed to the server, we need to run a 2nd pass
         # to add all of the quality and importance attributes
