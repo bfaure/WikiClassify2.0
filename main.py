@@ -15,7 +15,7 @@ import numpy as np
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
-from WikiLearn.code.vectorize import doc2vec
+from WikiLearn.code.vectorize import doc2vec, make_seconds_pretty
 from WikiLearn.code.classify  import vector_classifier_keras
 
 from pathfinder import get_queries, astar_path
@@ -28,7 +28,7 @@ def classify_quality(encoder=None, directory=None, sequence=False):
     func_str = "Classifying quality"
     if sequence: func_str+=" by word-vector sequences (sentences)..."
     else: func_str+=" by doc-vectors"
-    print("\n%s\n" % func_str)
+    print("\n%s" % func_str)
     
     y = []
     x = []
@@ -62,16 +62,16 @@ def classify_quality(encoder=None, directory=None, sequence=False):
     for c in class_names:
         class_str+=c
         if class_names.index(c)!=len(class_names)-1: class_str+=" | "
-    sys.stdout.write("\nClasses:\t\t%s\n"% (class_str))
+    sys.stdout.write("Classes:\t\t%s\n"% (class_str))
 
     if sequence:
 
         ####
-        max_quality_dict_size    = 10000000 # if -1, no limit, o.w. total articles limited to this
-        min_sentence_length_char = 28 # trim any sentences with less than this many characters
+        max_quality_dict_size    = -1 # if -1, no limit, o.w. total articles limited to this
+        min_sentence_length_char = 50 # trim any sentences with less than this many characters
         sentence_length_words    = 20 # exact number of words per sentence
-        print_sentences          = 10 # approx number of sentences to print during sentence encoding
-        sentences_per_category   = 50000 # exact number of sentences to load in as training set
+        print_sentences          = 0 # approx number of sentences to print during sentence encoding
+        sentences_per_category   = 500000 # exact number of sentences to load in as training set
 
         drop_sentence_on_dropped_word = True # drop the whole sentence if one of its words isnt in model,
                                              # if false: drop just the word
@@ -109,12 +109,13 @@ def classify_quality(encoder=None, directory=None, sequence=False):
         approx_planned_sentences = num_categories*sentences_per_category 
         f = open("text.tsv","r")
         i=0
+        enc_start_time = time.time()
         num_loaded=0
         for line in f:
             i+=1
             percent_done = "%0.1f%%" % (100.0*float(num_loaded)/float(approx_planned_sentences))
             perc_loaded = "%0.1f%%" % (100.0 *float(i)/13119700.0)
-            sys.stdout.write("\rEncoding sentence-vectors: %s done (%d/%d) | %s total "% (percent_done,num_loaded,approx_planned_sentences,perc_loaded))
+            sys.stdout.write("\rEncoding: %s done (%d/%d) | %s total | %s  "% (percent_done,num_loaded,approx_planned_sentences,perc_loaded,make_seconds_pretty(time.time()-enc_start_time)))
             sys.stdout.flush()
             try:
                 article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
@@ -129,12 +130,12 @@ def classify_quality(encoder=None, directory=None, sequence=False):
 
             if counts[qual_map]>=sentences_per_category:  continue
 
-            article_sentences = article_contents.split(".")
+            article_sentences = article_contents.split(". ")
             for a in article_sentences:
                 if len(a)<min_sentence_length_char: continue 
 
                 cleaned_a = a.replace(","," ").replace("(","").replace(")","")
-                cleaned_a = cleaned_a.replace("&nbsp;"," ").replace("   "," ")
+                cleaned_a = cleaned_a.replace("&nbsp;","").replace("   "," ")
                 cleaned_a = cleaned_a.replace("  "," ").lower()
                 sentence_words = cleaned_a.split(" ")
 
@@ -147,7 +148,7 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                             cur_sentence_length+=len(w)
                         except: 
                             if drop_sentence_on_dropped_word:
-                                word_vecs = []
+                                cur_sentence_length=0
                                 break
                             else: continue
 
@@ -169,7 +170,7 @@ def classify_quality(encoder=None, directory=None, sequence=False):
 
             if done_loading: break
 
-        sys.stdout.write("\n")
+        sys.stdout.write("\nTotal encoding time: %s" % make_seconds_pretty(time.time()-enc_start_time))
         del qualities
 
     else:
@@ -312,8 +313,11 @@ def main():
         if train_quality_classifier:
             
             #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
-            #model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding model on ssd for faster load
-            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            #model_dir = get_most_recent_model('/home/bfaure/Desktop/WikiClassify2.0/WikiLearn/data/models/doc2vec')
+            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+
+            # very small model for testing
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
 
             classifier_dir = "WikiLearn/data/models/classifier/recent" # directory to save classifier to
@@ -482,7 +486,7 @@ def main():
     else:
         print("text.tsv not present, could not create text dictionary")
 
-    print("\nTotal time: %0.2f seconds" % (time.time()-start_time))
+    print("\nTotal time: %s seconds" % make_seconds_pretty(time.time()-start_time))
 
 if __name__ == "__main__":
     main()

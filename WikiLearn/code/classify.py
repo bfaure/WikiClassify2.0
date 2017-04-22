@@ -28,6 +28,9 @@ from keras.layers import Dense,Activation,Dropout
 from keras.layers import Embedding,LSTM
 from keras.optimizers import SGD
 
+DEFAULT_BATCH_SIZE = 2000
+DEFAULT_EPOCHS = 100
+
 #                            Linear classifier
 #-----------------------------------------------------------------------------#
 
@@ -37,17 +40,29 @@ def make_one_hot(y):
     return one_hot
 
 class vector_classifier_keras(object):
-    def __init__(self, class_names=None):
+    def __init__(self, class_names=None, directory=None):
         self.class_names = class_names
+        self.save_path=None
+        if directory!=None:
+            if not os.path.exists(directory):
+                os.path.makedirs(directory)
+                save_name = "vector_classifier_seq.h5"
+                self.save_path = os.path.join(directory,save_name)
 
-    def train_seq(self,X,y,test_ratio=0.2,epochs=None,batch_size=None):
+    def train_seq(self,X,y,test_ratio=0.2,epochs=None,batch_size=None,load_file=None):
         y_hot = make_one_hot(y)
 
+        num_samples = X.shape[0]
         input_dim  = X.shape[2] 
         timesteps  = X.shape[1]
         output_dim = y_hot.shape[1]
-        batch_size = 64 if batch_size==None else batch_size
-        epochs     = 5 if epochs==None else epochs
+        batch_size = DEFAULT_BATCH_SIZE if batch_size==None else batch_size
+
+        if num_samples<batch_size: 
+            print("\nAuto-resizing batch size")
+            batch_size=num_samples
+
+        epochs     = DEFAULT_EPOCHS if epochs==None else epochs
 
         print("\nBuilding model...")
         sys.stdout.flush()
@@ -56,6 +71,11 @@ class vector_classifier_keras(object):
         model.add(Dropout(0.2))
         model.add(Dense(output_dim, input_dim=200, activation='softmax'))
 
+        if load_file!=None: model.load_weights(load_file)
+        cbks = [callbacks.EarlyStopping(monitor='val_loss', patience=3)]
+        if self.save_path!=None:
+            cbks.append(callbacks.ModelCheckpoint(filepath=self.save_path, monitor='val_loss', save_best_only=True))
+
         print("Compiling model...")
         sys.stdout.flush()
         model.compile(loss="categorical_crossentropy", optimizer='rmsprop',metrics=['accuracy'])
@@ -63,7 +83,7 @@ class vector_classifier_keras(object):
         print("Fitting model...")
         sys.stdout.flush()
         model.fit(X, y_hot, batch_size=batch_size, epochs=epochs,
-                  validation_split=0.25, shuffle=True)
+                  callbacks=cbks, validation_split=0.25, shuffle=True)
 
         #loss, acc = model.evaluate(test_X, test_Y, batch_size, show_accuracy=True)
         #print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
