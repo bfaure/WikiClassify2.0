@@ -67,18 +67,22 @@ class vector_classifier_keras(object):
         print("\nBuilding model...")
         sys.stdout.flush()
         model = Sequential()
-        model.add(LSTM(200,  input_shape=(timesteps, input_dim),  return_sequences=False))
-        model.add(Dropout(0.2))
-        model.add(Dense(output_dim, input_dim=200, activation='softmax'))
+        #model.add(LSTM(200,  input_shape=(timesteps, input_dim),  return_sequences=False))
+        model.add(LSTM(timesteps,input_shape=(timesteps, input_dim)))
+        #model.add(Dropout(0.2))
+        model.add(Dropout(0.3))
+        #model.add(Dense(output_dim, input_dim=200, activation='softmax'))
+        model.add(Dense(output_dim))
+        model.add(Activation('sigmoid'))
 
         if load_file!=None: model.load_weights(load_file)
-        cbks = [callbacks.EarlyStopping(monitor='val_loss', patience=3)]
+        cbks = [callbacks.EarlyStopping(monitor='val_loss', patience=10)]
         if self.save_path!=None:
             cbks.append(callbacks.ModelCheckpoint(filepath=self.save_path, monitor='val_loss', save_best_only=True))
 
         print("Compiling model...")
         sys.stdout.flush()
-        model.compile(loss="categorical_crossentropy", optimizer='rmsprop',metrics=['accuracy'])
+        model.compile(loss="binary_crossentropy", optimizer='adam',metrics=['accuracy'])
 
         print("Fitting model...")
         sys.stdout.flush()

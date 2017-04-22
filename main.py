@@ -67,15 +67,17 @@ def classify_quality(encoder=None, directory=None, sequence=False):
     if sequence:
 
         ####
-        max_quality_dict_size    = -1 # if -1, no limit, o.w. total articles limited to this
+        max_quality_dict_size    = 100000 # if -1, no limit, o.w. total articles limited to this
         min_sentence_length_char = 50 # trim any sentences with less than this many characters
-        sentence_length_words    = 20 # exact number of words per sentence
+        sentence_length_words    = 10 # exact number of words per sentence
         print_sentences          = 0 # approx number of sentences to print during sentence encoding
-        sentences_per_category   = 500000 # exact number of sentences to load in as training set
+        sentences_per_category   = 2000 # exact number of sentences to load in as training set
 
         drop_sentence_on_dropped_word = True # drop the whole sentence if one of its words isnt in model,
                                              # if false: drop just the word
         
+        remove_stop_words = True # if True, removes stop words before calculating sentence lengths
+
         epochs = None        # if None, defaults to whats set in classify.py
         batch_size = None    # if None, defaults to whats set in classify.py
         ####
@@ -85,6 +87,13 @@ def classify_quality(encoder=None, directory=None, sequence=False):
         sys.stdout.write("Sentences/Class:   \t%d\n\n"%sentences_per_category)
         sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
         sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
+
+        if remove_stop_words:
+            stop_words_dict = {}
+            stop_words = open("WikiLearn/data/stopwords/stopwords.txt").read().replace("\'","").split("\n")
+            for s in stop_words:
+                if s not in [""," "] and len(s)>0:
+                    stop_words_dict[s] = True
 
         num_lines = len(open("quality.tsv","r").read().split("\n"))
         qf = open("quality.tsv","r")
@@ -138,6 +147,16 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                 cleaned_a = cleaned_a.replace("&nbsp;","").replace("   "," ")
                 cleaned_a = cleaned_a.replace("  "," ").lower()
                 sentence_words = cleaned_a.split(" ")
+
+                if remove_stop_words:
+                    s_idx=0
+                    while True:
+                        try:
+                            stop_words_dict[sentence_words[s_idx]]
+                            del sentence_words[s_idx]
+                        except:
+                            s_idx+=1
+                            if s_idx>=len(sentence_words): break
 
                 word_vecs = []
                 cur_sentence_length = 0
@@ -205,7 +224,7 @@ def classify_quality(encoder=None, directory=None, sequence=False):
         print("\t"+key+" - "+str(value)+" entries")
     '''
 
-    classifier = vector_classifier_keras(class_names=class_names)
+    classifier = vector_classifier_keras(class_names=class_names,directory=directory)
     y = np.ravel(np.array(y))
 
     if sequence:
@@ -317,7 +336,7 @@ def main():
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
 
             # very small model for testing
-            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
 
             classifier_dir = "WikiLearn/data/models/classifier/recent" # directory to save classifier to
