@@ -35,6 +35,7 @@ DEFAULT_EPOCHS = 100
 #-----------------------------------------------------------------------------#
 
 def make_one_hot(y):
+    print("Converting y to one-hot...")
     one_hot = np.zeros((y.size, np.max(y)+1),dtype='bool')
     one_hot[np.arange(y.size), y] = 1 
     return one_hot
@@ -42,12 +43,8 @@ def make_one_hot(y):
 class vector_classifier_keras(object):
     def __init__(self, class_names=None, directory=None):
         self.class_names = class_names
-        self.save_path=None
-        if directory!=None:
-            if not os.path.exists(directory):
-                os.path.makedirs(directory)
-                save_name = "vector_classifier_seq.h5"
-                self.save_path = os.path.join(directory,save_name)
+        self.directory = directory
+        if directory!=None and not os.path.exists(directory): os.makedirs(directory)
 
     def train_seq(self,X,y,test_ratio=0.2,epochs=None,batch_size=None,load_file=None):
         y_hot = make_one_hot(y)
@@ -56,7 +53,13 @@ class vector_classifier_keras(object):
         input_dim  = X.shape[2] 
         timesteps  = X.shape[1]
         output_dim = y_hot.shape[1]
-        batch_size = DEFAULT_BATCH_SIZE if batch_size==None else batch_size
+
+        test_size = int(num_samples*test_ratio)
+        train_size = num_samples-test_size
+
+        if batch_size==None: 
+            batch_size = int(12000/timesteps)
+            print("Using batch size: %d"%batch_size)
 
         if num_samples<batch_size: 
             print("\nAuto-resizing batch size")
@@ -68,7 +71,8 @@ class vector_classifier_keras(object):
         sys.stdout.flush()
         model = Sequential()
         #model.add(LSTM(200,  input_shape=(timesteps, input_dim),  return_sequences=False))
-        model.add(LSTM(timesteps,input_shape=(timesteps, input_dim)))
+        #model.add(LSTM(timesteps,input_shape=(timesteps, input_dim)))
+        model.add(LSTM(int(timesteps*1.5),input_shape=(timesteps, input_dim)))
         #model.add(Dropout(0.2))
         model.add(Dropout(0.3))
         #model.add(Dense(output_dim, input_dim=200, activation='softmax'))
@@ -77,20 +81,30 @@ class vector_classifier_keras(object):
 
         if load_file!=None: model.load_weights(load_file)
         cbks = [callbacks.EarlyStopping(monitor='val_loss', patience=3)]
-        if self.save_path!=None:
-            cbks.append(callbacks.ModelCheckpoint(filepath=self.save_path, monitor='val_loss', save_best_only=True))
+        if self.directory!=None:
+            print("Saving best model to %s"%self.directory)
+            cbks.append(callbacks.ModelCheckpoint(filepath=os.path.join(self.directory,"classifier_best.h5"), monitor='val_loss', save_best_only=True))
 
         print("Compiling model...")
         sys.stdout.flush()
         model.compile(loss="binary_crossentropy", optimizer='adam',metrics=['accuracy'])
 
-        print("Fitting model...")
+        print("Fitting model...\n")
         sys.stdout.flush()
-        model.fit(X, y_hot, batch_size=batch_size, epochs=epochs,
+        model.fit(X[:train_size], y_hot[:train_size], batch_size=batch_size, epochs=epochs,
                   callbacks=cbks, validation_split=0.25, shuffle=True)
 
-        #loss, acc = model.evaluate(test_X, test_Y, batch_size, show_accuracy=True)
-        #print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
+        print("\nEvaluating model...")
+        loss, acc = model.evaluate(X[train_size:], y_hot[train_size:], batch_size)
+        print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
+
+        print("Saving model...")
+        model.save(os.path.join(self.directory,"classifier_final.h5"))
+
+        print("Saving model architecture...")
+        s=open(os.path.join(self.directory,"classifier_architecture.json"),"w")
+        s.write(model.to_json())
+        s.close()
 
         """
         model.add(Embedding(max_features, output_dim=256))

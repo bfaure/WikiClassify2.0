@@ -26,12 +26,12 @@ from pathfinder import get_queries, astar_path
 def classify_quality(encoder=None, directory=None, sequence=False):
 
     func_str = "Classifying quality"
-    if sequence: func_str+=" by word-vector sequences (sentences)..."
+    if sequence: func_str+=" by word-vector sequences..."
     else: func_str+=" by doc-vectors"
-    print("\n%s" % func_str)
+    print("\n%s\n" % func_str)
     
-    y = []
-    x = []
+    y   = []
+    x   = []
     ids = []
 
     classes = {"fa":np.array([0],dtype=int),\
@@ -47,7 +47,7 @@ def classify_quality(encoder=None, directory=None, sequence=False):
 
     counts  = {"good"   :0,\
                "mid"    :0,\
-               "poor" :0,\
+               "poor"   :0,\
                "unknown/not_in_model":0}
 
     class_dict = {  "0": "good",\
@@ -55,7 +55,7 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                     "2": "poor"}
 
     class_pretty = { "good": "\'good\'",\
-                     "mid": "\'mid\' ",\
+                     "mid" : "\'mid\' ",\
                      "poor": "\'poor\'"}
 
     class_str = ""
@@ -64,9 +64,13 @@ def classify_quality(encoder=None, directory=None, sequence=False):
         if class_names.index(c)!=len(class_names)-1: class_str+=" | "
     sys.stdout.write("Classes:\t\t%s\n"% (class_str))
 
+    class_lengths = {"good":0,\
+                     "mid":0,\
+                     "poor":0}
+
     if sequence:
 
-        ####
+        #### SETTINGS
         max_quality_dict_size    = 100000 # if -1, no limit, o.w. total articles limited to this
         min_sentence_length_char = 60 # trim any sentences with less than this many characters
         sentence_length_words    = 8 # exact number of words per sentence
@@ -81,29 +85,36 @@ def classify_quality(encoder=None, directory=None, sequence=False):
         epochs = None        # if None, defaults to whats set in classify.py
         batch_size = None    # if None, defaults to whats set in classify.py
 
-        # concatenate all words in doc to single sequence of maximum length 'document_max_num_words'
-        treat_each_doc_as_single_sentence = True 
-        if treat_each_doc_as_single_sentence:
-            document_max_num_words        = 800
-            drop_sentence_on_dropped_word = False
-            docs_per_category             = 1000
-            batch_size                    = 10
-            document_min_num_words        = 500
+        treat_each_doc_as_single_sentence = True # concatenate all sentences in each doc together
+        document_min_num_words        = 300 # trim any documents with less than this many words
+        document_max_num_words        = 400 # maximum number of words to maintain in each document
+        docs_per_category             = 500 # number of documents to load per category
         ####
 
-        sys.stdout.write("Words/Sentence:    \t%d\n"%sentence_length_words)
-        sys.stdout.write("Min. Char/Sentence:\t%d\n"%min_sentence_length_char)
-        sys.stdout.write("Sentences/Class:   \t%d\n\n"%sentences_per_category)
+        # print out config info
+        if not treat_each_doc_as_single_sentence:
+            sys.stdout.write("Words/Sentence:    \t%d\n"%sentence_length_words)
+            sys.stdout.write("Min. Char/Sentence:\t%d\n"%min_sentence_length_char)
+            sys.stdout.write("Sentences/Class:   \t%d\n\n"%sentences_per_category)
+        else:
+            sys.stdout.write("Max Words/Doc:     \t%d\n"%document_max_num_words)
+            sys.stdout.write("Min Words/Doc:     \t%d\n"%document_min_num_words)
+            sys.stdout.write("Docs/Class:        \t%d\n\n"%docs_per_category)
         sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
         sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
 
+        # create stop words dictionary
         if remove_stop_words:
+            print("Creating stop words dict...")
             stop_words_dict = {}
             stop_words = open("WikiLearn/data/stopwords/stopwords.txt").read().replace("\'","").split("\n")
             for s in stop_words:
                 if s not in [""," "] and len(s)>0:
                     stop_words_dict[s] = True
+        else:
+            print("Not removing stop words.")
 
+        # load quality dictionary
         num_lines = len(open("quality.tsv","r").read().split("\n"))
         qf = open("quality.tsv","r")
         i=0
@@ -118,58 +129,72 @@ def classify_quality(encoder=None, directory=None, sequence=False):
             except:
                 i+=-1
                 continue
+        qf.close()
 
         sys.stdout.write("\nEncoding english sentences to vector sequences...\n")
-        qf.close()
 
         done_loading = False
         num_categories = len(class_names)
 
-        approx_planned_sentences = num_categories*sentences_per_category 
-        if treat_each_doc_as_single_sentence:
-            approx_planned_sentences = num_categories*docs_per_category
+        # number of total items we will have to load (sentences or docs)
+        approx_total = num_categories*sentences_per_category if not treat_each_doc_as_single_sentence else num_categories*docs_per_category
 
         f = open("text.tsv","r")
         i=0
         enc_start_time = time.time()
         num_loaded=0
+
+        # iterate over each line (document) in text.tsv
         for line in f:
             i+=1
-            percent_done = "%0.1f%%" % (100.0*float(num_loaded)/float(approx_planned_sentences))
-            perc_loaded = "%0.1f%%" % (100.0 *float(i)/13119700.0)
-            sys.stdout.write("\rEncoding: %s done (%d/%d) | %s total | %s  "% (percent_done,num_loaded,approx_planned_sentences,perc_loaded,make_seconds_pretty(time.time()-enc_start_time)))
+            percent_done = "%0.1f%%" % (100.0*float(num_loaded)/float(approx_total))
+            perc_loaded  = "%0.1f%%" % (100.0 *float(i)/13119700.0)
+            sys.stdout.write("\rEncoding: %s done (%d/%d) | %s total | %s  "% (percent_done,num_loaded,approx_total,perc_loaded,make_seconds_pretty(time.time()-enc_start_time)))
             sys.stdout.flush()
-            try:
-                article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
+            
+            # load in the current line
+            try:    article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
             except: continue
-                
+            
+            # see if this article has a quality mapping
             try: qual = classes[qualities[article_id]]
             except: 
+                # skip article if no listed quality
                 counts['unknown/not_in_model'] +=1
                 continue
 
+            # get the number we are using as the y for this quality (0,1,2,etc)
             qual_map = class_dict[str(qual[0])]
 
+            # if we have already loaded the maximum number of articles in this category
             if not treat_each_doc_as_single_sentence and counts[qual_map]>=sentences_per_category:  continue
             if treat_each_doc_as_single_sentence and counts[qual_map]>=docs_per_category: continue
 
+            # split article into sentences
             article_sentences = article_contents.split(". ")
+
+            # create elems to hold entire document (if saving as single seq)
             if treat_each_doc_as_single_sentence:
                 full_doc = []
                 full_doc_str = []
                 doc_arr = np.zeros(shape=(document_max_num_words,300)).astype(float)
 
+            # iterate over each sentence in the article
             for a in article_sentences:
-                if len(a)<min_sentence_length_char and not treat_each_doc_as_single_sentence: 
-                    continue 
 
-                if treat_each_doc_as_single_sentence and len(full_doc)>=document_max_num_words: continue
+                # skip the sentence if its too short (but not if we're saving whole doc)
+                if len(a)<min_sentence_length_char and not treat_each_doc_as_single_sentence: continue 
 
+                # if we have already loaded enough from this doc
+                if treat_each_doc_as_single_sentence and len(full_doc)>=document_max_num_words: break
+
+                # minor text cleaning
                 cleaned_a = a.replace(","," ").replace("(","").replace(")","")
                 cleaned_a = cleaned_a.replace("&nbsp;","").replace("   "," ")
                 cleaned_a = cleaned_a.replace("  "," ").lower()
                 sentence_words = cleaned_a.split(" ")
 
+                # remove all stop word instances
                 if remove_stop_words:
                     s_idx=0
                     while True:
@@ -180,6 +205,7 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                             s_idx+=1
                             if s_idx>=len(sentence_words): break
 
+                # iterate over each word in sentence and convert into word vector
                 word_vecs = []
                 cur_sentence_length = 0
                 if len(sentence_words)>=sentence_length_words:
@@ -191,17 +217,21 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                                 full_doc.append(word_vec)
                                 full_doc_str.append(w)
                             cur_sentence_length+=len(w)
-                            
                         except: 
-                            if drop_sentence_on_dropped_word:
+                            if drop_sentence_on_dropped_word and not treat_each_doc_as_single_sentence:
                                 cur_sentence_length=0
                                 break
                             else: continue
 
-                if treat_each_doc_as_single_sentence: continue # add full doc after for loop
+                # we add the full doc after the end of this for loop
+                if treat_each_doc_as_single_sentence: continue 
+
+                # if this sentence is now too short (after having dropped words due to them not being in model)
                 if cur_sentence_length<min_sentence_length_char: continue
+                
+                # if this sentence is the correct number of words
                 if len(word_vecs)==sentence_length_words: 
-                    if random.randint(0,approx_planned_sentences)<print_sentences:
+                    if random.randint(0,approx_total)<print_sentences:
                         sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],cleaned_a))
                     x.append(word_vecs[:sentence_length_words])
                     y.append(qual)
@@ -212,25 +242,29 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                         break
                     if counts[qual_map]==sentences_per_category: break
             
+            # if we have reached the target number of sentences to load
             if done_loading: break
             
+            # add the document
             if treat_each_doc_as_single_sentence:
                 if len(full_doc)<document_min_num_words: continue 
-                if random.randint(0,approx_planned_sentences)<print_sentences:
+                if random.randint(0,approx_total)<print_sentences:
                     sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],''.join(e+" " for e in full_doc_str)))
-
                 for q in range(len(full_doc)):
                     if q==document_max_num_words: break
                     doc_arr[q,:] = full_doc[q]
                 x.append(doc_arr)
                 y.append(qual)
                 counts[qual_map]+=1
+                class_lengths[qual_map]+=len(full_doc)
                 num_loaded+=1 
-                if min(counts["good"],counts["mid"],counts["poor"])>=docs_per_category: 
-                    break
+                if min(counts["good"],counts["mid"],counts["poor"])>=docs_per_category: break
 
-        sys.stdout.write("\nTotal encoding time: %s" % make_seconds_pretty(time.time()-enc_start_time))
+        sys.stdout.write("\nTotal encoding time: %s\n" % make_seconds_pretty(time.time()-enc_start_time))
         del qualities
+
+        #for key,value in class_lengths.iteritems():
+        #    print("%s avg length (words): %0.1f"%(key,float(value/docs_per_category)))
 
     else:
         num_lines = len(open("quality.tsv","r").read().split("\n"))
@@ -269,15 +303,10 @@ def classify_quality(encoder=None, directory=None, sequence=False):
 
     if sequence:
         X = np.array(x)
-        print(X.shape)
-        t = time.time()
         classifier.train_seq(X,y,epochs=epochs,batch_size=batch_size)        
     else:
         X = np.array(x)
-        t = time.time()
         classifier.train(X,y)    
-
-    print('Elapsed for %d: %0.2f' % (i,time.time()-t))
 
     '''
     print("\nEnter sentences to test model (q to quit)...")
@@ -374,13 +403,14 @@ def main():
             
             #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
             #model_dir = get_most_recent_model('/home/bfaure/Desktop/WikiClassify2.0/WikiLearn/data/models/doc2vec')
-            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            #model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
 
             # very small model for testing
             model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
+            # directory to save classifier to
+            classifier_dir = "WikiLearn/data/models/classifier/keras" 
 
-            classifier_dir = "WikiLearn/data/models/classifier/recent" # directory to save classifier to
             encoder = doc2vec()
             encoder.load(model_dir)
 
@@ -546,7 +576,7 @@ def main():
     else:
         print("text.tsv not present, could not create text dictionary")
 
-    print("\nTotal time: %s seconds" % make_seconds_pretty(time.time()-start_time))
+    print("\nTotal time: %s\n" % make_seconds_pretty(time.time()-start_time))
 
 if __name__ == "__main__":
     main()
