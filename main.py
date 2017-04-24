@@ -13,7 +13,7 @@ sys.stdout = os.fdopen(sys.stdout.fileno(),'w',0)
 import numpy as np
 
 import imageio
-
+from keras.layers import Embedding 
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
@@ -27,43 +27,74 @@ from pathfinder import get_queries, astar_path
 
 qualities = None # used by get_quality_documents, cross-call variable
 stop_words_dict = None # used by get_quality_documents, cross-call variable
+most_common_dict = None #
+class_dict = None 
+class_pretty = None 
+classes = None 
 # Returns the first sequences_per_class good, mid, and poor article bodies, converted to word vectors
 # single sequence of word vectors returned for each article, if a start_at value is specified, will 
 # traverse into the text.tsv file that far (line-wise) before starting to add documents to the data
-def get_quality_documents(encoder,seq_per_class,min_words_per_seq,max_words_per_seq,start_at=0,print_avg_length=False,remove_stop_words=True):
+def get_quality_documents(  
+    encoder,
+    seq_per_class,
+    min_words_per_seq,
+    max_words_per_seq,
+    start_at=0,
+    print_avg_length=False,
+    remove_stop_words=True,
+    trim_vocab_to=-1,
+    replace_non_model=False,
+    swap_with_word_idx=False,
+    class_names=["good","mid","poor"],
+    class_map={"fa":0,"a":0,"ga":0,"bplus":0,"b":0,"c":1,"start":2,"stub":2}
+    ):
+    
     global qualities 
     global stop_words_dict 
+    global most_common_dict
+    global class_dict
+    global class_pretty
+    global classes
 
     y   = []
     x   = []
 
-    classes = {"fa":np.array([0],dtype=int),\
-               "a":np.array([0],dtype=int),\
-               "ga":np.array([0],dtype=int),\
-               "bplus":np.array([0],dtype=int),\
-               "b":np.array([0],dtype=int),\
-               "c":np.array([1],dtype=int),\
-               "start":np.array([2],dtype=int),\
-               "stub" :np.array([2],dtype=int)}
+    if classes==None:
+        classes = {"fa":np.array([class_map["fa"]],dtype=int),\
+                    "a":np.array([class_map["a"]],dtype=int),\
+                    "ga":np.array([class_map["ga"]],dtype=int),\
+                    "bplus":np.array([class_map["bplus"]],dtype=int),\
+                    "b":np.array([class_map["b"]],dtype=int),\
+                    "c":np.array([class_map["c"]],dtype=int),\
+                    "start":np.array([class_map["start"]],dtype=int),
+                    "stub":np.array([class_map["stub"]],dtype=int)}
 
-    class_names = ["good","mid","poor"]
+    longest_class_len = 0
+    counts = {}
+    for n in class_names:
+        if len(n)>longest_class_len:
+            longest_class_len = len(n)
+        counts[n] = 0
+    counts["unknown/not_in_model"]=0
 
-    counts  = {"good"   :0,\
-               "mid"    :0,\
-               "poor"   :0,\
-               "unknown/not_in_model":0}
+    if class_dict==None:
+        class_dict = {}
+        for i in range(len(class_names)):
+            class_dict[str(i)] = class_names[i]
 
-    class_dict = {  "0": "good",\
-                    "1": "mid",\
-                    "2": "poor"}
+    if class_pretty==None:
+        class_pretty = {}
+        for i in range(len(class_names)):
+            class_name_pretty = class_names[i]
+            while len(class_name_pretty)<=longest_class_len:
+                class_name_pretty+=" "
+            class_pretty[class_names[i]]=class_name_pretty
 
-    class_pretty = { "good": "\'good\'",\
-                     "mid" : "\'mid\' ",\
-                     "poor": "\'poor\'"}
+    class_lengths = {}
+    for c in class_names:
+        class_lengths[c]=0
 
-    class_lengths = {"good":0,\
-                     "mid":0,\
-                     "poor":0}
+    zero_vector = [0.00]*300 
 
     max_quality_dict_size    = -1 # if -1, no limit, o.w. total articles limited to this
     print_sentences          = 0 # approx number of sentences to print during sentence encoding
@@ -72,10 +103,28 @@ def get_quality_documents(encoder,seq_per_class,min_words_per_seq,max_words_per_
     if remove_stop_words and stop_words_dict==None:
         stop_words_dict = {}
         #stop_words = open("WikiLearn/data/stopwords/stopwords.txt").read().replace("\'","").split("\n")
-        stop_words = open("WikiLearn/data/stopwords/stopwords_long.txt").read().replace("\'","").split("\n")
+        stop_words = open("WikiLearn/data/stopwords/stopwords_long.txt","r").read().replace("\'","").split("\n")
         for s in stop_words:
             if s not in [""," "] and len(s)>0:
                 stop_words_dict[s] = True
+
+    # create dictionary containing top 'trim_vocab_to' highest frequency words
+    if ((trim_vocab_to!=-1 or swap_with_word_idx) and most_common_dict==None):
+        most_common_dict = {}
+        word_list = open("WikiLearn/data/models/dictionary/text/word_list.tsv","r").read().split("\n")
+        w_idx=0
+        for w in word_list:
+            items = w.split("\t")
+            #if len(items)==3 and int(items[2])>trim_vocab_to:
+            if len(items)==3 and int(items[2])>2500:
+                try:
+                    in_model = encoder.model[items[1].lower()]
+                    most_common_dict[items[1]]=w_idx 
+                    w_idx+=1
+                except:
+
+                    continue
+
     # Create the qualities dictionary if not yet loaded
     if qualities==None:
         num_lines = len(open("quality.tsv","r").read().split("\n"))
@@ -147,16 +196,29 @@ def get_quality_documents(encoder,seq_per_class,min_words_per_seq,max_words_per_
                     except:
                         s_idx+=1
                         if s_idx>=len(sentence_words): break
-            # iterate over each word in sentence and convert into word vector
-            word_vecs = []
+
             #if len(sentence_words)>=sentence_length_words:
             for w in sentence_words:
+                if trim_vocab_to!=-1 or swap_with_word_idx:
+                    try: 
+                        idx = most_common_dict[w.lower()]
+                    except: 
+
+                        continue
                 try: 
                     word_vec = encoder.model[w.lower()]
-                    full_doc.append(word_vec)
+                    if swap_with_word_idx:
+                        full_doc.append(most_common_dict[w.lower()])
+                    else:
+                        full_doc.append(word_vec)
                     full_doc_str.append(w)
-                    cur_sentence_length+=len(w)
                 except: 
+                    if replace_non_model:
+                        if swap_with_word_idx:
+                            full_doc.append(0)
+                        else:
+                            full_doc.append(zero_vector)
+                        full_doc_str.append(w)
                     continue
         # add the document
         if len(full_doc)<min_words_per_seq: continue 
@@ -215,7 +277,7 @@ def make_gif(parent_folder):
             image = imageio.imread(parent_folder+"/"+filename)
             writer.append_data(image)
 
-def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
+def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     print("\nClassifying quality by word-vector sequences...\n")
 
     class_names = ["good","mid","poor"]
@@ -226,13 +288,32 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
     sys.stdout.write("Classes:\t\t%s\n"% (class_str))
 
     #### SETTINGS
-    dpipc = 213 # documents per iteration per class, limited by available memory
-    min_words = 40 # trim any documents with less than this many words
-    max_words = 40 # maximum number of words to maintain in each document
-    remove_stop_words = True # if True, removes stop words before calculating sentence lengths
+    #dpipc = 213 # documents per iteration per class, limited by available memory
+    #dpipc = 320
+    #dpipc = 640
+    #dpipc = 960
+    dpipc = 1280
+    #min_words = 90 # trim any documents with less than this many words
+    min_words = 90
+    #max_word=100
+    max_words = 200 # maximum number of words to maintain in each document
+    remove_stop_words = False # if True, removes stop words before calculating sentence lengths
+    limit_vocab_size = 20000 # if !=-1, trim vocab to 'limit_vocab_size' words
     batch_size = None    # if None, defaults to whats set in classify.py, requires vram
+    replace_non_model = True # replace words not found in model with zero vector
+    swap_with_word_idx = False
     epochs=1
     ####
+
+    # if using CNN, this must be non -1
+    if model_type=="cnn":
+        if limit_vocab_size==-1:
+            print("WARNING: limit_vocab_size must be non -1 for CNN")
+            sys.exit(0)
+        remove_stop_words=False
+        replace_non_model=True
+        swap_with_word_idx=False
+
 
     sys.stdout.write("Max Words/Doc:     \t%d\n"%max_words)
     sys.stdout.write("Min Words/Doc:     \t%d\n"%min_words)
@@ -242,7 +323,7 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
 
     test_on_epochs = True
 
-    classifier = vector_classifier_keras(class_names=class_names,directory=directory,model_type=model_type)
+    classifier = vector_classifier_keras(class_names=class_names,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
     doc_idx = 0
     i=0
     while True:
@@ -251,14 +332,20 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
         #if i>10: break
 
         print("\nIteration %d"%i)
-        X,y,doc_idx = get_quality_documents(encoder, dpipc, min_words, max_words, doc_idx, remove_stop_words=remove_stop_words)
+        X,y,doc_idx = get_quality_documents(encoder, dpipc, min_words, max_words, doc_idx,\
+                                             remove_stop_words=remove_stop_words,\
+                                             trim_vocab_to=limit_vocab_size,\
+                                             replace_non_model=replace_non_model,
+                                             swap_with_word_idx=swap_with_word_idx)
+
+        embedding_layer=None
 
         last_loss=None 
         num_worse=0
         for j in range(epochs):
             #plot = True if j==epochs-1 else False
             plot=True
-            loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
+            loss = classifier.train_seq_iter(X,y,i,j,plot=plot,embedding_layer=embedding_layer)
             if last_loss==None: last_loss=loss 
             else:
                 if loss>last_loss:

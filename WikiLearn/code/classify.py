@@ -35,6 +35,8 @@ from keras.layers import Conv1D,MaxPooling1D,Embedding
 from keras.layers import Dense, Input, Flatten, Dropout, Merge
 from keras.optimizers import Adadelta,RMSprop
 
+
+
 DEFAULT_BATCH_SIZE = 1000
 DEFAULT_EPOCHS = 100
 
@@ -81,7 +83,8 @@ def get_class_weights(y,classes=[0,1,2]):
     return totals
 
 class vector_classifier_keras(object):
-    def __init__(self, class_names=None, directory=None, log=True, model_type="lstm"):
+    def __init__(self, class_names=None, directory=None, log=True, model_type="lstm",vocab_size=20000):
+        self.vocab_size=vocab_size
 
         if model_type not in ["lstm","cnn"]:
             print("ERROR: Invalid model_type input.")
@@ -105,7 +108,7 @@ class vector_classifier_keras(object):
         if log: self.log_file = open(os.path.join(self.directory,"%s-log.tsv"%model_type),"w")
 
     # Can be called multiple times, similar to train_seq
-    def train_seq_iter(self,X,y,iteration,epoch,test_ratio=0.2,batch_size=None,load_file=None,plot=False):
+    def train_seq_iter(self,X,y,iteration,epoch,test_ratio=0.2,batch_size=None,load_file=None,plot=False,embedding_layer=None):
 
         #self.log_file.write("Iteration:%d\tEpoch:%d\n"%(iteration,epoch))
 
@@ -116,6 +119,8 @@ class vector_classifier_keras(object):
 
         #print("y[0]: ",y[0])
         #print("y_hot[0]: ",y_hot[0])
+
+        print("X.shape:",X.shape)
 
         num_samples = X.shape[0] # number of input samples
         input_dim  = X.shape[2] # number of elements in each wordvec
@@ -157,7 +162,10 @@ class vector_classifier_keras(object):
         if self.model==None:
             print("Building %s model..."%self.model_type)
             sys.stdout.flush()
+
             if self.model_type=="lstm":
+                # ideas from
+                # https://www.bonaccorso.eu/2016/08/02/reuters-21578-text-classification-with-gensim-and-keras/
                 self.model = Sequential()
                 self.model.add(LSTM(int(timesteps*10),input_shape=(timesteps, input_dim)))
                 self.model.add(Dropout(0.3))
@@ -169,42 +177,34 @@ class vector_classifier_keras(object):
                 self.model.compile(loss="binary_crossentropy", optimizer='adam',metrics=['accuracy'])
 
             if self.model_type=="cnn":
+                # Convolution
+                kernel_size = 10 # 5
+                filters = 200 #64,128
+                pool_size = 27 # 20
+
+                # LSTM
+                lstm_output_size = 9
+
                 self.model = Sequential()
-                self.model.add(Conv1D())
+                self.model.add(Conv1D(filters,
+                                 kernel_size,
+                                 input_shape=(timesteps,input_dim),
+                                 padding='valid',
+                                 activation='relu',
+                                 strides=1))
+                self.model.add(MaxPooling1D(pool_size=pool_size))
+                self.model.add(LSTM(lstm_output_size))
+                self.model.add(Dense(output_dim))
+                self.model.add(Activation('sigmoid'))
 
-
-        #print("train_x shape: ",train_x.shape)
-        #print("train_y shape: ",train_y.shape)
-        #print("train_y_hot: ",train_y_hot.shape)
-        #print("test_x shape: ",test_x.shape)
-        #print("test_y shape: ",test_y.shape)
-        #print("test_y_hot shape: ",test_y_hot.shape)
-
-        #self.model.fit(train_x,train_y_hot,batch_size=batch_size,epochs=1)
-
-        #p = np.random.permutation(train_x.shape[0])
-        #train_x,train_y,train_y_hot = train_x[p],train_y[p],train_y_hot[p]
+                self.model.compile(loss='binary_crossentropy',
+                              optimizer='adam',
+                              metrics=['accuracy'])
+                #batch_size=timesteps
         
         num_batches = train_size/batch_size
-        #num_batches=1
-        #batch_size = train_size
-        #num_batches = num_samples/batch_size
         start_time = time.time()
         for i in range(num_batches):
-
-            #p = np.random.permutation(X.shape[0])
-            #X, y, y_hot = X[p], y[p], y_hot[p]
-
-            #p = np.random.permutation(train_x.shape[0])
-            #train_x,train_y,train_y_hot = train_x[p],train_y[p],train_y_hot[p]
-
-            #num_examples = [0]*output_dim
-            #for i in range(output_dim):
-            #    num_examples[i] = train_y.count()
-
-            #print("train_x shape: ",train_x.shape)
-            #print("train_y shape: ",train_y.shape)
-            #print("train_y_hot: ",train_y_hot.shape)
 
             num_items = int( float(i+1)/float(num_batches)*float(30) )
             progress_string = "Epoch %d (%d/%d)" % (epoch,(i+1)*batch_size,train_size)
@@ -221,16 +221,7 @@ class vector_classifier_keras(object):
             t1 = t0+batch_size
 
             weights = get_class_weights(train_y[t0:t1])
-            #print("\nClass weights",weights)
-
-            #print("train_y[%d:%d] - "%(t0,t1),train_y[t0:t1])
-
-            #self.model.train_on_batch(X[t0:t1],y_hot[t0:t1])
-            #loss, acc = self.model.test_on_batch(X[t0:t1],y_hot[t0:t1])
-
-            #loss,acc = self.model.train_on_batch(train_x[t0:t1],train_y_hot[t0:t1],class_weight=weights)
             loss,acc = self.model.train_on_batch(train_x[t0:t1],train_y_hot[t0:t1],class_weight='auto')
-            #loss,acc = self.model.test_on_batch(train_x[t0:t1],train_y_hot[t0:t1])
 
             progress_string += " - %ds"% int(time.time()-start_time)
             progress_string += " - loss: %0.4f - acc: %0.1f%%"%(loss,100.0*acc)
@@ -245,19 +236,12 @@ class vector_classifier_keras(object):
             #y_pred = self.model.predict_on_batch(test_x)
             plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=True,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
 
-        #sys.stdout.write("\n")
-        #sys.stdout.flush()
-
-        #print("Evaluating model...")
-        #loss, acc = self.model.evaluate(text_x, test_y_hot, batch_size=batch_size, verbose=0)
         loss, acc = self.model.evaluate(test_x, test_y_hot, batch_size=batch_size, verbose=0)
         sys.stdout.write(' - val_loss: %0.4f - val_acc: %0.1f%%\n'%(loss,100.0*acc))
 
         if self.highest_acc==None or acc>self.highest_acc:
             self.highest_acc=acc 
-            #print("Saving model...")
             self.model.save(os.path.join(self.directory,"%s-classifier_%d.h5"%(self.model_type,iteration)))
-            #self.num_worse = 0
         #else:
         #    self.num_worse+=1
         #    if self.num_worse==3:
