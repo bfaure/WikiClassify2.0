@@ -12,6 +12,8 @@ sys.stdout = os.fdopen(sys.stdout.fileno(),'w',0)
 
 import numpy as np
 
+import imageio
+
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
@@ -23,16 +25,17 @@ from pathfinder import get_queries, astar_path
 #                            Main function
 #-----------------------------------------------------------------------------#
 
-def classify_quality(encoder=None, directory=None, sequence=False):
+qualities = None # used by get_quality_documents, cross-call variable
+stop_words_dict = None # used by get_quality_documents, cross-call variable
+# Returns the first sequences_per_class good, mid, and poor article bodies, converted to word vectors
+# single sequence of word vectors returned for each article, if a start_at value is specified, will 
+# traverse into the text.tsv file that far (line-wise) before starting to add documents to the data
+def get_quality_documents(encoder,seq_per_class,min_words_per_seq,max_words_per_seq,start_at=0,print_avg_length=False,remove_stop_words=True):
+    global qualities 
+    global stop_words_dict 
 
-    func_str = "Classifying quality"
-    if sequence: func_str+=" by word-vector sequences..."
-    else: func_str+=" by doc-vectors"
-    print("\n%s\n" % func_str)
-    
     y   = []
     x   = []
-    ids = []
 
     classes = {"fa":np.array([0],dtype=int),\
                "a":np.array([0],dtype=int),\
@@ -58,63 +61,23 @@ def classify_quality(encoder=None, directory=None, sequence=False):
                      "mid" : "\'mid\' ",\
                      "poor": "\'poor\'"}
 
-    class_str = ""
-    for c in class_names:
-        class_str+=c
-        if class_names.index(c)!=len(class_names)-1: class_str+=" | "
-    sys.stdout.write("Classes:\t\t%s\n"% (class_str))
-
     class_lengths = {"good":0,\
                      "mid":0,\
                      "poor":0}
 
-    if sequence:
+    max_quality_dict_size    = -1 # if -1, no limit, o.w. total articles limited to this
+    print_sentences          = 0 # approx number of sentences to print during sentence encoding
 
-        #### SETTINGS
-        max_quality_dict_size    = 100000 # if -1, no limit, o.w. total articles limited to this
-        min_sentence_length_char = 60 # trim any sentences with less than this many characters
-        sentence_length_words    = 8 # exact number of words per sentence
-        print_sentences          = 0 # approx number of sentences to print during sentence encoding
-        sentences_per_category   = 2000 # exact number of sentences to load in as training set
-
-        drop_sentence_on_dropped_word = True # drop the whole sentence if one of its words isnt in model,
-                                             # if false: drop just the word
-        
-        remove_stop_words = True # if True, removes stop words before calculating sentence lengths
-
-        epochs = None        # if None, defaults to whats set in classify.py
-        batch_size = None    # if None, defaults to whats set in classify.py
-
-        treat_each_doc_as_single_sentence = True # concatenate all sentences in each doc together
-        document_min_num_words        = 300 # trim any documents with less than this many words
-        document_max_num_words        = 400 # maximum number of words to maintain in each document
-        docs_per_category             = 500 # number of documents to load per category
-        ####
-
-        # print out config info
-        if not treat_each_doc_as_single_sentence:
-            sys.stdout.write("Words/Sentence:    \t%d\n"%sentence_length_words)
-            sys.stdout.write("Min. Char/Sentence:\t%d\n"%min_sentence_length_char)
-            sys.stdout.write("Sentences/Class:   \t%d\n\n"%sentences_per_category)
-        else:
-            sys.stdout.write("Max Words/Doc:     \t%d\n"%document_max_num_words)
-            sys.stdout.write("Min Words/Doc:     \t%d\n"%document_min_num_words)
-            sys.stdout.write("Docs/Class:        \t%d\n\n"%docs_per_category)
-        sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
-        sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
-
-        # create stop words dictionary
-        if remove_stop_words:
-            print("Creating stop words dict...")
-            stop_words_dict = {}
-            stop_words = open("WikiLearn/data/stopwords/stopwords.txt").read().replace("\'","").split("\n")
-            for s in stop_words:
-                if s not in [""," "] and len(s)>0:
-                    stop_words_dict[s] = True
-        else:
-            print("Not removing stop words.")
-
-        # load quality dictionary
+    # create stop words dictionary if not yet loaded
+    if remove_stop_words and stop_words_dict==None:
+        stop_words_dict = {}
+        #stop_words = open("WikiLearn/data/stopwords/stopwords.txt").read().replace("\'","").split("\n")
+        stop_words = open("WikiLearn/data/stopwords/stopwords_long.txt").read().replace("\'","").split("\n")
+        for s in stop_words:
+            if s not in [""," "] and len(s)>0:
+                stop_words_dict[s] = True
+    # Create the qualities dictionary if not yet loaded
+    if qualities==None:
         num_lines = len(open("quality.tsv","r").read().split("\n"))
         qf = open("quality.tsv","r")
         i=0
@@ -129,194 +92,201 @@ def classify_quality(encoder=None, directory=None, sequence=False):
             except:
                 i+=-1
                 continue
+        sys.stdout.write("\n")
         qf.close()
-
-        sys.stdout.write("\nEncoding english sentences to vector sequences...\n")
-
-        done_loading = False
-        num_categories = len(class_names)
-
-        # number of total items we will have to load (sentences or docs)
-        approx_total = num_categories*sentences_per_category if not treat_each_doc_as_single_sentence else num_categories*docs_per_category
-
-        f = open("text.tsv","r")
-        i=0
-        enc_start_time = time.time()
-        num_loaded=0
-
-        # iterate over each line (document) in text.tsv
-        for line in f:
-            i+=1
-            percent_done = "%0.1f%%" % (100.0*float(num_loaded)/float(approx_total))
-            perc_loaded  = "%0.1f%%" % (100.0 *float(i)/13119700.0)
-            sys.stdout.write("\rEncoding: %s done (%d/%d) | %s total | %s  "% (percent_done,num_loaded,approx_total,perc_loaded,make_seconds_pretty(time.time()-enc_start_time)))
-            sys.stdout.flush()
-            
-            # load in the current line
-            try:    article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
-            except: continue
-            
-            # see if this article has a quality mapping
-            try: qual = classes[qualities[article_id]]
-            except: 
-                # skip article if no listed quality
-                counts['unknown/not_in_model'] +=1
-                continue
-
-            # get the number we are using as the y for this quality (0,1,2,etc)
-            qual_map = class_dict[str(qual[0])]
-
-            # if we have already loaded the maximum number of articles in this category
-            if not treat_each_doc_as_single_sentence and counts[qual_map]>=sentences_per_category:  continue
-            if treat_each_doc_as_single_sentence and counts[qual_map]>=docs_per_category: continue
-
-            # split article into sentences
-            article_sentences = article_contents.split(". ")
-
-            # create elems to hold entire document (if saving as single seq)
-            if treat_each_doc_as_single_sentence:
-                full_doc = []
-                full_doc_str = []
-                doc_arr = np.zeros(shape=(document_max_num_words,300)).astype(float)
-
-            # iterate over each sentence in the article
-            for a in article_sentences:
-
-                # skip the sentence if its too short (but not if we're saving whole doc)
-                if len(a)<min_sentence_length_char and not treat_each_doc_as_single_sentence: continue 
-
-                # if we have already loaded enough from this doc
-                if treat_each_doc_as_single_sentence and len(full_doc)>=document_max_num_words: break
-
-                # minor text cleaning
-                cleaned_a = a.replace(","," ").replace("(","").replace(")","")
-                cleaned_a = cleaned_a.replace("&nbsp;","").replace("   "," ")
-                cleaned_a = cleaned_a.replace("  "," ").lower()
-                sentence_words = cleaned_a.split(" ")
-
-                # remove all stop word instances
-                if remove_stop_words:
-                    s_idx=0
-                    while True:
-                        try:
-                            stop_words_dict[sentence_words[s_idx]]
-                            del sentence_words[s_idx]
-                        except:
-                            s_idx+=1
-                            if s_idx>=len(sentence_words): break
-
-                # iterate over each word in sentence and convert into word vector
-                word_vecs = []
-                cur_sentence_length = 0
-                if len(sentence_words)>=sentence_length_words:
-                    for w in sentence_words:
-                        try: 
-                            word_vec = encoder.model[w.lower()]
-                            if not treat_each_doc_as_single_sentence: word_vecs.append(word_vec)
-                            else: 
-                                full_doc.append(word_vec)
-                                full_doc_str.append(w)
-                            cur_sentence_length+=len(w)
-                        except: 
-                            if drop_sentence_on_dropped_word and not treat_each_doc_as_single_sentence:
-                                cur_sentence_length=0
-                                break
-                            else: continue
-
-                # we add the full doc after the end of this for loop
-                if treat_each_doc_as_single_sentence: continue 
-
-                # if this sentence is now too short (after having dropped words due to them not being in model)
-                if cur_sentence_length<min_sentence_length_char: continue
-                
-                # if this sentence is the correct number of words
-                if len(word_vecs)==sentence_length_words: 
-                    if random.randint(0,approx_total)<print_sentences:
-                        sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],cleaned_a))
-                    x.append(word_vecs[:sentence_length_words])
-                    y.append(qual)
-                    counts[qual_map]+=1
-                    num_loaded+=1
-                    if min(counts["good"],counts["mid"],counts["poor"])>=sentences_per_category: 
-                        done_loading = True
-                        break
-                    if counts[qual_map]==sentences_per_category: break
-            
-            # if we have reached the target number of sentences to load
-            if done_loading: break
-            
-            # add the document
-            if treat_each_doc_as_single_sentence:
-                if len(full_doc)<document_min_num_words: continue 
-                if random.randint(0,approx_total)<print_sentences:
-                    sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],''.join(e+" " for e in full_doc_str)))
-                for q in range(len(full_doc)):
-                    if q==document_max_num_words: break
-                    doc_arr[q,:] = full_doc[q]
-                x.append(doc_arr)
-                y.append(qual)
-                counts[qual_map]+=1
-                class_lengths[qual_map]+=len(full_doc)
-                num_loaded+=1 
-                if min(counts["good"],counts["mid"],counts["poor"])>=docs_per_category: break
-
-        sys.stdout.write("\nTotal encoding time: %s\n" % make_seconds_pretty(time.time()-enc_start_time))
-        del qualities
-
-        #for key,value in class_lengths.iteritems():
-        #    print("%s avg length (words): %0.1f"%(key,float(value/docs_per_category)))
-
-    else:
-        num_lines = len(open("quality.tsv","r").read().split("\n"))
-        sys.stdout.write('Parsing quality ')
-        with open('quality.tsv','r') as f:
-            i=0
-            num_classified = 0
-            for line in f:
-                i+=1
-                sys.stdout.write("\rParsing Quality: (%d|%d|%d), (model|class.|tot.)" % (len(x),num_classified,num_lines))
-                try:
-                    article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
-
-                    qual = classes[article_quality]
-                    num_classified+=1
-
-                    doc_vector = encoder.model.docvecs[int(article_id)] 
-                    x.append(doc_vector)
-                    y.append(qual)
-
-                    if qual==0: counts["good"] +=1
-                    if qual==1: counts["mid"]  +=1
-                    if qual==2: counts["poor"] +=1
-                except:
-                    counts["unknown/not_in_model"]+=1
-
+    # number of total items we will have to load (sentences or docs)
+    approx_total = len(class_names)*seq_per_class
+    f = open("text.tsv","r")
+    i=0
+    enc_start_time = time.time()
+    num_loaded=0
+    eof=True 
+    # iterate over each line (document) in text.tsv
+    for line in f:
+        i+=1
+        # skip
+        if i<start_at: continue
+        percent_done = "%0.1f%%" % (100.0*float(num_loaded+1)/float(approx_total))
+        perc_loaded  = "%0.1f%%" % (100.0 *float(i)/13119700.0)
+        sys.stdout.write("\rEncoding: %s done (%d/%d) | %s total | %s  "% (percent_done,num_loaded+1,approx_total,perc_loaded,make_seconds_pretty(time.time()-enc_start_time)))
+        sys.stdout.flush()
+        
+        # load in the current line
+        try:    article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
+        except: continue
+        # see if this article has a quality mapping
+        try: qual = classes[qualities[article_id]]
+        except: 
+            # skip article if no listed quality
+            counts['unknown/not_in_model'] +=1
+            continue
+        # get the number we are using as the y for this quality (0,1,2,etc)
+        qual_map = class_dict[str(qual[0])]
+        # if we have already loaded the maximum number of articles in this category
+        if counts[qual_map]>=seq_per_class: continue
+        # split article into sentences
+        article_sentences = article_contents.split(". ")
+        # create elems to hold entire document (if saving as single seq)
+        full_doc = []
+        full_doc_str = []
+        doc_arr = np.zeros(shape=(max_words_per_seq,300)).astype(float)
+        # iterate over each sentence in the article
+        for a in article_sentences:
+            if len(full_doc)>=max_words_per_seq: break
+            # minor text cleaning
+            cleaned_a = a.replace(","," ").replace("(","").replace(")","")
+            cleaned_a = cleaned_a.replace("&nbsp;","").replace("   "," ")
+            cleaned_a = cleaned_a.replace("  "," ").lower()
+            sentence_words = cleaned_a.split(" ")
+            if remove_stop_words:
+                s_idx=0
+                while True:
+                    try:
+                        stop_words_dict[sentence_words[s_idx]]
+                        del sentence_words[s_idx]
+                    except:
+                        s_idx+=1
+                        if s_idx>=len(sentence_words): break
+            # iterate over each word in sentence and convert into word vector
+            word_vecs = []
+            #if len(sentence_words)>=sentence_length_words:
+            for w in sentence_words:
+                try: 
+                    word_vec = encoder.model[w.lower()]
+                    full_doc.append(word_vec)
+                    full_doc_str.append(w)
+                    cur_sentence_length+=len(w)
+                except: 
+                    continue
+        # add the document
+        if len(full_doc)<min_words_per_seq: continue 
+        if random.randint(0,approx_total)<print_sentences:
+            sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],''.join(e+" " for e in full_doc_str[:10])+"..."))
+        for q in range(len(full_doc)):
+            if q==max_words_per_seq: break
+            doc_arr[q,:] = full_doc[q]
+        x.append(doc_arr)
+        y.append(qual)
+        counts[qual_map]+=1
+        class_lengths[qual_map]+=len(full_doc)
+        num_loaded+=1 
+        if min(counts["good"],counts["mid"],counts["poor"])>=seq_per_class: 
+            eof=False
+            break
+    #sys.stdout.write("\nTotal encoding time: %s\n" % make_seconds_pretty(time.time()-enc_start_time))
     sys.stdout.write("\n")
-    
-    '''
-    for key,value in counts.iteritems():
-        print("\t"+key+" - "+str(value)+" entries")
-    '''
-
-    classifier = vector_classifier_keras(class_names=class_names,directory=directory)
+    f.close()
+    if print_avg_length:
+        for key,value in class_lengths.iteritems():
+            print("%s avg length (words): %0.1f"%(key,float(value/seq_per_class)))
+        sys.stdout.write("\n")
     y = np.ravel(np.array(y))
+    X = np.array(x)
+    if eof: i=-1 # denote eof
+    return X,y,i 
 
-    if sequence:
-        X = np.array(x)
-        classifier.train_seq(X,y,epochs=epochs,batch_size=batch_size)        
-    else:
-        X = np.array(x)
-        classifier.train(X,y)    
+def make_gif(parent_folder):
+    items = os.listdir(parent_folder)
+    png_filenames = []
+    for elem in items:
+        if elem.find(".png")!=-1 and elem.find("heatmap")!=-1:
+            png_filenames.append(elem)
 
-    '''
+    sorted_png = []
+    while True:
+        lowest = 10000000
+        lowest_idx = -1
+        for p in png_filenames:
+            iter_val = int(p.split("-")[2].split(":")[1])
+            epoch_val = int(p.split("-")[3].split(":")[1].split(".")[0])
+            val = float(iter_val)+0.1*epoch_val
+
+            if lowest_idx==-1 or val<lowest:
+                lowest = val
+                lowest_idx = png_filenames.index(p)
+
+        sorted_png.append(png_filenames[lowest_idx])
+        del png_filenames[lowest_idx]
+        if len(png_filenames)==0: break
+    png_filenames = sorted_png
+
+    with imageio.get_writer(parent_folder+"/prediction-heatmap.gif", mode='I',duration=0.3) as writer:
+        for filename in png_filenames:
+            image = imageio.imread(parent_folder+"/"+filename)
+            writer.append_data(image)
+
+def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
+    print("\nClassifying quality by word-vector sequences...\n")
+
+    class_names = ["good","mid","poor"]
+    class_str = ""
+    for c in class_names:
+        class_str+=c
+        if class_names.index(c)!=len(class_names)-1: class_str+=" | "
+    sys.stdout.write("Classes:\t\t%s\n"% (class_str))
+
+    #### SETTINGS
+    dpipc = 213 # documents per iteration per class, limited by available memory
+    min_words = 40 # trim any documents with less than this many words
+    max_words = 40 # maximum number of words to maintain in each document
+    remove_stop_words = True # if True, removes stop words before calculating sentence lengths
+    batch_size = None    # if None, defaults to whats set in classify.py, requires vram
+    epochs=1
+    ####
+
+    sys.stdout.write("Max Words/Doc:     \t%d\n"%max_words)
+    sys.stdout.write("Min Words/Doc:     \t%d\n"%min_words)
+    sys.stdout.write("Docs/Class:        \t%d\n\n"%dpipc)
+    sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
+    sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
+
+    test_on_epochs = True
+
+    classifier = vector_classifier_keras(class_names=class_names,directory=directory,model_type=model_type)
+    doc_idx = 0
+    i=0
+    while True:
+        i+=1
+
+        #if i>10: break
+
+        print("\nIteration %d"%i)
+        X,y,doc_idx = get_quality_documents(encoder, dpipc, min_words, max_words, doc_idx, remove_stop_words=remove_stop_words)
+
+        last_loss=None 
+        num_worse=0
+        for j in range(epochs):
+            #plot = True if j==epochs-1 else False
+            plot=True
+            loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
+            if last_loss==None: last_loss=loss 
+            else:
+                if loss>last_loss:
+                    num_worse+=1
+                else:
+                    num_worse=0
+            if num_worse>1:
+                break
+
+        #if test_on_epochs:
+
+        if doc_idx==-1: break
+
+    # write out ordered gif of all items in picture directory (heatmaps)
+    if gif: make_gif(classifier.pic_dir)
+
+    sys.stdout.write("\nReached end of text.tsv")
+    #test_model_interactive(classifier,encoder)
+
+
+def test_model_interactive(classifier,encoder):
     print("\nEnter sentences to test model (q to quit)...")
     while True:
         sentence = raw_input("> ")
         if sentence=="q": return
         docvec = np.ravel(self.encoder.model.infer_vector(sentence.split()))
         print(model.predict(docvec,batch_size=1,verbose=1))
-    '''
-        
+
 # returns the most recent trained model (according to naming scheme)
 def get_most_recent_model(directory):
     model_dirs = os.listdir(directory)
@@ -403,7 +373,7 @@ def main():
             
             #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
             #model_dir = get_most_recent_model('/home/bfaure/Desktop/WikiClassify2.0/WikiLearn/data/models/doc2vec')
-            #model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
 
             # very small model for testing
             model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
@@ -414,8 +384,8 @@ def main():
             encoder = doc2vec()
             encoder.load(model_dir)
 
-            #classify_quality(encoder,classifier_dir)
-            classify_quality(encoder=encoder,directory=classifier_dir,sequence=True)
+            classify_quality(encoder,classifier_dir)
+            #classify_quality(encoder=encoder,directory=classifier_dir,sequence=True)
 
         # after the data has been pushed to the server, we need to run a 2nd pass
         # to add all of the quality and importance attributes

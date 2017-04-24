@@ -4,7 +4,10 @@ from __future__ import print_function
 #                          Standard imports
 #-----------------------------------------------------------------------------#
 import os, itertools
-import sys
+import sys,time
+
+from shutil import rmtree
+from collections import Counter
 #                          Third-party imports
 #-----------------------------------------------------------------------------#
 import numpy as np
@@ -28,6 +31,10 @@ from keras.layers import Dense,Activation,Dropout
 from keras.layers import Embedding,LSTM
 from keras.optimizers import SGD
 
+from keras.layers import Conv1D,MaxPooling1D,Embedding
+from keras.layers import Dense, Input, Flatten, Dropout, Merge
+from keras.optimizers import Adadelta,RMSprop
+
 DEFAULT_BATCH_SIZE = 1000
 DEFAULT_EPOCHS = 100
 
@@ -35,16 +42,233 @@ DEFAULT_EPOCHS = 100
 #-----------------------------------------------------------------------------#
 
 def make_one_hot(y):
-    print("Converting y to one-hot...")
     one_hot = np.zeros((y.size, np.max(y)+1),dtype='bool')
     one_hot[np.arange(y.size), y] = 1 
     return one_hot
 
+def make_integers(y_dists):
+    ints = []
+    for i in range(y_dists.shape[0]):
+        highest_idx = -1
+        highest_prob = 0
+        #print(y_dists[i])
+        for j in range(y_dists.shape[1]):
+            if y_dists[i][j]>highest_prob:
+                highest_prob = y_dists[i][j]
+                highest_idx = j 
+        ints.append(highest_idx)
+    return ints
+
+def get_class_weights(y,classes=[0,1,2]):    
+    totals = {}
+    for i in range(len(classes)):
+        totals[classes[i]]=0
+
+    for i in range(y.shape[0]):
+        totals[y[i]]+=1
+
+    highest_count = -1  
+    for key,val in totals.items():
+        if val>highest_count:
+            highest_count = val 
+
+    for key,val in totals.items():
+        if val is not 0:
+            totals[key]=float(highest_count)/float(val)
+        else:
+            totals[key]=1.0
+
+    return totals
+
 class vector_classifier_keras(object):
-    def __init__(self, class_names=None, directory=None):
+    def __init__(self, class_names=None, directory=None, log=True, model_type="lstm"):
+
+        if model_type not in ["lstm","cnn"]:
+            print("ERROR: Invalid model_type input.")
+            sys.exit(0)
+
+        self.model_type = model_type
         self.class_names = class_names
         self.directory = directory
         if directory!=None and not os.path.exists(directory): os.makedirs(directory)
+        self.model=None 
+        self.highest_acc = None 
+
+        self.pic_dir = os.path.join(directory,"%s-pics"%model_type)
+        if not os.path.exists(self.pic_dir):
+            os.makedirs(self.pic_dir)
+        else:
+            rmtree(self.pic_dir)
+            os.makedirs(self.pic_dir)
+
+        self.log_file=None 
+        if log: self.log_file = open(os.path.join(self.directory,"%s-log.tsv"%model_type),"w")
+
+    # Can be called multiple times, similar to train_seq
+    def train_seq_iter(self,X,y,iteration,epoch,test_ratio=0.2,batch_size=None,load_file=None,plot=False):
+
+        #self.log_file.write("Iteration:%d\tEpoch:%d\n"%(iteration,epoch))
+
+        p = np.random.permutation(X.shape[0])
+        X,y = X[p], y[p]
+
+        y_hot = make_one_hot(y) # convert input to one-hot encoding
+
+        #print("y[0]: ",y[0])
+        #print("y_hot[0]: ",y_hot[0])
+
+        num_samples = X.shape[0] # number of input samples
+        input_dim  = X.shape[2] # number of elements in each wordvec
+        timesteps  = X.shape[1] # length of each document 
+        output_dim = y_hot.shape[1] 
+        test_size = int(num_samples*test_ratio)
+        train_size = num_samples-test_size
+
+        if iteration==1 and epoch==0:
+            print("Train/Test split: %d | %d"%(train_size,test_size))
+
+        test_y_hot = y_hot[train_size:]
+        test_y = y[train_size:]
+        test_x = X[train_size:]
+
+        train_x = X[0:train_size]
+        train_y = y[0:train_size]
+        train_y_hot = y_hot[0:train_size]
+
+        if batch_size==None: 
+            batch_size = int(3000/timesteps) # good for my amt of vram
+
+            if batch_size<10: batch_size=4 
+            elif batch_size<100: batch_size=12
+            elif batch_size<1000: batch_size=128
+            else: batch_size = 1024
+            #print("Using batch size: %d"%batch_size)
+
+        #batch_size=128
+        batch_size=128
+
+        if iteration==1 and epoch==0:
+            print("Using batch size: %d" % batch_size)
+
+        if num_samples<batch_size: 
+            print("\nAuto-resizing batch size")
+            batch_size=num_samples
+
+        if self.model==None:
+            print("Building %s model..."%self.model_type)
+            sys.stdout.flush()
+            if self.model_type=="lstm":
+                self.model = Sequential()
+                self.model.add(LSTM(int(timesteps*10),input_shape=(timesteps, input_dim)))
+                self.model.add(Dropout(0.3))
+                self.model.add(Dense(output_dim))
+                self.model.add(Activation('sigmoid'))
+                if load_file!=None: self.model.load_weights(load_file)
+                print("Compiling model...")
+                sys.stdout.flush()
+                self.model.compile(loss="binary_crossentropy", optimizer='adam',metrics=['accuracy'])
+
+            if self.model_type=="cnn":
+                self.model = Sequential()
+                self.model.add(Conv1D())
+
+
+        #print("train_x shape: ",train_x.shape)
+        #print("train_y shape: ",train_y.shape)
+        #print("train_y_hot: ",train_y_hot.shape)
+        #print("test_x shape: ",test_x.shape)
+        #print("test_y shape: ",test_y.shape)
+        #print("test_y_hot shape: ",test_y_hot.shape)
+
+        #self.model.fit(train_x,train_y_hot,batch_size=batch_size,epochs=1)
+
+        #p = np.random.permutation(train_x.shape[0])
+        #train_x,train_y,train_y_hot = train_x[p],train_y[p],train_y_hot[p]
+        
+        num_batches = train_size/batch_size
+        #num_batches=1
+        #batch_size = train_size
+        #num_batches = num_samples/batch_size
+        start_time = time.time()
+        for i in range(num_batches):
+
+            #p = np.random.permutation(X.shape[0])
+            #X, y, y_hot = X[p], y[p], y_hot[p]
+
+            #p = np.random.permutation(train_x.shape[0])
+            #train_x,train_y,train_y_hot = train_x[p],train_y[p],train_y_hot[p]
+
+            #num_examples = [0]*output_dim
+            #for i in range(output_dim):
+            #    num_examples[i] = train_y.count()
+
+            #print("train_x shape: ",train_x.shape)
+            #print("train_y shape: ",train_y.shape)
+            #print("train_y_hot: ",train_y_hot.shape)
+
+            num_items = int( float(i+1)/float(num_batches)*float(30) )
+            progress_string = "Epoch %d (%d/%d)" % (epoch,(i+1)*batch_size,train_size)
+            while len(progress_string)<15:
+                progress_string+=" "
+            progress_string+="["
+
+            for prog_index in range(30):
+                if prog_index<=num_items: progress_string+="="
+                else: progress_string += "."
+            progress_string += "]"
+
+            t0 = i*batch_size 
+            t1 = t0+batch_size
+
+            weights = get_class_weights(train_y[t0:t1])
+            #print("\nClass weights",weights)
+
+            #print("train_y[%d:%d] - "%(t0,t1),train_y[t0:t1])
+
+            #self.model.train_on_batch(X[t0:t1],y_hot[t0:t1])
+            #loss, acc = self.model.test_on_batch(X[t0:t1],y_hot[t0:t1])
+
+            #loss,acc = self.model.train_on_batch(train_x[t0:t1],train_y_hot[t0:t1],class_weight=weights)
+            loss,acc = self.model.train_on_batch(train_x[t0:t1],train_y_hot[t0:t1],class_weight='auto')
+            #loss,acc = self.model.test_on_batch(train_x[t0:t1],train_y_hot[t0:t1])
+
+            progress_string += " - %ds"% int(time.time()-start_time)
+            progress_string += " - loss: %0.4f - acc: %0.1f%%"%(loss,100.0*acc)
+            sys.stdout.write("\r%s"%progress_string)
+
+            self.log_file.write("%0.5f\t%0.1f\n"%(loss,100.0*acc))
+            self.log_file.flush()
+        
+
+        if plot:
+            y_pred = make_integers(self.model.predict(test_x,batch_size=batch_size,verbose=0))
+            #y_pred = self.model.predict_on_batch(test_x)
+            plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=True,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
+
+        #sys.stdout.write("\n")
+        #sys.stdout.flush()
+
+        #print("Evaluating model...")
+        #loss, acc = self.model.evaluate(text_x, test_y_hot, batch_size=batch_size, verbose=0)
+        loss, acc = self.model.evaluate(test_x, test_y_hot, batch_size=batch_size, verbose=0)
+        sys.stdout.write(' - val_loss: %0.4f - val_acc: %0.1f%%\n'%(loss,100.0*acc))
+
+        if self.highest_acc==None or acc>self.highest_acc:
+            self.highest_acc=acc 
+            #print("Saving model...")
+            self.model.save(os.path.join(self.directory,"%s-classifier_%d.h5"%(self.model_type,iteration)))
+            #self.num_worse = 0
+        #else:
+        #    self.num_worse+=1
+        #    if self.num_worse==3:
+        #        print("Training canceled, accuracy fell for 3 consecutive ")
+
+        if iteration==1 and epoch==0:
+            #print("Saving model architecture...")
+            s=open(os.path.join(self.directory,"%s-classifier_architecture.json"%(self.model_type)),"w")
+            s.write(self.model.to_json())
+            s.close()
+        return loss 
 
     def train_seq(self,X,y,test_ratio=0.2,epochs=None,batch_size=None,load_file=None):
         y_hot = make_one_hot(y)
@@ -58,7 +282,8 @@ class vector_classifier_keras(object):
         train_size = num_samples-test_size
 
         if batch_size==None: 
-            batch_size = int(12000/timesteps)
+            #batch_size = int(12000/timesteps)
+            batch_size = 128
             print("Using batch size: %d"%batch_size)
 
         if num_samples<batch_size: 
@@ -212,7 +437,6 @@ class vector_classifier(object):
             return
 
 
-
         elif self.classifier_type=="multiclass":        
             y_hot = make_one_hot(y)
             self.scores = cross_val_score(self.model,X[train_instances:],y_hot[train_instances:],cv=5)
@@ -247,7 +471,7 @@ class vector_classifier(object):
     def get_classes(self, matrix):
         return np.array([self.get_class(np.expand_dims(x,axis=0)) for x in matrix])
     
-def plot_confusion_matrix(y_test, y_pred, class_names, training_size, normalize=False):
+def plot_confusion_matrix(y_test, y_pred, class_names, training_size, normalize=False, save_dir=None, meta=None):
     """
     *** ONLY WORKS FOR NON-MULTICLASS ***
     
@@ -255,8 +479,13 @@ def plot_confusion_matrix(y_test, y_pred, class_names, training_size, normalize=
     Normalization can be applied by setting `normalize=True`.
     """
 
-    title='Confusion matrix (Training size:%d)' % training_size
+    #title='Confusion matrix (Training size:%d)' % training_size
+    title='Confusion matrix'
+    if meta is not None: title += " | "+meta 
     cmap=plt.cm.Blues
+
+    #fig,ax = plt.subplots()
+    #fig.suptitle(title,)
 
     # Compute confusion matrix
     cm = confusion_matrix(y_test, y_pred)
@@ -281,4 +510,9 @@ def plot_confusion_matrix(y_test, y_pred, class_names, training_size, normalize=
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    plt.show()
+        
+    if save_dir!=None:
+        plt.savefig(os.path.join(save_dir,"prediction-heatmap-%s.png"%meta),bbox_inches='tight',dpi=100)
+        plt.close()
+    else:
+        plt.show()
