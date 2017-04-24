@@ -178,23 +178,34 @@ class vector_classifier_keras(object):
 
             if self.model_type=="cnn":
                 # Convolution
-                kernel_size = 10 # 5
-                filters = 200 #64,128
-                pool_size = 27 # 20
+                kernel_size = 20 # 5
+                filters = 3 #64,128
+                pool_size = 3 # 20
 
                 # LSTM
-                lstm_output_size = 9
+                lstm_output_size = 1000
 
                 self.model = Sequential()
                 self.model.add(Conv1D(filters,
                                  kernel_size,
                                  input_shape=(timesteps,input_dim),
-                                 padding='valid',
+                                 padding='causal',
+                                 activation='softplus',
+                                 strides=1))
+                self.model.add(Dense(output_dim))
+                #self.model.add(Dense(1000))
+                #self.model.add(LSTM(200))
+                '''
+                self.model.add(Conv1D(filters,
+                                 kernel_size,
+                                 input_shape=(timesteps,input_dim),
+                                 padding='causal',
                                  activation='relu',
                                  strides=1))
-                self.model.add(MaxPooling1D(pool_size=pool_size))
-                self.model.add(LSTM(lstm_output_size))
-                self.model.add(Dense(output_dim))
+                '''
+                #self.model.add(MaxPooling1D(pool_size=pool_size))
+                #self.model.add(LSTM(lstm_output_size))
+                #self.model.add(Dense(output_dim))
                 self.model.add(Activation('sigmoid'))
 
                 self.model.compile(loss='binary_crossentropy',

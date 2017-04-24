@@ -116,14 +116,14 @@ def get_quality_documents(
         for w in word_list:
             items = w.split("\t")
             #if len(items)==3 and int(items[2])>trim_vocab_to:
-            if len(items)==3 and int(items[2])>2500:
+            if len(items)==3 and int(items[2])>3000:
                 try:
                     in_model = encoder.model[items[1].lower()]
                     most_common_dict[items[1]]=w_idx 
                     w_idx+=1
                 except:
-
                     continue
+        print("Word List Size: %d"%len(most_common_dict.keys()))
 
     # Create the qualities dictionary if not yet loaded
     if qualities==None:
@@ -294,9 +294,9 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     #dpipc = 960
     dpipc = 1280
     #min_words = 90 # trim any documents with less than this many words
-    min_words = 90
+    min_words = 20
     #max_word=100
-    max_words = 200 # maximum number of words to maintain in each document
+    max_words = 20 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
     limit_vocab_size = 20000 # if !=-1, trim vocab to 'limit_vocab_size' words
     batch_size = None    # if None, defaults to whats set in classify.py, requires vram
@@ -310,8 +310,8 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
         if limit_vocab_size==-1:
             print("WARNING: limit_vocab_size must be non -1 for CNN")
             sys.exit(0)
-        remove_stop_words=False
-        replace_non_model=True
+        remove_stop_words=True
+        #replace_non_model=True
         swap_with_word_idx=False
 
 
