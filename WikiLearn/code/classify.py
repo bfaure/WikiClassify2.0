@@ -92,6 +92,11 @@ class vector_classifier_keras(object):
 
         self.model_type = model_type
         self.class_names = class_names
+
+        self.class_ints = []
+        for i in range(len(self.class_names)):
+            self.class_ints.append(i)
+
         self.directory = directory
         if directory!=None and not os.path.exists(directory): os.makedirs(directory)
         self.model=None 
@@ -194,19 +199,6 @@ class vector_classifier_keras(object):
                                  strides=1))
                 self.model.add(MaxPooling1D(pool_size=pool_size))
                 self.model.add(Dense(output_dim))
-                #self.model.add(Dense(1000))
-                #self.model.add(LSTM(200))
-                '''
-                self.model.add(Conv1D(filters,
-                                 kernel_size,
-                                 input_shape=(timesteps,input_dim),
-                                 padding='causal',
-                                 activation='relu',
-                                 strides=1))
-                '''
-                #self.model.add(MaxPooling1D(pool_size=pool_size))
-                #self.model.add(LSTM(lstm_output_size))
-                #self.model.add(Dense(output_dim))
                 self.model.add(Activation('sigmoid'))
 
                 self.model.compile(loss='binary_crossentropy',
@@ -232,7 +224,7 @@ class vector_classifier_keras(object):
             t0 = i*batch_size 
             t1 = t0+batch_size
 
-            weights = get_class_weights(train_y[t0:t1])
+            weights = get_class_weights(train_y[t0:t1],self.class_ints)
             loss,acc = self.model.train_on_batch(train_x[t0:t1],train_y_hot[t0:t1],class_weight='auto')
 
             progress_string += " - %ds"% int(time.time()-start_time)

@@ -31,6 +31,7 @@ most_common_dict = None #
 class_dict = None 
 class_pretty = None 
 classes = None 
+seen_article_dict = None # articles pulled on the last iteration, prevent repeats
 # Returns the first sequences_per_class good, mid, and poor article bodies, converted to word vectors
 # single sequence of word vectors returned for each article, if a start_at value is specified, will 
 # traverse into the text.tsv file that far (line-wise) before starting to add documents to the data
@@ -39,14 +40,15 @@ def get_quality_documents(
     seq_per_class,
     min_words_per_seq,
     max_words_per_seq,
+    class_names,
+    class_map,
     start_at=0,
     print_avg_length=False,
     remove_stop_words=True,
     trim_vocab_to=-1,
     replace_non_model=False,
     swap_with_word_idx=False,
-    class_names=["good","mid","poor"],
-    class_map={"fa":0,"a":0,"ga":0,"bplus":0,"b":0,"c":1,"start":2,"stub":2}
+    enforce_exact_seq_num=True
     ):
     
     global qualities 
@@ -55,6 +57,7 @@ def get_quality_documents(
     global class_dict
     global class_pretty
     global classes
+    global seen_article_dict # holds the last article read for each class on last iteration
 
     y   = []
     x   = []
@@ -76,6 +79,11 @@ def get_quality_documents(
             longest_class_len = len(n)
         counts[n] = 0
     counts["unknown/not_in_model"]=0
+
+    if seen_article_dict==None:
+        seen_article_dict = {}
+        for i in range(len(class_names)):
+            seen_article_dict[class_names[i]]=0
 
     if class_dict==None:
         class_dict = {}
@@ -150,29 +158,46 @@ def get_quality_documents(
     enc_start_time = time.time()
     num_loaded=0
     eof=True 
+    earliest_class_full_at=-1 # i value when first class was filled
+
     # iterate over each line (document) in text.tsv
     for line in f:
         i+=1
         # skip
         if i<start_at: continue
+        
         percent_done = "%0.1f%%" % (100.0*float(num_loaded+1)/float(approx_total))
         perc_loaded  = "%0.1f%%" % (100.0 *float(i)/13119700.0)
         sys.stdout.write("\rEncoding: %s done (%d/%d) | %s total | %s  "% (percent_done,num_loaded+1,approx_total,perc_loaded,make_seconds_pretty(time.time()-enc_start_time)))
         sys.stdout.flush()
         
+        #for key,val in counts.items():
+        #    sys.stdout.write("%s:%d"%(key,val))
+
         # load in the current line
         try:    article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
         except: continue
+        
         # see if this article has a quality mapping
-        try: qual = classes[qualities[article_id]]
+        try: 
+            art_qual = qualities[article_id] # check if quality mapping
+            qual = classes[art_qual] # check if in specified class
+            target_class = class_names[qual[0]]
+            #print("\n%s | %s"%(art_qual,qual[0]))
         except: 
             # skip article if no listed quality
             counts['unknown/not_in_model'] +=1
             continue
+
+        # skip this article if we got farther than this on the last iteration for this class
+        if seen_article_dict[target_class]>i: continue
+
         # get the number we are using as the y for this quality (0,1,2,etc)
         qual_map = class_dict[str(qual[0])]
+        
         # if we have already loaded the maximum number of articles in this category
-        if counts[qual_map]>=seq_per_class: continue
+        if counts[qual_map]>=seq_per_class and enforce_exact_seq_num: continue
+        
         # split article into sentences
         article_sentences = article_contents.split(". ")
         # create elems to hold entire document (if saving as single seq)
@@ -203,6 +228,11 @@ def get_quality_documents(
                     try: 
                         idx = most_common_dict[w.lower()]
                     except: 
+                        if replace_non_model:
+                            if swap_with_word_idx:
+                                full_doc.append(0)
+                            else:
+                                full_doc.append(zero_vector)
 
                         continue
                 try: 
@@ -222,19 +252,33 @@ def get_quality_documents(
                     continue
         # add the document
         if len(full_doc)<min_words_per_seq: continue 
+        # print out doc maybe
         if random.randint(0,approx_total)<print_sentences:
             sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],''.join(e+" " for e in full_doc_str[:10])+"..."))
+        # populate numpy array with full_doc contents
         for q in range(len(full_doc)):
             if q==max_words_per_seq: break
             doc_arr[q,:] = full_doc[q]
+
+        # add document/quality to total found so far
         x.append(doc_arr)
         y.append(qual)
         counts[qual_map]+=1
         class_lengths[qual_map]+=len(full_doc)
         num_loaded+=1 
-        if min(counts["good"],counts["mid"],counts["poor"])>=seq_per_class: 
+
+        # check if this class is now full
+        if counts[qual_map]>=seq_per_class:
+            # take note of current location in file for next iteration
+            seen_article_dict[art_qual]=i+1
+            # this will be the spot we will re-enter file on next iteration
+            if earliest_class_full_at==-1: earliest_class_full_at=i
+
+        # check if every class has been filled 
+        if min([val for _,val in counts.items()])>=seq_per_class:
             eof=False
             break
+
     #sys.stdout.write("\nTotal encoding time: %s\n" % make_seconds_pretty(time.time()-enc_start_time))
     sys.stdout.write("\n")
     f.close()
@@ -245,7 +289,7 @@ def get_quality_documents(
     y = np.ravel(np.array(y))
     X = np.array(x)
     if eof: i=-1 # denote eof
-    return X,y,i 
+    return X,y,earliest_class_full_at 
 
 def make_gif(parent_folder):
     items = os.listdir(parent_folder)
@@ -280,7 +324,21 @@ def make_gif(parent_folder):
 def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     print("\nClassifying quality by word-vector sequences...\n")
 
-    class_names = ["good","mid","poor"]
+    #class_names = ["good","mid","poor"]
+    #class_map={"fa":0,"a":0,"ga":0,"bplus":0,"b":0,"c":1,"start":2,"stub":2}
+
+    model_type = "lstm"
+
+    #class_names = ["fa","a","ga","bplus","b","c","start","stub"]
+    #class_map = {"fa":0,"a":1,"ga":2,"bplus":3,"b":4,"c":5,"start":6,"stub":7}
+
+
+    # all output quality classes
+    class_names = ["featured","good","mediocre","poor"]
+    # tagged class : index of name in class_names (to treat it as)
+    class_map = {"fa":0,"a":0,"ga":1,"bplus":1,"b":1,"c":2,"start":3,"stub":3}
+
+
     class_str = ""
     for c in class_names:
         class_str+=c
@@ -288,17 +346,18 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     sys.stdout.write("Classes:\t\t%s\n"% (class_str))
 
     #### SETTINGS
+    #dpipc=10
     #dpipc = 213 # documents per iteration per class, limited by available memory
     #dpipc = 320
     #dpipc = 640
-    #dpipc = 960
-    dpipc = 1280
+    dpipc = 960
+    #dpipc = 1280
     #min_words = 90 # trim any documents with less than this many words
-    min_words = 20
+    min_words = 4
     #max_word=100
-    max_words = 20 # maximum number of words to maintain in each document
+    max_words = 80 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
-    limit_vocab_size = 20000 # if !=-1, trim vocab to 'limit_vocab_size' words
+    limit_vocab_size = -1 # if !=-1, trim vocab to 'limit_vocab_size' words
     batch_size = None    # if None, defaults to whats set in classify.py, requires vram
     replace_non_model = True # replace words not found in model with zero vector
     swap_with_word_idx = False
@@ -314,7 +373,6 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
         #replace_non_model=True
         swap_with_word_idx=False
 
-
     sys.stdout.write("Max Words/Doc:     \t%d\n"%max_words)
     sys.stdout.write("Min Words/Doc:     \t%d\n"%min_words)
     sys.stdout.write("Docs/Class:        \t%d\n\n"%dpipc)
@@ -329,23 +387,22 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     while True:
         i+=1
 
-        #if i>10: break
-
         print("\nIteration %d"%i)
-        X,y,doc_idx = get_quality_documents(encoder, dpipc, min_words, max_words, doc_idx,\
-                                             remove_stop_words=remove_stop_words,\
-                                             trim_vocab_to=limit_vocab_size,\
-                                             replace_non_model=replace_non_model,
-                                             swap_with_word_idx=swap_with_word_idx)
-
-        embedding_layer=None
+        X,y,doc_idx = get_quality_documents(    encoder, dpipc, min_words, max_words,
+                                                class_names=class_names,
+                                                class_map=class_map,
+                                                start_at=doc_idx,
+                                                remove_stop_words=remove_stop_words,
+                                                trim_vocab_to=limit_vocab_size,
+                                                replace_non_model=replace_non_model,
+                                                swap_with_word_idx=swap_with_word_idx )
 
         last_loss=None 
         num_worse=0
         for j in range(epochs):
             #plot = True if j==epochs-1 else False
             plot=True
-            loss = classifier.train_seq_iter(X,y,i,j,plot=plot,embedding_layer=embedding_layer)
+            loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
             if last_loss==None: last_loss=loss 
             else:
                 if loss>last_loss:
@@ -463,7 +520,7 @@ def main():
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
 
             # very small model for testing
-            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
             # directory to save classifier to
             classifier_dir = "WikiLearn/data/models/classifier/keras" 
