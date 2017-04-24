@@ -85,8 +85,8 @@ wikidump::wikidump(string &path, string &cutoff_date, string password, string ho
 
         server_capacity             = 10000000000; // 10 GB
         replace_server_duplicates   = false; // dont replace duplicates
-        server_write_buffer_size    = 10000; // write to server after this many read
-        maximum_server_writes       = 2; // maximum number of buffers to write to server
+        server_write_buffer_size    = 20000; // write to server after this many read
+        maximum_server_writes       = 1000; // maximum number of buffers to write to server
         num_sent_to_server          = 0; // number of articles sent to server
         num_server_writes           = 0; // number of server writes executed
 
@@ -355,14 +355,18 @@ void wikidump::save_page(wikipage &wp)
         // if currently connected to server and allowed to write a page
         if ( connected_to_server )
         {
-            server_write_buffer.push_back(wp);
-            if ( server_write_buffer.size() >= server_write_buffer_size )
+            // if not a redirect article
+            if (wp.is_redirect()==false)
             {
-                // write current buffer to server
-                server_write();
+                server_write_buffer.push_back(wp);
+                if ( server_write_buffer.size() >= server_write_buffer_size )
+                {
+                    // write current buffer to server
+                    server_write();
 
-                // clear current buffer
-                server_write_buffer.clear();
+                    // clear current buffer
+                    server_write_buffer.clear();
+                }
             }
         }
 //        authors<<wp.id<<'\t';;

@@ -192,6 +192,7 @@ class vector_classifier_keras(object):
                                  padding='causal',
                                  activation='softplus',
                                  strides=1))
+                self.model.add(MaxPooling1D(pool_size=pool_size))
                 self.model.add(Dense(output_dim))
                 #self.model.add(Dense(1000))
                 #self.model.add(LSTM(200))
