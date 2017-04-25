@@ -87,9 +87,7 @@ def id_to_quality(id):
 			return l.split("\t")[1]
 	return "None"
 
-def main():
-
-	cat_file = "categories.tsv"
+def map_largest_categories(cat_file="categories.tsv",string=True,n_largest=120):
 	f = open(cat_file,"r")
 	categories = {}
 	i=0
@@ -111,7 +109,6 @@ def main():
 
 	dest_file = "largest_categories.tsv"
 
-	n_largest = 120
 	largest_categories = []
 	largest_categories_counts = []
 	used = {}
@@ -144,21 +141,80 @@ def main():
 	f2.close()
 	print("Done")
 
-	titles = open("titles.tsv")
+	largest_categories_strings=[]
 
 	print("\nSaving string results...")
 	f3 = open("largest_categories-string.tsv","w")
 	for p,p_ct in zip(largest_categories,largest_categories_counts):
+		titles = open("titles.tsv","r")
 		for line in titles:
 			try:
 				if p==line.split("\t")[0]:
 					f3.write("%s\t%d\n"%(line.strip().split("\t")[1],p_ct))
-					sys.stdout.write("Category: %s | Count: %d\n"%(line.strip().split("\t")[1],p_ct))
+					largest_categories_strings.append(line.strip().split("\t")[1])
+					sys.stdout.write("%s | Count: %d\n"%(line.strip().split("\t")[1],p_ct))
 					sys.stdout.flush()
 					break
 			except:
 				continue
+		titles.close()
 	f3.close()
+
+	print("Saving meta data...")
+	f4 = open("largest_categories-meta.txt","w")
+
+	f4.write("Category String | Category ID | Article Count\n")
+	for i in range(len(largest_categories_strings)):
+		f4.write("%s | %s | %d\n"%(largest_categories_strings[i],largest_categories[i],largest_categories_counts[i]))
+	f4.close()
+	print("Done")
+
+def map_article_to_category():
+	print("Mapping articles to categories...")
+
+	largest_categories_file = "largest_categories.tsv"
+	f = open(largest_categories_file,"r")
+
+	print("Loading large cat dict...")
+	large_cat_dict = {}
+	for line in f:
+		items = line.strip().split("\t")
+		if len(items)==2:
+			large_cat_dict[items[0]]=items[1]
+	f.close()
+
+	print("Creating article_categories.tsv")
+	dest = open("article_categories.tsv","w")
+
+	print("Loading categories.tsv...")
+	f = open("categories.tsv","r")
+	for line in f:
+		items = line.strip().split("\t")
+		if len(items)==2:
+			line_cats = items[1].split(" ")
+			my_cat_priority=None
+			my_category=None
+			for l in line_cats:
+				try:
+					temp = large_cat_dict[l]
+					if my_cat_priority==None or int(temp)<my_cat_priority: 
+						my_category=l 
+						my_cat_priority=int(temp)
+				except: continue 
+			if my_category!=None: 
+				dest.write("%s\t%s\n"%(items[0],my_category))
+	f.close()
+	dest.close()
+	print("Done.")
+
+def main():
+	map_largest=True
+	if map_largest:
+		map_largest_categories()
+		
+	create_largest_article_mapping=True
+	if create_largest_article_mapping:
+		map_article_to_category()
 
 if __name__ == '__main__':
 	main()
