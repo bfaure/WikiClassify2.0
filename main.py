@@ -624,8 +624,7 @@ def get_most_recent_model(directory):
     return os.path.join(directory,most_recent_model_dir)
 
 # calculates the most similar articles for all articles
-def similar_articles_manager(model_dir,topn=5):
-
+def similar_articles_manager(model_dir,topn=5,trim_under=200):
     '''
     import psycopg2
     from psycopg2 import connect
@@ -646,9 +645,8 @@ def similar_articles_manager(model_dir,topn=5):
         return
     sys.stdout.write("success\n")
     '''
-    #log_file_ids = open("similar_articles-id.tsv","w")
     log_file_strings = open("similar_articles-string.tsv","w")
-    #log_file_cosmul = open("similar_articles-cosmul.tsv","w")
+    log_file_ids = open("similar_articles-ids.tsv","w")
 
     encoder = doc2vec()
     encoder.load(model_dir)
@@ -662,68 +660,52 @@ def similar_articles_manager(model_dir,topn=5):
     dropped=0
     for line in qf:
         i+=1
-        #if i>100000: break
         sys.stdout.write("\rCreating titles.tsv dict (%d/%d) Dropped: %d"%(i,num_lines,dropped))
         try:
-            #article_id, article_title = line.decode('utf-8', errors='replace').strip().split('\t')
             article_id,article_title = line.strip().split("\t")
-            #print("\n")
-            #print(article_id)
             in_model = doctags[article_id]
-
-            #docvec = encoder.model.docvecs[str(article_id)]
             title_dict[int(article_id)]=article_title
-            #title_dict[int(article_id)]=encoder.model.docvecs.
         except: dropped+=1
 
     sys.stdout.write("\n")
     qf.close()
     
     i=0
-    dropped_2=0
     dropped=0
-    num_lines = len(title_dict)    
     num_lines = len(doctags)
 
+    full_ct=0
     model_time = 0
     full_start_time = time.time()
     for doctag,docinfo in doctags.items():
-        #print("\n")
-        #print(doctag,str(doctag),int(doctag))
+        full_ct+=1
 
-        #i+=1
-        sys.stdout.write("\rDocs: (%d/%d) | Dropped: %d,%d | Model:%s , Full:%s | %0.2f/s"%(i,num_lines,dropped,dropped_2,make_seconds_pretty(time.time()-full_start_time),make_seconds_pretty(model_time),float(i)/(time.time()-full_start_time)))
+        if (docinfo.word_count)<trim_under:
+            dropped+=1
+            continue
+
+        eta_str = "ETA:"+make_seconds_pretty((num_lines)/(full_ct/(time.time()-full_start_time)))
+        sys.stdout.write("\rDocs:(%d/%d) | Dropped:%d | Full:%s, Model:%s | %0.2f/s | %s"%(i,num_lines,dropped,make_seconds_pretty(time.time()-full_start_time),make_seconds_pretty(model_time),float(full_ct)/(time.time()-full_start_time),eta_str))
         sys.stdout.flush()
-
         try:
             a_title = title_dict[int(doctag)]
-        except:
-            dropped+=1
-            continue
-
-        start_model_time = time.time()
-        try:
+            m0 = time.time()
             related_ids = encoder.model.docvecs.most_similar([str(doctag)],topn=topn)
-            model_time += time.time()-start_model_time
+            model_time += (time.time()-m0)
+
+            log_file_strings.write("%s\t"%(a_title))
+            log_file_ids.write("%s\t"%str(doctag))
+            for a_id,_ in related_ids:
+                log_file_ids.write("%s "%str(a_id))
+                log_file_strings.write("%s "%title_dict[int(a_id)])
+            log_file_strings.write("\n")
+            log_file_ids.write("\n")
+            i+=1
         except:
-            #print(a_id,a_title)
             dropped+=1
-            model_time += time.time()-start_model_time
-            continue
 
-        log_file_strings.write("%s\t"%a_title)
-        for a_id,a_prob in related_ids:
-            try:
-                r_s = title_dict[int(a_id)]
-                log_file_strings.write("%s "%(r_s))
-            except:
-                dropped_2+=1
-        log_file_strings.write("\n")
-        i+=1
-
+    log_file_ids.close()
     log_file_strings.close()
-    #log_file_ids.close()
-    #log_file_cosmul.close()
     sys.stdout.write("\nDone.")
     
 def main():
