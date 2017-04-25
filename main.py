@@ -435,8 +435,6 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     # tagged class : index of name in class_names (to treat it as)
     class_map = {"fa":0,"a":0,"ga":1,"bplus":1,"b":1,"c":2,"start":3,"stub":3}
 
-
-
     model_type = "lstm"
 
     class_str = ""
@@ -703,7 +701,7 @@ def main():
             encoder.load(model_dir)
             test_classifier(classifier,encoder) 
 
-        train_importance_classifier=True 
+        train_importance_classifier=False
         if train_importance_classifier:
 
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
@@ -720,7 +718,7 @@ def main():
 
         # after Doc2Vec has created vector encodings, this trains on those
         # mappings using the quality.tsv data as the output
-        train_quality_classifier = False
+        train_quality_classifier = True
         if train_quality_classifier:
             
             #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
