@@ -83,9 +83,9 @@ wikidump::wikidump(string &path, string &cutoff_date, string password, string ho
         server_port     = port;
         server_dbname   = dbname;
 
-        server_capacity             = 10000000000; // 10 GB
+        server_capacity             = 100000000000; // 10 GB
         replace_server_duplicates   = false; // dont replace duplicates
-        server_write_buffer_size    = 5000; // write to server after this many read
+        server_write_buffer_size    = 20000; // write to server after this many read
         maximum_server_writes       = 10000; // maximum number of buffers to write to server
         num_sent_to_server          = 0; // number of articles sent to server
         num_server_writes           = 0; // number of server writes executed

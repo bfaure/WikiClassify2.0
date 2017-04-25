@@ -715,6 +715,11 @@ class wikiparse_window(QWidget):
 
 	def start_execution(self,use_server=False):
 
+		enforce_recompile=True
+		if enforce_recompile:
+			print("Enforcing re-compile of wikiparse.out")
+			if os.path.isfile("wikiparse.out"): os.remove("wikiparse.out")
+
 		if self.retrain_check.isChecked():
 			base_model_files = ["authors","categories","category_parents","domains","links","redirects","text","titles","related_text","related_authors"]
 			for f in base_model_files:
