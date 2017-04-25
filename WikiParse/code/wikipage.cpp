@@ -55,8 +55,8 @@ void wikipage::read_title() {
         }
     }
     */
-    
-    condition = true;
+
+    bool condition = true;
     while(condition){
         size_t location = title.find(" ");
         if (location != string::npos){
