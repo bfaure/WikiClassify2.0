@@ -85,8 +85,8 @@ wikidump::wikidump(string &path, string &cutoff_date, string password, string ho
 
         server_capacity             = 10000000000; // 10 GB
         replace_server_duplicates   = false; // dont replace duplicates
-        server_write_buffer_size    = 20000; // write to server after this many read
-        maximum_server_writes       = 1000; // maximum number of buffers to write to server
+        server_write_buffer_size    = 5000; // write to server after this many read
+        maximum_server_writes       = 10000; // maximum number of buffers to write to server
         num_sent_to_server          = 0; // number of articles sent to server
         num_server_writes           = 0; // number of server writes executed
 
@@ -293,9 +293,16 @@ void wikidump::server_write()
         overall_command += command;
     }
 
-    pqxx::work w(*conn);
-    pqxx::result r = w.exec(overall_command);
-    w.commit();
+    try
+    {
+        pqxx::work w(*conn);
+        pqxx::result r = w.exec(overall_command);
+        w.commit();
+    }
+    catch (const std::exception &e)
+    {
+        cout<<"\nERROR: Dropped a write buffer!\n";
+    }
 
     num_server_writes++;
     num_sent_to_server += server_write_buffer.size();

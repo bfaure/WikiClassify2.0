@@ -42,6 +42,7 @@ void kosher(string &field) {
 void wikipage::read_title() {
     parse(dump_page, "<title>", "</title>", title);
 
+    /*
     // Fix Title
     bool condition = true;
     while(condition){
@@ -53,6 +54,8 @@ void wikipage::read_title() {
             condition=false;
         }
     }
+    */
+    
     condition = true;
     while(condition){
         size_t location = title.find(" ");
