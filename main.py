@@ -418,6 +418,119 @@ def classify_importance(encoder,directory,gif=True,model_type="lstm"):
     sys.stdout.write("\nReached end of text.tsv")
     #test_model_interactive(classifier,encoder)
 
+def classify_content(encoder,directory,gif=True,model_type="lstm"):
+    if not os.path.exists(directory): os.makedirs(directory)
+    print("Classifying contents by word-vector sequences...\n")
+    cur_time = int(time.time())
+    directory = os.path.join(directory,str(cur_time))
+
+    class_names_string = []
+
+    f = open("largest_categories-string.tsv","r")
+    for line in f:
+        items = line.strip().split("\t")
+        if len(items)==2:
+            class_names_string.append(items[0])
+    f.close()
+
+    class_names=[]
+    class_map = {}
+
+    i=0
+    f = open("largest_categories.tsv","r")
+    for line in f:
+        items = line.strip().split("\t")
+        if len(items)==2:
+            class_names.append(items[0])
+            class_map[items[0]]=i 
+            i+=1
+    f.close()
+
+    for c in class_names_string:
+        class_str+=c
+        if class_names_string.index(c)!=len(class_names_string)-1: class_str+=" | "
+    sys.stdout.write("Classes:\t\t%s\n"% (class_str))
+
+    #### SETTINGS
+    #dpipc=10
+    #dpipc = 213 # documents per iteration per class, limited by available memory
+    #dpipc = 320
+    #dpipc = 640
+    dpipc = 960
+    #dpipc = 1280
+    #min_words = 90 # trim any documents with less than this many words
+    min_words = 2
+    #max_word=100
+    max_words = 120 # maximum number of words to maintain in each document
+    remove_stop_words = False # if True, removes stop words before calculating sentence lengths
+    limit_vocab_size = 3000 # if !=-1, trim vocab to 'limit_vocab_size' words
+    batch_size = None    # if None, defaults to whats set in classify.py, requires vram
+    replace_removed = True # replace words not found in model with zero vector
+    swap_with_word_idx = False
+    epochs=1
+    ####
+
+    # if using CNN, this must be non -1
+    if model_type=="cnn":
+        if limit_vocab_size==-1:
+            print("WARNING: limit_vocab_size must be non -1 for CNN")
+            sys.exit(0)
+        remove_stop_words=True
+        #replace_removed=True
+        swap_with_word_idx=False
+
+    sys.stdout.write("Model Type:        \t%s\n"%model_type)
+    sys.stdout.write("Max Words/Doc:     \t%d\n"%max_words)
+    sys.stdout.write("Min Words/Doc:     \t%d\n"%min_words)
+    sys.stdout.write("Stopwords:         \t%s\n"%("<leave>" if not remove_stop_words else "<remove>"))
+    sys.stdout.write("Limit Vocab:       \t%s\n"%("<none>" if limit_vocab_size==-1 else str(limit_vocab_size)))
+    sys.stdout.write("Replace Non-Model: \t%s\n"%("True" if replace_removed else "False"))
+    sys.stdout.write("Swap w/ Index:     \t%s\n"%("True" if swap_with_word_idx else "False"))
+    sys.stdout.write("Doc/Class/Iter:    \t%d\n\n"%dpipc)
+
+    sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
+    sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
+
+
+    classifier = vector_classifier_keras(class_names=class_names,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
+    doc_idx = 0
+    i=0
+    while True:
+        i+=1
+
+        print("\nIteration %d"%i)
+        X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
+                                                class_names=class_names,
+                                                class_map=class_map,
+                                                start_at=doc_idx,
+                                                remove_stop_words=remove_stop_words,
+                                                trim_vocab_to=limit_vocab_size,
+                                                replace_removed=replace_removed,
+                                                swap_with_word_idx=swap_with_word_idx )
+
+        last_loss=None 
+        num_worse=0
+        for j in range(epochs):
+            #plot = True if j==epochs-1 else False
+            plot=True
+            loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
+            if last_loss==None: last_loss=loss 
+            else:
+                if loss>last_loss:
+                    num_worse+=1
+                else:
+                    num_worse=0
+            if num_worse>1:
+                break
+
+        if doc_idx==-1: break
+
+    # write out ordered gif of all items in picture directory (heatmaps)
+    if gif: make_gif(classifier.pic_dir)
+
+    sys.stdout.write("\nReached end of text.tsv")
+    #test_model_interactive(classifier,encoder)
+
 def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     if not os.path.exists(directory): os.makedirs(directory)
 
