@@ -833,12 +833,13 @@ def send_similar_articles():
     # from the titles on the server, we need to use the similar_articles-ids.tsv file and map to the
     # new titles in titles.tsv (we changed the parser so it doesn't remove '/'), normally we could just
     # use similar_articles-string.tsv and not have to maintain this titles dict in memory
+    num_lines=35000000
     f=open("titles.tsv","r")
     title_dict={}
     i=0
     for line in f:
         i+=1
-        sys.stdout.write("Creating titles dict (%d/%d)"%(i,34178963))
+        sys.stdout.write("Creating titles dict (%d/%d)"%(i,num_lines))
         items=line.strip().split("\t")
         if len(items)==2:
             title_dict[int(items[0])]=items[1]
@@ -869,19 +870,23 @@ def send_similar_articles():
 
     i=0
     num_total=len(article_id)
+    num_dropped=0
     for a_id,sim_str in zip(article_id,similar_articles):
         i+=1
-        sys.stdout.write("Sending to server (%d/%d)"%(i,num_total))
+        sys.stdout.write("Sending to server (%d/%d) | Dropped:%d"%(i,num_total,num_dropped))        
         cursor = server_conn.cursor()
         command = "UPDATE articles SET nearestarticles = \'"+sim_str+"\' "
         command += "WHERE id = "+str(a_id)+";"
-        cursor.execute(command)
+        try:    cursor.execute(command)
+        except: num_dropped+=1
         cursor.close()
     server_conn.commit()
     sys.stdout.write("\nDone\n")
 
 # parsers quality.tsv and importance.tsv and sends quality and importance to server
-def send_quality_importance():
+# defunct because it relies on id_mapping.tsv which we no longer use, see the new
+# function send_quality_importance()
+def send_quality_importance_defunct():
     
     if not os.path.isfile("id_mapping.tsv"):
         print("File id_mapping.tsv must be present to perform this task")
@@ -1034,6 +1039,79 @@ def send_quality_importance():
     sys.stdout.write("\n")
     print("Done")
 
+# parsers quality.tsv and importance.tsv and sends quality and importance to server
+def send_quality_importance():
+
+    if not os.path.isfile("quality.tsv"):
+        print("File quality.tsv must be present to perform this task")
+        return
+
+    if not os.path.isfile("importance.tsv"):
+        print("File importance.tsv must be present to perform this task")
+        return
+
+    import psycopg2
+    from psycopg2 import connect
+    from bisect import bisect_left
+
+    # connecting to database
+    username = "waynesun95"
+    host = "aa9qiuq51j8l7b.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
+    port = "5432"
+    dbname = "ebdb"
+    password = raw_input("Enter server password: ")
+
+    sys.stdout.write("Trying to connect... ")
+    try:
+        server_conn = connect("user="+username+" host="+host+" port="+port+" password="+password+" dbname="+dbname)
+    except:
+        sys.stdout.write("failure\n")
+        return
+    sys.stdout.write("success\n")
+
+    num_lines=5171609
+    f=open("quality.tsv","r")
+    quality_dict={}
+    i=0
+    for line in f:
+        i+=1
+        sys.stdout.write("Creating quality dict (%d/%d)"%(i,num_lines))
+        items=line.strip().split("\t")
+        if len(items)==2:
+            quality_dict[int(items[0])]=items[1]
+    f.close()
+    sys.stdout.write("\n")
+
+
+    f=open("importance.tsv","r")
+    importance_dict={}
+    i=0
+    for line in f:
+        i+=1
+        sys.stdout.write("Creating importance dict (%d/%d)"%(i,num_lines))
+        items=line.strip().split("\t")
+        if len(items)==2:
+            importance_dict[int(items[0])]=items[1]
+    f.close()
+    sys.stdout.write("\n")
+
+
+    i=0
+    num_total=len(quality_dict)
+    num_dropped=0
+    for a_id,a_qual in quality_dict.items():
+        i+=1
+        sys.stdout.write("Sending to server (%d/%d) | Dropped:%d"%(i,num_total,num_dropped))      
+        a_imp=importance_dict[a_id]        
+        cursor=server_conn.cursor()
+        command = "UPDATE articles SET quality = \'"+a_qual+"\', importance = \'"+a_imp+"\'"
+        command += "WHERE id = "+str(a_id)+";"
+        try: cursor.execute(command)
+        except: num_dropped+=1
+        cursor.close()
+    server_conn.commit()
+    sys.stdout.write("\nDone\n")
+
 
 def main():
     start_time = time.time()
@@ -1142,7 +1220,6 @@ def main():
             encoder.load(model_dir)
             classify_content(encoder,classifier_dir)
 
-
         # requires a model and text.tsv, creates similar_articles-string.tsv & similar_articles-ids.tsv
         compile_similar_articles = False
         if compile_similar_articles:
@@ -1156,6 +1233,12 @@ def main():
         if send_similar_articles_to_server:
             send_similar_articles()
 
+        # update the server entries with quality/importance attributes
+        send_quality_importance_to_server=False
+        if send_quality_importance_to_server:
+            send_quality_importance()
+
+        # DEFUNCT
         # after parser is run, use this to map the article ids (talk ids) in quality.tsv 
         # to the article ids (real article ids) in text.tsv, saved in id_mapping.tsv
         map_talk_to_real = False 
@@ -1165,13 +1248,6 @@ def main():
             subprocess.Popen('python setup.py build_ext --inplace',shell=True).wait()
             from helpers import map_talk_to_real_ids
             map_talk_to_real_ids("id_mapping.tsv")  
-
-
-        # after the data has been pushed to the server, we need to run a 2nd pass
-        # to add all of the quality and importance attributes
-        send_quality_importance_to_server=False
-        if send_quality_importance_to_server:
-            send_quality_importance()
 
     else:
         print("text.tsv not present, could not create text dictionary")
