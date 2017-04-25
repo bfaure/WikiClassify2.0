@@ -109,8 +109,11 @@ class vector_classifier_keras(object):
             rmtree(self.pic_dir)
             os.makedirs(self.pic_dir)
 
-        self.log_file=None 
-        if log: self.log_file = open(os.path.join(self.directory,"%s-log.tsv"%model_type),"w")
+        self.log_file=None  
+        self.val_log_file=None # validation data
+        if log: 
+            self.log_file = open(os.path.join(self.directory,"%s-log.tsv"%model_type),"w")
+            self.val_log_file = open(os.path.join(self.directory,"%s-validation_log.tsv"%model_type),"w")
 
     # Can be called multiple times, similar to train_seq
     def train_seq_iter(self,X,y,iteration,epoch,test_ratio=0.2,batch_size=None,load_file=None,plot=False,embedding_layer=None):
@@ -125,7 +128,7 @@ class vector_classifier_keras(object):
         #print("y[0]: ",y[0])
         #print("y_hot[0]: ",y_hot[0])
 
-        print("X.shape:",X.shape)
+        #print("X.shape:",X.shape)
 
         num_samples = X.shape[0] # number of input samples
         input_dim  = X.shape[2] # number of elements in each wordvec
@@ -182,14 +185,10 @@ class vector_classifier_keras(object):
                 self.model.compile(loss="binary_crossentropy", optimizer='adam',metrics=['accuracy'])
 
             if self.model_type=="cnn":
-                # Convolution
                 kernel_size = 20 # 5
                 filters = 3 #64,128
                 pool_size = 3 # 20
-
-                # LSTM
                 lstm_output_size = 1000
-
                 self.model = Sequential()
                 self.model.add(Conv1D(filters,
                                  kernel_size,
@@ -200,11 +199,10 @@ class vector_classifier_keras(object):
                 self.model.add(MaxPooling1D(pool_size=pool_size))
                 self.model.add(Dense(output_dim))
                 self.model.add(Activation('sigmoid'))
-
+                print("Compiling model...")
                 self.model.compile(loss='binary_crossentropy',
                               optimizer='adam',
                               metrics=['accuracy'])
-                #batch_size=timesteps
         
         num_batches = train_size/batch_size
         start_time = time.time()
@@ -231,28 +229,23 @@ class vector_classifier_keras(object):
             progress_string += " - loss: %0.4f - acc: %0.1f%%"%(loss,100.0*acc)
             sys.stdout.write("\r%s"%progress_string)
 
-            self.log_file.write("%0.5f\t%0.1f\n"%(loss,100.0*acc))
+            self.log_file.write("%0.5f\t%0.1f\n"%(loss,100.0*acc)) # write data to log file
             self.log_file.flush()
         
-
         if plot:
             y_pred = make_integers(self.model.predict(test_x,batch_size=batch_size,verbose=0))
-            #y_pred = self.model.predict_on_batch(test_x)
             plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=True,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
 
         loss, acc = self.model.evaluate(test_x, test_y_hot, batch_size=batch_size, verbose=0)
         sys.stdout.write(' - val_loss: %0.4f - val_acc: %0.1f%%\n'%(loss,100.0*acc))
+        self.val_log_file.write("%0.5f\t%0.1f\n"%(loss,100.0*acc))
+        self.val_log_file.flush()
 
         if self.highest_acc==None or acc>self.highest_acc:
             self.highest_acc=acc 
-            self.model.save(os.path.join(self.directory,"%s-classifier_%d.h5"%(self.model_type,iteration)))
-        #else:
-        #    self.num_worse+=1
-        #    if self.num_worse==3:
-        #        print("Training canceled, accuracy fell for 3 consecutive ")
+            self.model.save(os.path.join(self.directory,"%s-classifier.h5"%(self.model_type)))
 
         if iteration==1 and epoch==0:
-            #print("Saving model architecture...")
             s=open(os.path.join(self.directory,"%s-classifier_architecture.json"%(self.model_type)),"w")
             s.write(self.model.to_json())
             s.close()

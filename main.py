@@ -22,6 +22,9 @@ from WikiLearn.code.classify  import vector_classifier_keras
 
 from pathfinder import get_queries, astar_path
 
+import matplotlib.pyplot as plt 
+import matplotlib.patches as patches
+
 #                            Main function
 #-----------------------------------------------------------------------------#
 
@@ -291,7 +294,7 @@ def get_quality_documents(
     if eof: i=-1 # denote eof
     return X,y,earliest_class_full_at 
 
-def make_gif(parent_folder):
+def make_gif(parent_folder,frame_duration=0.3):
     items = os.listdir(parent_folder)
     png_filenames = []
     for elem in items:
@@ -316,7 +319,7 @@ def make_gif(parent_folder):
         if len(png_filenames)==0: break
     png_filenames = sorted_png
 
-    with imageio.get_writer(parent_folder+"/prediction-heatmap.gif", mode='I',duration=0.3) as writer:
+    with imageio.get_writer(parent_folder+"/prediction-heatmap.gif", mode='I',duration=frame_duration) as writer:
         for filename in png_filenames:
             image = imageio.imread(parent_folder+"/"+filename)
             writer.append_data(image)
@@ -332,12 +335,10 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     #class_names = ["fa","a","ga","bplus","b","c","start","stub"]
     #class_map = {"fa":0,"a":1,"ga":2,"bplus":3,"b":4,"c":5,"start":6,"stub":7}
 
-
     # all output quality classes
     class_names = ["featured","good","mediocre","poor"]
     # tagged class : index of name in class_names (to treat it as)
     class_map = {"fa":0,"a":0,"ga":1,"bplus":1,"b":1,"c":2,"start":3,"stub":3}
-
 
     class_str = ""
     for c in class_names:
@@ -353,7 +354,7 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     dpipc = 960
     #dpipc = 1280
     #min_words = 90 # trim any documents with less than this many words
-    min_words = 4
+    min_words = 0
     #max_word=100
     max_words = 80 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
@@ -422,14 +423,92 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     sys.stdout.write("\nReached end of text.tsv")
     #test_model_interactive(classifier,encoder)
 
-
-def test_model_interactive(classifier,encoder):
+def test_classifier(classifier,encoder):
     print("\nEnter sentences to test model (q to quit)...")
     while True:
         sentence = raw_input("> ")
+        print("\n")
         if sentence=="q": return
-        docvec = np.ravel(self.encoder.model.infer_vector(sentence.split()))
-        print(model.predict(docvec,batch_size=1,verbose=1))
+
+        zero_vector = [0.0]*300
+
+        sentence.replace("."," ")
+        sentence.replace(",","")
+        sentence = sentence.lower()
+
+        wordvecs = []
+        for s in sentence.split():
+            try:
+                wordvec = encoder.model[s]
+                wordvecs.append(wordvec)
+            except:
+                wordvecs.append(zero_vector)
+        while len(wordvecs)<80:
+            wordvecs.append(zero_vector)
+
+        if len(wordvecs)>80:
+            wordvecs = wordvecs[:80]
+
+        inputs = np.array([wordvecs])
+        probs = classifier.predict(inputs,batch_size=1,verbose=0)
+        print(probs[0])
+        plot_probabilities(probs[0],["featured","good","mediocre","poor"])
+
+#orig_colors = [[0,73,170],[0,170,151],[34,170,0],[204,204,0],[153,0,131],[238,0,0],[238,99,0],[255,234,0]]
+orig_colors = [[0,0,255],[0,0,255],[0,0,255],[0,0,255]]
+
+def plot_probabilities(probs,labels):
+
+    fig1 = plt.figure(figsize=(10,10),dpi=120)
+
+    max_prob=max(probs)
+    for i in range(len(probs)):
+        probs[i]=probs[i]/max_prob 
+        if probs[i]>1:
+            probs[i]=1.0
+
+    labels = ["featured","good","mediocre","poor"]
+    colors = {}
+    for l,prob in zip(labels,probs):
+        cur_color = orig_colors[labels.index(l)]
+        for i in range(len(cur_color)):
+            cur_color[i] = float(cur_color[i])/255.0
+        cur_color.append((255.0*prob/255.0))
+        colors[l] = cur_color 
+
+    ax1 = fig1.add_subplot(111,aspect='equal')
+    
+    loc = [0.0,0.1]
+    trans_x = float(1.0/float(len(labels)))
+
+    for l in labels:
+        x,y = loc 
+        #print(loc,colors[l],trans_x)
+        ax1.add_patch(
+            patches.Rectangle(
+                (x,y), # (x,y)
+                trans_x, # width
+                #0.5, # width
+                0.5, # height
+                facecolor=colors[l],
+            )
+        )
+
+        x,y = x+(trans_x/4.0),y+0.3
+        ax1.annotate(l,xy=(x,y),fontsize=20)
+
+        loc = [loc[0]+trans_x,loc[1]]
+
+    plt.axis('off')
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+        
+    #if save_dir!=None:
+    #    plt.savefig(os.path.join(save_dir,"prediction-heatmap-%s.png"%meta),bbox_inches='tight',dpi=100)
+    #    plt.close()
+    #else:
+    plt.show()
 
 # returns the most recent trained model (according to naming scheme)
 def get_most_recent_model(directory):
@@ -510,9 +589,22 @@ def main():
             # train model on text corpus
             encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
 
+        
+        test_quality_classifier = True 
+        if test_quality_classifier:
+            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            classifier_dir = "WikiLearn/data/models/classifier/keras/lstm-classifier_36.h5"
+
+            from keras.models import load_model
+            classifier = load_model(classifier_dir)
+            encoder = doc2vec()
+            encoder.load(model_dir)
+            test_classifier(classifier,encoder) 
+
         # after Doc2Vec has created vector encodings, this trains on those
         # mappings using the quality.tsv data as the output
-        train_quality_classifier = True 
+        train_quality_classifier = False 
         if train_quality_classifier:
             
             #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
