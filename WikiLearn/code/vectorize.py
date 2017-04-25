@@ -154,8 +154,11 @@ class doc2vec(object):
     def get_all_docvecs():
         return np.array(self.model.docvecs)
 
-    def get_nearest_doc(self, doc_id):
-        return [x[0] for x in self.model.docvecs.most_similar(doc_id,topn=20)]
+    def get_nearest_doc_cosmul(self, doc_id, topn=20):
+        return [x[0] for x in self.model.docvecs.most_similar_cosmul(doc_id,topn=topn)]
+
+    def get_nearest_doc(self, doc_id, topn=20):
+        return [x[0] for x in self.model.docvecs.most_similar(doc_id,topn=topn)]
 
     def get_nearest_word(self, text, topn=10):
         try:

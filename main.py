@@ -426,9 +426,9 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     directory = os.path.join(directory,str(cur_time))
 
     # all output quality classes
-    class_names = ["featured","good","mediocre","poor"]
+    #class_names = ["featured","good","mediocre","poor"]
     # tagged class : index of name in class_names (to treat it as)
-    class_map = {"fa":0,"a":0,"ga":1,"bplus":1,"b":1,"c":2,"start":3,"stub":3}
+    #class_map = {"fa":0,"a":0,"ga":1,"bplus":1,"b":1,"c":2,"start":3,"stub":3}
 
     # all output quality classes
     class_names = ["featured","good","mediocre","poor"]
@@ -623,6 +623,109 @@ def get_most_recent_model(directory):
         except: continue
     return os.path.join(directory,most_recent_model_dir)
 
+# calculates the most similar articles for all articles
+def similar_articles_manager(model_dir,topn=5):
+
+    '''
+    import psycopg2
+    from psycopg2 import connect
+    from bisect import bisect_left
+
+    # connecting to database
+    username = "waynesun95"
+    host = "aa9qiuq51j8l7b.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
+    port = "5432"
+    dbname = "ebdb"
+    password = raw_input("Enter server password: ")
+
+    sys.stdout.write("Trying to connect... ")
+    try:
+        server_conn = connect("user="+username+" host="+host+" port="+port+" password="+password+" dbname="+dbname)
+    except:
+        sys.stdout.write("failure\n")
+        return
+    sys.stdout.write("success\n")
+    '''
+    #log_file_ids = open("similar_articles-id.tsv","w")
+    log_file_strings = open("similar_articles-string.tsv","w")
+    #log_file_cosmul = open("similar_articles-cosmul.tsv","w")
+
+    encoder = doc2vec()
+    encoder.load(model_dir)
+
+    doctags = encoder.model.docvecs.doctags 
+
+    title_dict = {}
+    num_lines = len(open("titles.tsv","r").read().split("\n"))
+    qf = open("titles.tsv","r")
+    i=0
+    dropped=0
+    for line in qf:
+        i+=1
+        #if i>100000: break
+        sys.stdout.write("\rCreating titles.tsv dict (%d/%d) Dropped: %d"%(i,num_lines,dropped))
+        try:
+            #article_id, article_title = line.decode('utf-8', errors='replace').strip().split('\t')
+            article_id,article_title = line.strip().split("\t")
+            #print("\n")
+            #print(article_id)
+            in_model = doctags[article_id]
+
+            #docvec = encoder.model.docvecs[str(article_id)]
+            title_dict[int(article_id)]=article_title
+            #title_dict[int(article_id)]=encoder.model.docvecs.
+        except: dropped+=1
+
+    sys.stdout.write("\n")
+    qf.close()
+    
+    i=0
+    dropped_2=0
+    dropped=0
+    num_lines = len(title_dict)    
+    num_lines = len(doctags)
+
+    model_time = 0
+    full_start_time = time.time()
+    for doctag,docinfo in doctags.items():
+        #print("\n")
+        #print(doctag,str(doctag),int(doctag))
+
+        #i+=1
+        sys.stdout.write("\rDocs: (%d/%d) | Dropped: %d,%d | Model:%s , Full:%s | %0.2f/s"%(i,num_lines,dropped,dropped_2,make_seconds_pretty(time.time()-full_start_time),make_seconds_pretty(model_time),float(i)/(time.time()-full_start_time)))
+        sys.stdout.flush()
+
+        try:
+            a_title = title_dict[int(doctag)]
+        except:
+            dropped+=1
+            continue
+
+        start_model_time = time.time()
+        try:
+            related_ids = encoder.model.docvecs.most_similar([str(doctag)],topn=topn)
+            model_time += time.time()-start_model_time
+        except:
+            #print(a_id,a_title)
+            dropped+=1
+            model_time += time.time()-start_model_time
+            continue
+
+        log_file_strings.write("%s\t"%a_title)
+        for a_id,a_prob in related_ids:
+            try:
+                r_s = title_dict[int(a_id)]
+                log_file_strings.write("%s "%(r_s))
+            except:
+                dropped_2+=1
+        log_file_strings.write("\n")
+        i+=1
+
+    log_file_strings.close()
+    #log_file_ids.close()
+    #log_file_cosmul.close()
+    sys.stdout.write("\nDone.")
+    
 def main():
     start_time = time.time()
 
@@ -643,6 +746,14 @@ def main():
     # if we have a copy of the parsed datadump
     if os.path.isfile('text.tsv'):
 
+        push_similar_articles_to_server = True 
+        if push_similar_articles_to_server:
+            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            # very small model for testing
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            similar_articles_manager(model_dir)
+            return
+
         # after parser is run, use this to map the article ids (talk ids) in quality.tsv 
         # to the article ids (real article ids) in text.tsv, saved in id_mapping.tsv
         map_talk_to_real = False 
@@ -652,7 +763,6 @@ def main():
             subprocess.Popen('python setup.py build_ext --inplace',shell=True).wait()
             from helpers import map_talk_to_real_ids
             map_talk_to_real_ids("id_mapping.tsv")         
-
 
         # trains a new Doc2Vec encoder on the contents of text.tsv
         run_doc2vec = False
@@ -687,7 +797,6 @@ def main():
             encoder.build(features=features,context_window=context_window,threads=threads,iterations=pass_per_epoch)
             # train model on text corpus
             encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
-
         
         test_quality_classifier = False 
         if test_quality_classifier:
@@ -715,10 +824,9 @@ def main():
             encoder.load(model_dir)
             classify_importance(encoder,classifier_dir)
 
-
         # after Doc2Vec has created vector encodings, this trains on those
         # mappings using the quality.tsv data as the output
-        train_quality_classifier = True
+        train_quality_classifier = False
         if train_quality_classifier:
             
             #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
