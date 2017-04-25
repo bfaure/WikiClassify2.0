@@ -728,6 +728,7 @@ def main():
     # if we have a copy of the parsed datadump
     if os.path.isfile('text.tsv'):
 
+
         push_similar_articles_to_server = True 
         if push_similar_articles_to_server:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
