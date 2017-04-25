@@ -737,7 +737,7 @@ def get_most_recent_model(directory):
     return os.path.join(directory,most_recent_model_dir)
 
 # calculates the most similar articles for all articles
-def similar_articles_manager(model_dir,topn=5,trim_under=200):
+def similar_articles_manager(model_dir,topn=5,trim_under=500):
     '''
     import psycopg2
     from psycopg2 import connect
