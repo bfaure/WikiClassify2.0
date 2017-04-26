@@ -416,6 +416,13 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     class_sizes=[]
     class_map={} # from id to index in class_names_id
 
+    cat_tree=True 
+    if cat_tree:
+        limit=1000 
+        f=open("category_children-string.tsv")
+        
+
+
     all_classes=False
     if all_classes:
         limit=100
