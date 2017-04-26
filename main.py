@@ -899,7 +899,7 @@ def similar_articles_compiler(model_dir,topn=5,trim_under=500):
     sys.stdout.write("\nDone.")
     
 # parses and sends data from similar_articles-ids.tsv to server
-def send_similar_articles():
+def send_similar_articles(start_at=0):
     if not os.path.isfile("similar_articles-ids.tsv"):
         print("Must run similar_articles_compiler() first to create")
         print("similar_articles-ids.tsv before running send_similar_articles()")
@@ -972,16 +972,17 @@ def send_similar_articles():
 
     i=0
     t0=time.time()
-    num_total=len(article_ids)
+    num_total=len(article_id)
     num_dropped=0
     sent=0
-    for a_id,sim_str in zip(article_ids,similar_articles):
+    for a_id,sim_str in zip(article_id,similar_articles):
+        sim_str=sim_str.strip().replace("\'","&squot")
         i+=1
 
         if i<start_at: continue
 
         sys.stdout.write("\rPreparing server data (%d/%d) | Dropped:%d | Sent:%d"%(i,num_total,num_dropped,sent))      
-        a_imp=importance_dict[a_id]
+        #a_imp=importance_dict[a_id]
         command = " (\'"+sim_str+"\', "+str(a_id)+")"
         command_str+=command 
 
