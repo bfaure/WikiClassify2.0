@@ -496,8 +496,8 @@ def plot_confusion_matrix(y_test, y_pred, class_names, training_size, normalize=
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names, rotation=45, fontsize=4)
-    plt.yticks(tick_marks, class_names, fontsize=4)
+    plt.xticks(tick_marks, class_names, rotation=45, fontsize=10)
+    plt.yticks(tick_marks, class_names, fontsize=10)
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]

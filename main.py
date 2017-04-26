@@ -544,15 +544,13 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
             sys.stdout.write("%s\t\t%d - %s\n"%("Classes:" if i==0 else "        ",class_sizes[c],c))
 
-            print_full_classes=True
+            print_full_classes=False
             if print_full_classes:
                 sys.stdout.write("        \t%s\n"%(contained_str))
             i+=1
 
-    return
-
     #### SETTINGS
-    dpipc=100
+    dpipc=120
     #dpipc = 213 # documents per iteration per class, limited by available memory
     #dpipc = 320
     #dpipc = 640
@@ -1515,11 +1513,11 @@ def main():
             encoder.load(model_dir)
             classify_quality(encoder,classifier_dir)
 
-        train_content_classifier = False 
+        train_content_classifier = True 
         if train_content_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
-            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
             # directory to save classifier to
             classifier_dir = "WikiLearn/data/models/classifier/content" 
@@ -1550,7 +1548,7 @@ def main():
             send_similar_articles()
 
         # update the server entries with quality/importance attributes, requires quality.tsv & importance.tsv
-        send_quality_importance_to_server=True
+        send_quality_importance_to_server=False
         if send_quality_importance_to_server:
             send_quality_importance()
 
