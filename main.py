@@ -1455,10 +1455,20 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
     f=open(text,"r")
     i=0
     f_targ=open("%s-%s.txt"%(text.split(".")[0],which),"w")
+    f_targ_floats=open("%s-%s-floats.txt"%(text.split(".")[0],which),"w")
+
+    f_targ_floats.write("Classes\t")
+    i=0
+    for c in class_names:
+        i+=1
+        f_targ_floats.write("%s%s"%(c,"\t" if i!=len(class_names) else "\n"))
+
+    num_total=len(open(text,"r").read().split("\n"))
     dropped=0
+    kept=0
     for line in f:
         i+=1
-        sys.stdout.write("\rClassifying (%d) | Dropped:%d"%(i,dropped))
+        sys.stdout.write("\rClassifying (%d/%d/%d) | Dropped:%d"%(kept,i,num_total,dropped))
         word = line.strip()
         wordvecs=[]
         try:
@@ -1474,14 +1484,19 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
             inputs=np.array([wordvecs])
             probs=classifier.predict(inputs,batch_size=1,verbose=0)
 
-            max_prob=0.0
+            f_targ_floats.write("%s\t"%word)
+
+            max_prob=0.75 # anything under this not counted
             j=0
             for p in probs[0]:
                 if p>max_prob:
                     max_prob=p 
                     pred_class=class_names[j]
+                f_targ_floats.write("%0.5f%s"%(p,"\t" if j!=len(class_names)-1 else "\n"))
                 j+=1
-            f_targ.write("%s\t%s\n"%(word,pred_class))
+            if max_prob!=0.5:
+                kept+=1
+                f_targ.write("%s\t%s\n"%(word,pred_class))
 
         except:
             dropped+=1
