@@ -1140,20 +1140,34 @@ def get_titles_dict():
         sys.stdout.write("%s\n"%(make_seconds_pretty(time.time()-t0)))
         return title_dict
 
-# parses categories.tsv
-def largest_categories_compiler(n_largest=1000,smart_combine=False):
+# Either creates sorted_categories.tsv and returns n_largest or read n_largest from it
+def get_nlargest_categories(n_largest,title_dict):
 
     from bisect import bisect_left # for sorting
 
     def get_row_size(row):
         return row[1]
 
-    if not os.path.isfile("categories.tsv"):
-        print("categories.tsv is required to run largest_categories_compiler()")
-        return
-    
-    title_dict = get_titles_dict()
-    ###############################
+    if os.path.exists("sorted_categories.tsv"):
+        f=open("sorted_categories.tsv","r")
+        largest_sizes=[]
+        largest_ids=[]
+        largest_strings=[]
+        i=0
+        t0=time.time()
+        for line in f:
+            i+=1
+            sys.stdout.write("\rLoading largest cats (%d/%d)"%(i,n_largest))
+            items=line.strip().split("\t")
+            if len(items)==3:
+                largest_strings.append(items[0])
+                largest_ids.append(items[1])
+                largest_sizes.append(int(items[2]))
+            if len(largest_sizes)==n_largest:
+                sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+                f.close()
+                return [largest_strings,largest_ids,largest_sizes]
+
     t0=time.time()
     f=open("categories.tsv","r")
     cat_size_dict={}
@@ -1171,7 +1185,6 @@ def largest_categories_compiler(n_largest=1000,smart_combine=False):
                 except: cat_size_dict[l]=0
     f.close()
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
-    ###############################
 
     num_total=len(cat_size_dict)
     rows=[]
@@ -1181,42 +1194,42 @@ def largest_categories_compiler(n_largest=1000,smart_combine=False):
         i+=1
         sys.stdout.write("\rSorting categories (%d/%d)"%(i,num_total))
         rows.append([key,val])
-    rows=sorted(rows,key=get_row_size)
+    rows=sorted(rows,key=get_row_size,reverse=True)
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
 
-    
-
-    '''
     t0=time.time()
     large_categories=[]
     large_category_sizes=[]
     large_categories_strings=[]
+    f=open("sorted_categories.tsv","w")
     dropped=0
-    seen={}
-    while len(large_categories)<n_largest:
-        sys.stdout.write("\rCompiling (%d/%d) | Dropped:%d"%(len(large_categories)+1,n_largest,dropped))
-        largest_size=200 # increase speed by skipping anything under this
-        largest_name="None"
-        for key,val in cat_size_dict.items():
-            if val<largest_size: continue
-            try: already_accounted_for=seen[key]
-            except:
-                if val>largest_size:
-                    largest_size=val 
-                    largest_name=key
-        if largest_name!="None":
-            large_categories_strings.append(title_dict[largest_name])
-            large_categories.append(largest_name)
-            large_category_sizes.append(largest_size)
-            seen[largest_name]=True
-        else: dropped+=1
+    for i in range(len(rows)):
+        sys.stdout.write("\rSaving largest (%d/%d) | Dropped:%d"%(i,len(rows),dropped))
+        try:
+            cur_id = rows[i][0]
+            cur_size = rows[i][1]
+            cur_string = title_dict[cur_id]
+            f.write("%s\t%s\t%d\n"%(cur_string,cur_id,cur_size))
+        except:
+            dropped+=1
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
-    '''
+    f.close()
+    return get_nlargest_categories(n_largest,title_dict) # recursive call
 
-    
+# parses categories.tsv
+def largest_categories_compiler(n_largest=1000,smart_combine=False):
 
+    if not os.path.isfile("categories.tsv"):
+        print("categories.tsv is required to run largest_categories_compiler()")
+        return
 
-    ###############################
+    # Load (or create) a dictionary with mappings from ids to article titles    
+    title_dict = get_titles_dict()
+
+    # get n_largest article names, ids, and sizes (# of articles)
+    large_categories_strings,large_categories,large_category_sizes = get_nlargest_categories(n_largest,title_dict)
+
+    # write out the subsection of the total sorted categories to files
     f_id = open("largest_categories-ids.tsv","w")
     f_str = open("largest_categories-string.tsv","w")
     for i in range(len(large_category_sizes)):
@@ -1229,7 +1242,8 @@ def largest_categories_compiler(n_largest=1000,smart_combine=False):
     f_id.close()
     f_str.close()
     sys.stdout.write("\n")
-    ###############################
+
+    # write out metadata (helps with prepping classifier)
     print("Writing metadata...")
     f_meta = open("largest_categories-meta.txt","w")
     f_meta.write("String | ID | Article Count\n\n")
@@ -1237,6 +1251,7 @@ def largest_categories_compiler(n_largest=1000,smart_combine=False):
         f_meta.write("%s | %s | %d\n"%(large_categories_strings[i],large_categories[i],large_category_sizes[i]))
     f_meta.close()
 
+    # small category dictionaries
     cat_id_to_string_dict={}
     cat_id_to_size_dict={}
     i=0
@@ -1246,7 +1261,8 @@ def largest_categories_compiler(n_largest=1000,smart_combine=False):
         cat_id_to_string_dict[p_id]=p_str
         cat_id_to_size_dict[p_id]=large_category_sizes[i-1]
     sys.stdout.write("\n")
-    ###############################
+
+    # map articles to their categories
     f_id= open("article_categories-ids.tsv","w")
     f_str = open("article_categories-string.tsv","w")
     t0=time.time()
