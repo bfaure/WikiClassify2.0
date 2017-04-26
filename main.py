@@ -1160,6 +1160,7 @@ def send_quality_importance():
         return
     sys.stdout.write("success\n")
 
+    t0=time.time()
     num_lines=5171609
     f=open("quality.tsv","r")
     quality_dict={}
@@ -1171,9 +1172,10 @@ def send_quality_importance():
         if len(items)==2:
             quality_dict[int(items[0])]=items[1]
     f.close()
-    sys.stdout.write("\n")
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
 
 
+    t0=time.time()
     f=open("importance.tsv","r")
     importance_dict={}
     i=0
@@ -1182,25 +1184,44 @@ def send_quality_importance():
         sys.stdout.write("\rCreating importance dict (%d/%d)"%(i,num_lines))
         items=line.strip().split("\t")
         if len(items)==2:
+            #print("Importance, items[0]:%s, items[1]:%s"%(items[0],items[1]))
             importance_dict[int(items[0])]=items[1]
     f.close()
-    sys.stdout.write("\n")
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
 
+    command_str = "UPDATE articles as t set"
+    command_str+= " quality = c.quality,"
+    command_str+= " importance = c.importance "
+    command_str+= "from (values"
 
     i=0
+    t0=time.time()
     num_total=len(quality_dict)
     num_dropped=0
+    sent=0
     for a_id,a_qual in quality_dict.items():
         i+=1
-        sys.stdout.write("\rSending to server (%d/%d) | Dropped:%d"%(i,num_total,num_dropped))      
-        a_imp=importance_dict[a_id]        
-        cursor=server_conn.cursor()
-        command = "UPDATE articles SET quality = \'"+a_qual+"\', importance = \'"+a_imp+"\'"
-        command += "WHERE id = "+str(a_id)+";"
-        try: cursor.execute(command)
-        except: num_dropped+=1
-        cursor.close()
-    server_conn.commit()
+
+        sys.stdout.write("\rPreparing server data (%d/%d) | Dropped:%d | Sent:%d"%(i,num_total,num_dropped,sent))      
+        a_imp=importance_dict[a_id]
+        command = " (\'"+a_qual+"\', \'"+a_imp+"\', "+str(a_id)+")"
+        command_str+=command 
+
+        if i%5000==0 or i==num_total:
+            command_str += " ) as c(quality, importance, id) where c.id = t.id;"
+            cursor=server_conn.cursor()
+            cursor.execute(command_str)
+            server_conn.commit()
+            sent+=1
+
+            command_str = "UPDATE articles as t set"
+            command_str+= " quality = c.quality,"
+            command_str+= " importance = c.importance "
+            command_str+= "from (values"
+        else:
+            command_str+=", "
+
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
     sys.stdout.write("\nDone\n")
 
 # Either creates titles dictionary from titles.tsv or loads it (if titles.pkl exists)
@@ -1494,7 +1515,7 @@ def main():
             encoder.load(model_dir)
             classify_quality(encoder,classifier_dir)
 
-        train_content_classifier = True 
+        train_content_classifier = False 
         if train_content_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
@@ -1529,7 +1550,7 @@ def main():
             send_similar_articles()
 
         # update the server entries with quality/importance attributes, requires quality.tsv & importance.tsv
-        send_quality_importance_to_server=False
+        send_quality_importance_to_server=True
         if send_quality_importance_to_server:
             send_quality_importance()
 
