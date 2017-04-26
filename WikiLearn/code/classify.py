@@ -102,6 +102,8 @@ class vector_classifier_keras(object):
         self.model=None 
         self.highest_acc = None 
 
+        self.exec_details_file = open(os.path.join(directory,"exec_details.txt"),"w")
+
         self.pic_dir = os.path.join(directory,"%s-pics"%model_type)
         if not os.path.exists(self.pic_dir):
             os.makedirs(self.pic_dir)
@@ -244,12 +246,17 @@ class vector_classifier_keras(object):
         if self.highest_acc==None or acc>self.highest_acc:
             self.highest_acc=acc 
             self.model.save(os.path.join(self.directory,"%s-classifier.h5"%(self.model_type)))
+            self.save_exec_details(loss,acc)
 
         if iteration==1 and epoch==0:
             s=open(os.path.join(self.directory,"%s-classifier_architecture.json"%(self.model_type)),"w")
             s.write(self.model.to_json())
             s.close()
         return loss 
+
+    def save_exec_details(self,loss,acc):
+        cur_time=int(time.time())
+        self.exec_details_file.write("%d - Loss:%0.5f Acc:%0.5f\n"%(cur_time,loss,acc))
 
     def train_seq(self,X,y,test_ratio=0.2,epochs=None,batch_size=None,load_file=None):
         y_hot = make_one_hot(y)

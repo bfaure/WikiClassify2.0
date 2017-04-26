@@ -1394,7 +1394,7 @@ def main():
             encoder.load(model_dir)
             classify_quality(encoder,classifier_dir)
 
-        train_content_classifier = False 
+        train_content_classifier = True 
         if train_content_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
@@ -1408,8 +1408,9 @@ def main():
 
         
         # requires categories.tsv & titles.tsv, creates largest_categories.tsv, largest_categories-strings.tsv,
-        # largest_categories-meta.txt & article_categories.tsv
-        compile_largest_categories=True 
+        # largest_categories-meta.txt, article_categories.tsv, sorted_categories.tsv
+        # faster after first run (loads sorted_categories.tsv for speed)
+        compile_largest_categories=False 
         if compile_largest_categories:
             largest_categories_compiler()
         
