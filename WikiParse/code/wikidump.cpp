@@ -48,12 +48,12 @@ void wikidump::connect_to_server()
 
     if ( connected_to_server )
     {
-        int server_bytes = get_server_used_bytes();
+        long server_bytes = get_server_used_bytes();
         cout<<"Current server usage: "<<server_bytes<<" Bytes\n";
         if ( server_bytes > server_capacity or delete_prior_table)
         {
             cout<<"WARNING: Deleting current database table... ";
-            cout.flush()
+            cout.flush();
             string delete_query = "DELETE FROM articles;";
 
             try
