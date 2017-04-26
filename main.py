@@ -966,6 +966,42 @@ def send_similar_articles():
     f.close()
     sys.stdout.write("\n")
 
+    command_str = "UPDATE articles as t set"
+    command_str+= " nearestarticles = c.nearestarticles "
+    command_str+= "from (values"
+
+    i=0
+    t0=time.time()
+    num_total=len(quality_dict)
+    num_dropped=0
+    sent=0
+    for a_id,sim_str in quality_dict.items():
+        i+=1
+
+        if i<start_at: continue
+
+        sys.stdout.write("\rPreparing server data (%d/%d) | Dropped:%d | Sent:%d"%(i,num_total,num_dropped,sent))      
+        a_imp=importance_dict[a_id]
+        command = " (\'"+sim_str+"\', "+str(a_id)+")"
+        command_str+=command 
+
+        if i%5000==0 or i==num_total:
+            command_str += " ) as c(nearestarticles, id) where c.id = t.id;"
+            cursor=server_conn.cursor()
+            cursor.execute(command_str)
+            server_conn.commit()
+            sent+=1
+
+            command_str = "UPDATE articles as t set"
+            command_str+= " nearestarticles = c.nearestarticles "
+            command_str+= "from (values"
+        else:
+            command_str+=", "
+
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+    sys.stdout.write("\nDone\n")
+
+    '''
     i=0
     num_total=len(article_id)
     num_dropped=0
@@ -980,6 +1016,7 @@ def send_similar_articles():
         cursor.close()
     server_conn.commit()
     sys.stdout.write("\nDone\n")
+    '''
 
 # parsers quality.tsv and importance.tsv and sends quality and importance to server
 # defunct because it relies on id_mapping.tsv which we no longer use, see the new
@@ -1630,7 +1667,7 @@ def main():
             encoder.load(model_dir)
             classify_content(encoder,classifier_dir)
 
-        create_classifier_samples=True 
+        create_classifier_samples=False 
         if create_classifier_samples:
             
             create_content_samples=True 
@@ -1665,14 +1702,14 @@ def main():
             similar_articles_compiler(model_dir)
 
         # update the server entries with related articles, requires similar_articled-ids.tsv
-        send_similar_articles_to_server = False
+        send_similar_articles_to_server = True
         if send_similar_articles_to_server:
             send_similar_articles()
 
         # update the server entries with quality/importance attributes, requires quality.tsv & importance.tsv
         send_quality_importance_to_server=False
         if send_quality_importance_to_server:
-            send_quality_importance(start_at=650000)
+            send_quality_importance(start_at=0)
 
         
         # DEFUNCT
