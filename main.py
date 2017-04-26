@@ -972,10 +972,10 @@ def send_similar_articles():
 
     i=0
     t0=time.time()
-    num_total=len(quality_dict)
+    num_total=len(article_ids)
     num_dropped=0
     sent=0
-    for a_id,sim_str in quality_dict.items():
+    for a_id,sim_str in zip(article_ids,similar_articles):
         i+=1
 
         if i<start_at: continue
