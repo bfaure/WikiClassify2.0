@@ -1447,15 +1447,26 @@ def get_most_recent_classifier(which,parent_dir="WikiLearn/data/models/classifie
 
 def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_common.txt",which="content"):
 
+    if text.find(".tsv")!=-1:
+        tsv=True 
+    else:
+        tsv=False
+
     max_len=120
+    max_words=20000
+    trim_under_prob=0.99
+
+    start_tsv_at=615000
+    end_tsv_at=1200
 
     zero_vector = [0.0]*300
     
     t0=time.time()
     f=open(text,"r")
     i=0
-    f_targ=open("%s-%s.txt"%(text.split(".")[0],which),"w")
-    f_targ_floats=open("%s-%s-floats.txt"%(text.split(".")[0],which),"w")
+
+    f_targ=open("20k_most_common-content.txt","w")
+    f_targ_floats=open("20k_most_common_float-content.txt","w")
 
     f_targ_floats.write("Classes\t")
     i=0
@@ -1470,6 +1481,13 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
         i+=1
         sys.stdout.write("\rClassifying (%d/%d/%d) | Dropped:%d"%(kept,i,num_total,dropped))
         word = line.strip()
+
+        if tsv:
+            freq=int(word.split("\t")[2])
+            if freq>start_tsv_at or freq<end_tsv_at: 
+                continue
+            word=word.split("\t")[1]
+
         wordvecs=[]
         try:
             wordvec=encoder.model[word.lower()]
@@ -1486,7 +1504,7 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
 
             f_targ_floats.write("%s\t"%word)
 
-            max_prob=0.75 # anything under this not counted
+            max_prob=trim_under_prob # anything under this not counted
             j=0
             for p in probs[0]:
                 if p>max_prob:
@@ -1494,7 +1512,7 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
                     pred_class=class_names[j]
                 f_targ_floats.write("%0.5f%s"%(p,"\t" if j!=len(class_names)-1 else "\n"))
                 j+=1
-            if max_prob!=0.5:
+            if max_prob!=trim_under_prob:
                 kept+=1
                 f_targ.write("%s\t%s\n"%(word,pred_class))
 
@@ -1624,8 +1642,10 @@ def main():
                 encoder=doc2vec()
                 encoder.load(model_dir)
 
+                src_words="WikiLearn/data/models/dictionary/text/word_list.tsv"
+
                 class_names=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
-                generate_classifier_samples(classifier_t,class_names,encoder)
+                generate_classifier_samples(classifier_t,class_names,encoder,text=src_words)
 
         
         # requires categories.tsv & titles.tsv, creates largest_categories.tsv, largest_categories-strings.tsv,
