@@ -286,6 +286,10 @@ def get_classified_documents(
     if eof: earliest_class_full_at=-1 # denote eof
     return X,y,earliest_class_full_at 
 
+# Resets all state-saving items used in get_classified_documents
+def reset_corpus():
+    seen_article_dict=None # start classes back at start 
+
 def make_gif(parent_folder,frame_duration=0.3):
     items = os.listdir(parent_folder)
     png_filenames = []
@@ -434,16 +438,21 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
     all_classes=False
     if all_classes:
+        limit=100
         # load in content category strings, ids, and counts 
         f=open("largest_categories-meta.txt","r")
         lines = f.read().split("\n")
+        i=0
         for l in lines:
+            i+=1
+            if i>limit: break
             items=l.strip().split(" | ")
             if len(items)==3 and items[0]!="String":
                 class_map[items[1]]=len(class_names_string)
                 class_names_string.append(items[0])
                 class_names_id.append(items[1])
                 class_sizes.append(int(items[2]))
+        f.close()
 
         i=0
         for c in class_names_string:
@@ -452,10 +461,98 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
     # custom loading of classes
     else:
-        class_names_string=["living_people","films",""]
+
+        #  "space" --> #[ "moon","planet"],\
+
+        class_names_string=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
+
+        class_tags=[    [ "film","television"] ,\
+                        [ "moth","plant","fungi","lake","beetle","animal","flora","river","lamiinae","bird","mountain","spider","calpinae","hadeninae","diptera","insect","fish","genera","fauna","beaches" ] ,\
+                        [ "song","single","album","musician","musical","choral"] , #singers  \
+                        [ "athlete","footballer","football","major_league","cricketer","cyclist","skateboarders"] ,\
+                        [ "video_game","virtual_reality"] ,\
+                        [ "companie","economic","economist"] ,\
+                        [ "war","air_force","paramilitary"] ,\
+                        [ "transport","ship","aircraft","vehicle","highway","airport","railway_station"],
+                        [ "politic","political","politician"],  
+                        [ "village","town","municipality","communities","township","school_district","populated_place","cities","suburb","boroughs"], 
+                        [ "skyscraper","building","houses","structures","dams","architecture"]      ]
+
+        
+        class_map={} # dict from cat id to class_name_string index to use as class 
+        
+        contained_classes={}
+        for c in class_names_string:
+            contained_classes[c]=[]
+        
+        class_sizes={} # number of articles in each class 
+        for c in class_names_string:
+            class_sizes[c]=0
+
+        class_names_id=[]
+
+        t0=time.time()
+        f=open("largest_categories-meta.txt","r")
+        lines=f.read().split("\n")
+        i=0
+        for l in lines:
+            i+=1
+            sys.stdout.write("\rMapping categories (%d/%d)"%(i,len(lines)))
+            items=l.strip().split(" | ")
+            if len(items)==3 and items[0]!="String":
+                cur_cat_str = items[0].lower()
+                cur_cat_id = items[1]
+                cur_cat_ct = int(items[2])
+
+                if cur_cat_ct==0: continue # skip this cat if not articles in it
+                found_class=False
+
+                # mapping this cat to a class
+                c_index=0
+                for c_name,c_tags in zip(class_names_string,class_tags):
+
+                    # iterate over each tag for a match 
+                    for t in c_tags:
+                        tag_loc=cur_cat_str.find(t)
+
+                        if tag_loc!=-1:
+                            if tag_loc!=9: # if maybe just the end of another word (dont include)
+                                if cur_cat_str[tag_loc-1]!="_": 
+                                    continue 
+                            if tag_loc+len(t)!=len(cur_cat_str): # if not at the end of the category string
+                                if cur_cat_str[tag_loc+len(t)] not in ["_","s"]: # if the beginning of another word
+                                    continue
+
+                            found_class=True  
+                            class_map[cur_cat_id]=c_index
+                            contained_classes[c_name].append(cur_cat_str)
+                            class_sizes[c_name]+=cur_cat_ct 
+
+                    if found_class: break
+                    c_index+=1
+        f.close()
+        sys.stdout.write("%s\n"%(make_seconds_pretty(time.time()-t0)))
+
+        i=0
+        for c in class_names_string:
+            contained_str=""
+            q=0
+            for cont in contained_classes[c]:
+                q+=1
+                contained_str+=cont
+                if q!=len(contained_classes[c]): contained_str+=","
+
+            sys.stdout.write("%s\t\t%d - %s\n"%("Classes:" if i==0 else "        ",class_sizes[c],c))
+
+            print_full_classes=True
+            if print_full_classes:
+                sys.stdout.write("        \t%s\n"%(contained_str))
+            i+=1
+
+    return
 
     #### SETTINGS
-    dpipc=10
+    dpipc=100
     #dpipc = 213 # documents per iteration per class, limited by available memory
     #dpipc = 320
     #dpipc = 640
@@ -465,7 +562,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     #max_word=100
     max_words = 120 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
-    limit_vocab_size = 3000 # if !=-1, trim vocab to 'limit_vocab_size' words
+    limit_vocab_size = -1 # if !=-1, trim vocab to 'limit_vocab_size' words
     batch_size = None    # if None, defaults to whats set in classify.py, requires vram
     replace_removed = True # replace words not found in model with zero vector
     swap_with_word_idx = False
@@ -495,38 +592,31 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
 
     classifier = vector_classifier_keras(class_names=class_names_string,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
-    doc_idx = 0
-    i=0
-    while True:
-        i+=1
 
-        print("\nIteration %d"%i)
-        X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
-                                                class_names=class_names_string,
-                                                class_map=class_map,
-                                                start_at=doc_idx,
-                                                remove_stop_words=remove_stop_words,
-                                                trim_vocab_to=limit_vocab_size,
-                                                replace_removed=replace_removed,
-                                                swap_with_word_idx=swap_with_word_idx,
-                                                classifications="article_categories-ids.tsv" )
+    last_loss=None 
 
-        last_loss=None 
-        num_worse=0
-        for j in range(epochs):
-            #plot = True if j==epochs-1 else False
-            plot=True
+    # iterate over the full corpus on each iteration
+    for j in range(epochs):
+
+        reset_corpus() # tell get_classified_documents to reset all state variables
+        doc_idx = 0
+        i=0
+        while True:
+            i+=1
+            print("\nEpoch:%d | Iteration %d"%(j,i))
+            X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
+                                                    class_names=class_names_string,
+                                                    class_map=class_map,
+                                                    start_at=doc_idx,
+                                                    remove_stop_words=remove_stop_words,
+                                                    trim_vocab_to=limit_vocab_size,
+                                                    replace_removed=replace_removed,
+                                                    swap_with_word_idx=swap_with_word_idx,
+                                                    classifications="article_categories-ids.tsv" )
+            num_worse=0
+            plot=True 
             loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
-            if last_loss==None: last_loss=loss 
-            else:
-                if loss>last_loss:
-                    num_worse+=1
-                else:
-                    num_worse=0
-            if num_worse>1:
-                break
-
-        if doc_idx==-1: break
+            if doc_idx==-1: break # if at the end of the corpus
 
     # write out ordered gif of all items in picture directory (heatmaps)
     if gif: make_gif(classifier.pic_dir)
@@ -1217,7 +1307,7 @@ def get_nlargest_categories(n_largest,title_dict):
     return get_nlargest_categories(n_largest,title_dict) # recursive call
 
 # parses categories.tsv
-def largest_categories_compiler(n_largest=1000,smart_combine=False):
+def largest_categories_compiler(n_largest=20000,smart_combine=False):
 
     if not os.path.isfile("categories.tsv"):
         print("categories.tsv is required to run largest_categories_compiler()")
@@ -1229,27 +1319,8 @@ def largest_categories_compiler(n_largest=1000,smart_combine=False):
     # get n_largest article names, ids, and sizes (# of articles)
     large_categories_strings,large_categories,large_category_sizes = get_nlargest_categories(n_largest,title_dict)
 
-    # write out the subsection of the total sorted categories to files
-    f_id = open("largest_categories-ids.tsv","w")
-    f_str = open("largest_categories-string.tsv","w")
-    for i in range(len(large_category_sizes)):
-        sys.stdout.write("\rSaving largest (%d/%d)"%(i+1,len(large_category_sizes)))
-        c_size=large_category_sizes[i]
-        c_str=large_categories_strings[i]
-        c_id=large_categories[i]
-        f_id.write("%s\t%d\n"%(c_id,c_size))
-        f_str.write("%s\t%d\n"%(c_str,c_size))
-    f_id.close()
-    f_str.close()
-    sys.stdout.write("\n")
-
-    # write out metadata (helps with prepping classifier)
-    print("Writing metadata...")
-    f_meta = open("largest_categories-meta.txt","w")
-    f_meta.write("String | ID | Article Count\n\n")
-    for i in range(len(large_categories)):
-        f_meta.write("%s | %s | %d\n"%(large_categories_strings[i],large_categories[i],large_category_sizes[i]))
-    f_meta.close()
+    # sizes based on the amounts of articles we will map to them
+    effective_category_sizes={}
 
     # small category dictionaries
     cat_id_to_string_dict={}
@@ -1260,6 +1331,7 @@ def largest_categories_compiler(n_largest=1000,smart_combine=False):
         sys.stdout.write("\rMapping ids to strings (%d/%d)"%(i,len(large_categories)))
         cat_id_to_string_dict[p_id]=p_str
         cat_id_to_size_dict[p_id]=large_category_sizes[i-1]
+        effective_category_sizes[p_id]=0
     sys.stdout.write("\n")
 
     # map articles to their categories
@@ -1292,12 +1364,40 @@ def largest_categories_compiler(n_largest=1000,smart_combine=False):
                     f_str.write("%s\t%s\n"%(title_dict[items[0]],cat_str))
                     f_id.write("%s\t%s\n"%(items[0],cat_id))
                     num_saved+=1
+                    effective_category_sizes[cat_id]+=1
                 except:
                     dropped+=1
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
     f_id.close()
     f_str.close()
+
+    # write out the subsection of the total sorted categories to files
+    f_id = open("largest_categories-ids.tsv","w")
+    f_str = open("largest_categories-string.tsv","w")
+    for i in range(len(large_category_sizes)):
+        sys.stdout.write("\rSaving largest (%d/%d)"%(i+1,len(large_category_sizes)))
+        #c_size=large_category_sizes[i]
+        c_str=large_categories_strings[i]
+        c_id=large_categories[i]
+        c_size=effective_category_sizes[c_id]
+        f_id.write("%s\t%d\n"%(c_id,c_size))
+        f_str.write("%s\t%d\n"%(c_str,c_size))
+    f_id.close()
+    f_str.close()
+    sys.stdout.write("\n")
+
     sys.stdout.write("\nDone\n")
+
+    # write out metadata (helps with prepping classifier)
+    print("Writing metadata...")
+    f_meta = open("largest_categories-meta.txt","w")
+    f_meta.write("String | ID | Article Count\n\n")
+    for i in range(len(large_categories)):
+        #f_meta.write("%s | %s | %d\n"%(large_categories_strings[i],large_categories[i],large_category_sizes[i]))
+        cur_id=large_categories[i]
+        cur_str=large_categories_strings[i]
+        f_meta.write("%s | %s | %d\n"%(cur_str,cur_id,effective_category_sizes[cur_id]))
+    f_meta.close()
 
 def main():
     start_time = time.time()
@@ -1386,7 +1486,7 @@ def main():
             #model_dir = get_most_recent_model('/home/bfaure/Desktop/WikiClassify2.0/WikiLearn/data/models/doc2vec')
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
-            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
             # directory to save classifier to
             classifier_dir = "WikiLearn/data/models/classifier/quality" 

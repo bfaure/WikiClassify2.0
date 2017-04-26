@@ -43,6 +43,13 @@ DEFAULT_EPOCHS = 100
 #                            Linear classifier
 #-----------------------------------------------------------------------------#
 
+def make_seconds_pretty(seconds):
+    rem_hours = int(seconds/3600)                 
+    rem_mins = int((seconds-(rem_hours*3600))/60) 
+    rem_secs = int(seconds-(rem_hours*3600)-(rem_mins*60)) 
+    time_str = str(rem_hours)+"h "+str(rem_mins)+"m "+str(rem_secs)+"s"
+    return time_str 
+
 def make_one_hot(y):
     one_hot = np.zeros((y.size, np.max(y)+1),dtype='bool')
     one_hot[np.arange(y.size), y] = 1 
@@ -234,14 +241,18 @@ class vector_classifier_keras(object):
             self.log_file.write("%0.5f\t%0.1f\n"%(loss,100.0*acc)) # write data to log file
             self.log_file.flush()
         
-        if plot:
-            y_pred = make_integers(self.model.predict(test_x,batch_size=batch_size,verbose=0))
-            plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=False,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
-
         loss, acc = self.model.evaluate(test_x, test_y_hot, batch_size=batch_size, verbose=0)
         sys.stdout.write(' - val_loss: %0.4f - val_acc: %0.1f%%\n'%(loss,100.0*acc))
         self.val_log_file.write("%0.5f\t%0.1f\n"%(loss,100.0*acc))
         self.val_log_file.flush()
+
+        if plot:
+            t0=time.time()
+            sys.stdout.write("Plotting confusion matrix... ")
+            y_pred = make_integers(self.model.predict(test_x,batch_size=batch_size,verbose=0))
+            plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=False,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
+            sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+
 
         if self.highest_acc==None or acc>self.highest_acc:
             self.highest_acc=acc 
