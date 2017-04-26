@@ -14,6 +14,9 @@ import numpy as np
 
 import imageio
 from keras.layers import Embedding 
+
+import cPickle
+
 #                            Local imports
 #-----------------------------------------------------------------------------#
 from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
@@ -1112,25 +1115,40 @@ def send_quality_importance():
     server_conn.commit()
     sys.stdout.write("\nDone\n")
 
+# Either creates titles dictionary from titles.tsv or loads it (if titles.pkl exists)
+def get_titles_dict():
+    if not os.path.isfile("titles.pkl"):
+        t0=time.time()
+        i=0
+        dropped=0
+        title_dict={}
+        f=open("titles.tsv","r")
+        for line in f:
+            i+=1
+            sys.stdout.write("\rCreating titles dict (%d/%d) | Dropped:%d"%(i,34178963,dropped))
+            items=line.strip().split("\t")
+            if len(items)==2: title_dict[items[0]]=items[1]
+            else: dropped+=1
+        f.close()
+        with open("titles.pkl","wb") as f:
+            cPickle.dump(title_dict,f)
+        sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+        return title_dict 
+    else:
+        t0=time.time()
+        sys.stdout.write("Loading titles dict... ")
+        with open("titles.pkl","rb") as f:
+            title_dict = cPickle.load(f)
+        sys.stdout.write("%s\n"%(make_seconds_pretty(time.time()-t0)))
+        return title_dict
+
 # parses categories.tsv
 def largest_categories_compiler(n_largest=200,smart_combine=False):
     if not os.path.isfile("categories.tsv"):
         print("categories.tsv is required to run largest_categories_compiler()")
         return
-    ###############################
-    t0=time.time()
-    i=0
-    dropped=0
-    title_dict={}
-    f=open("titles.tsv","r")
-    for line in f:
-        i+=1
-        sys.stdout.write("\rCreating titles dict (%d/%d) | Dropped:%d"%(i,34178963,dropped))
-        items=line.strip().split("\t")
-        if len(items)==2: title_dict[items[0]]=items[1]
-        else: dropped+=1
-    f.close()
-    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+    
+    title_dict = get_titles_dict()
     ###############################
     t0=time.time()
     f=open("categories.tsv","r")
@@ -1157,8 +1175,8 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
     dropped=0
     seen={}
     while len(large_categories)<n_largest:
-        sys.stdout.write("\rCompiling (%d/%d) | Dropped:%d"%(len(large_categories),n_largest,dropped))
-        largest_size=0
+        sys.stdout.write("\rCompiling (%d/%d) | Dropped:%d"%(len(large_categories)+1,n_largest,dropped))
+        largest_size=200 # increase speed by skipping anything under this
         largest_name="None"
         for key,val in cat_size_dict.items():
             try: already_accounted_for=seen[key]
@@ -1170,13 +1188,14 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
             large_categories_strings.append(title_dict[largest_name])
             large_categories.append(largest_name)
             large_category_sizes.append(largest_size)
+            seen[largest_name]=True
         else: dropped+=1
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
     ###############################
     f_id = open("largest_categories-ids.tsv","w")
     f_str = open("largest_categories-string.tsv","w")
     for i in range(len(large_category_sizes)):
-        sys.stdout.write("\rSaving largest (%d/%d)"%(i,len(large_category_sizes)))
+        sys.stdout.write("\rSaving largest (%d/%d)"%(i+1,len(large_category_sizes)))
         c_size=large_category_sizes[i]
         c_str=large_categories_strings[i]
         c_id=large_categories[i]
@@ -1194,11 +1213,13 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
     f_meta.close()
 
     cat_id_to_string_dict={}
+    cat_id_to_size_dict={}
     i=0
     for p_id,p_str in zip(large_categories,large_categories_strings):
         i+=1
         sys.stdout.write("\rMapping ids to strings (%d/%d)"%(i,len(large_categories)))
         cat_id_to_string_dict[p_id]=p_str
+        cat_id_to_size_dict[p_id]=large_category_sizes[i-1]
     sys.stdout.write("\n")
     ###############################
     f_id= open("article_categories-ids.tsv","w")
@@ -1206,10 +1227,11 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
     t0=time.time()
     f=open("categories.tsv","r")
     i=0
+    dropped=0
     num_saved=0
     for line in f:
         i+=1
-        sys.stdout.write("\rMapping articles to categories (%d/%d) | Saved:%d"%(i,13119700,num_saved))
+        sys.stdout.write("\rMapping articles to categories (%d/%d) | Saved:%d | Dropped:%d"%(i,13119700,num_saved,dropped))
         items=line.strip().split("\t")
         if len(items)==2:
             line_cats=items[1].split(" ")
@@ -1218,16 +1240,19 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
             cat_str=None
             for l in line_cats:
                 try:
-                    temp=cat_id_to_string_dict[l]
-                    if cat_priority==None or int(temp)<cat_priority:
-                        cat_str=title_dict[l]
+                    large_with_size = cat_id_to_size_dict[l]
+                    if cat_priority==None or int(large_with_size)<cat_priority:
+                        cat_str=cat_id_to_string_dict[l]
                         cat_id=l 
-                        cat_priority=int(temp)
+                        cat_priority=int(large_with_size)
                 except: continue 
             if cat_id!=None:
-                f_str.write("%s\t%s\n"%(title_dict[items[0]],cat_str))
-                f_id.write("%s\t%s\n"%(items[0],cat_id))
-                num_saved+=1
+                try:
+                    f_str.write("%s\t%s\n"%(title_dict[items[0]],cat_str))
+                    f_id.write("%s\t%s\n"%(items[0],cat_id))
+                    num_saved+=1
+                except:
+                    dropped+=1
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
     f_id.close()
     f_str.close()
