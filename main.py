@@ -55,7 +55,8 @@ def get_classified_documents(
     replace_removed=False,     # if true, any words removed will be replaced w/ zero-vector 
     swap_with_word_idx=False,  # if true, wordvectors are swapped out
     max_class_mappings=-1,      # if non -1, limit size of classification mapping
-    classifications="quality.tsv" # where to pull article classifications from
+    classifications="quality.tsv", # where to pull article classifications from
+    tailored_to_content=False # diff. exec for content-classified documents
     ):
     
     global classification_dict # holds mappings from article_id to classification
@@ -145,8 +146,9 @@ def get_classified_documents(
             if max_quality_dict_size!=-1 and i>max_quality_dict_size: break
             sys.stdout.write("\rCreating class dict (%d/%d)"%(i,num_lines))
             try:
-                article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
-                classification_dict[article_id] = article_quality
+                article_id,article_subclass = line.strip().split("\t")
+                #article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
+                classification_dict[article_id] = article_subclass
             except:
                 i+=-1
                 continue
@@ -177,25 +179,29 @@ def get_classified_documents(
         #    sys.stdout.write("%s:%d"%(key,val))
 
         # load in the current line
-        try:    article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
+        try:    
+            #article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
+            article_id, article_contents = line.strip().split('\t')
         except: continue
         
         # see if this article has a quality mapping
         try: 
-            art_qual = classification_dict[article_id] # check if quality mapping
-            qual = classes[art_qual] # check if in specified class
-            target_class = class_names[qual[0]]
-            #print("\n%s | %s"%(art_qual,qual[0]))
+            art_subclass = classification_dict[article_id] # check if quality mapping
+            art_eff_y = classes[art_subclass]
+            art_effclass_idx = classes[art_subclass][0]
+            art_effclass = class_names[art_effclass_idx]
+
         except: 
             # skip article if no listed quality
             counts['unknown/not_in_model'] +=1
             continue
 
         # skip this article if we got farther than this on the last iteration for this class
-        if seen_article_dict[target_class]>i: continue
+        if seen_article_dict[art_effclass]>i: continue
 
         # get the number we are using as the y for this quality (0,1,2,etc)
-        qual_map = class_dict[str(qual[0])]
+        #qual_map = class_dict[str(qual[0])]
+        qual_map = art_effclass
         
         # if we have already loaded the maximum number of articles in this category
         if counts[qual_map]>=seq_per_class: continue
@@ -256,7 +262,7 @@ def get_classified_documents(
 
         # add document/quality to total found so far
         x.append(doc_arr)
-        y.append(qual)
+        y.append(art_eff_y)
         counts[qual_map]+=1
         class_lengths[qual_map]+=len(full_doc)
         num_loaded+=1 
@@ -264,7 +270,8 @@ def get_classified_documents(
         # check if this class is now full
         if counts[qual_map]>=seq_per_class:
             # take note of current location in file for next iteration
-            seen_article_dict[art_qual]=i+1
+            seen_article_dict[art_effclass]=i+1
+
             # this will be the spot we will re-enter file on next iteration
             if earliest_class_full_at==-1: earliest_class_full_at=i
 
@@ -288,6 +295,7 @@ def get_classified_documents(
 
 # Resets all state-saving items used in get_classified_documents
 def reset_corpus():
+    global seen_article_dict
     seen_article_dict=None # start classes back at start 
 
 def make_gif(parent_folder,frame_duration=0.3):
@@ -550,7 +558,8 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
             i+=1
 
     #### SETTINGS
-    dpipc=120
+    dpipc=150
+
     #dpipc = 213 # documents per iteration per class, limited by available memory
     #dpipc = 320
     #dpipc = 640
@@ -601,7 +610,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
         i=0
         while True:
             i+=1
-            print("\nEpoch:%d | Iteration %d"%(j,i))
+            print("\nEpoch:%d | Iteration: %d | doc_idx: %d"%(j,i,doc_idx))
             X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
                                                     class_names=class_names_string,
                                                     class_map=class_map,
@@ -1420,6 +1429,67 @@ def largest_categories_compiler(n_largest=20000,smart_combine=False):
         f_meta.write("%s | %s | %d\n"%(cur_str,cur_id,effective_category_sizes[cur_id]))
     f_meta.close()
 
+def get_most_recent_classifier(which,parent_dir="WikiLearn/data/models/classifier"):
+    my_dir = os.path.join(parent_dir,which)
+    classifiers = os.listdir(my_dir)
+    most_recent = None 
+    for c in classifiers:
+        try:
+            if most_recent==None or int(c)>int(most_recent):
+                most_recent=c 
+        except:
+            continue 
+    classifier_dir=os.path.join(my_dir,most_recent)
+    classifier_f=os.path.join(classifier_dir,"lstm-classifier.h5") 
+    from keras.models import load_model
+    classifier = load_model(classifier_f)
+    return classifier
+
+def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_common.txt",which="content"):
+
+    max_len=120
+
+    zero_vector = [0.0]*300
+    
+    t0=time.time()
+    f=open(text,"r")
+    i=0
+    f_targ=open("%s-%s.txt"%(text.split(".")[0],which),"w")
+    dropped=0
+    for line in f:
+        i+=1
+        sys.stdout.write("\rClassifying (%d) | Dropped:%d"%(i,dropped))
+        word = line.strip()
+        wordvecs=[]
+        try:
+            wordvec=encoder.model[word.lower()]
+            wordvecs.append(wordvec)
+
+            while len(wordvecs)<max_len:
+                wordvecs.append(zero_vector)
+
+            if len(wordvecs)>max_len:
+                wordvecs=wordvecs[:max_len]
+
+            inputs=np.array([wordvecs])
+            probs=classifier.predict(inputs,batch_size=1,verbose=0)
+
+            max_prob=0.0
+            j=0
+            for p in probs[0]:
+                if p>max_prob:
+                    max_prob=p 
+                    pred_class=class_names[j]
+                j+=1
+            f_targ.write("%s\t%s\n"%(word,pred_class))
+
+        except:
+            dropped+=1
+            continue 
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+    sys.stdout.write("Done\n")
+
+
 def main():
     start_time = time.time()
 
@@ -1507,7 +1577,7 @@ def main():
             #model_dir = get_most_recent_model('/home/bfaure/Desktop/WikiClassify2.0/WikiLearn/data/models/doc2vec')
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
-            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
             # directory to save classifier to
             classifier_dir = "WikiLearn/data/models/classifier/quality" 
@@ -1526,6 +1596,21 @@ def main():
             encoder = doc2vec()
             encoder.load(model_dir)
             classify_content(encoder,classifier_dir)
+
+        create_classifier_samples=True 
+        if create_classifier_samples:
+            
+            create_content_samples=True 
+            if create_content_samples:
+                classifier_t = get_most_recent_classifier("content")
+                model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+                #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+
+                encoder=doc2vec()
+                encoder.load(model_dir)
+
+                class_names=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
+                generate_classifier_samples(classifier_t,class_names,encoder)
 
         
         # requires categories.tsv & titles.tsv, creates largest_categories.tsv, largest_categories-strings.tsv,
@@ -1550,7 +1635,7 @@ def main():
             send_similar_articles()
 
         # update the server entries with quality/importance attributes, requires quality.tsv & importance.tsv
-        send_quality_importance_to_server=True
+        send_quality_importance_to_server=False
         if send_quality_importance_to_server:
             send_quality_importance(start_at=650000)
 
