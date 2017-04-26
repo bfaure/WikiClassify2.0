@@ -1490,11 +1490,11 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
         tsv=False
 
     max_len=120
-    max_words=20000
-    trim_under_prob=0.99
+    max_words=30000
+    trim_under_prob=0.9
 
-    start_tsv_at=615000
-    end_tsv_at=1200
+    start_tsv_at=800000
+    end_tsv_at=100
 
     zero_vector = [0.0]*300
     
@@ -1511,6 +1511,12 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
         i+=1
         f_targ_floats.write("%s%s"%(c,"\t" if i!=len(class_names) else "\n"))
 
+
+    word_dict={}
+    for line in f:
+        l=line.strip()
+        
+
     num_total=len(open(text,"r").read().split("\n"))
     dropped=0
     kept=0
@@ -1525,6 +1531,15 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
                 continue
             word=word.split("\t")[1]
 
+        if word.find("nbsp")!=-1: continue
+        if word.find("ndash")!=-1: continue 
+        if word.find("_")!=-1: continue
+        skip=False
+        for p in range(10):
+            if word.find(str(p))!=-1:
+                skip=True 
+                break
+        if skip: continue
         wordvecs=[]
         try:
             wordvec=encoder.model[word.lower()]
@@ -1544,6 +1559,7 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
             max_prob=trim_under_prob # anything under this not counted
             j=0
             for p in probs[0]:
+                #print(p)
                 if p>max_prob:
                     max_prob=p 
                     pred_class=class_names[j]
@@ -1667,7 +1683,7 @@ def main():
             encoder.load(model_dir)
             classify_content(encoder,classifier_dir)
 
-        create_classifier_samples=False 
+        create_classifier_samples=True 
         if create_classifier_samples:
             
             create_content_samples=True 
@@ -1702,7 +1718,7 @@ def main():
             similar_articles_compiler(model_dir)
 
         # update the server entries with related articles, requires similar_articled-ids.tsv
-        send_similar_articles_to_server = True
+        send_similar_articles_to_server = False
         if send_similar_articles_to_server:
             send_similar_articles()
 
