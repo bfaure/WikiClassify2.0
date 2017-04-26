@@ -839,7 +839,7 @@ def send_similar_articles():
     i=0
     for line in f:
         i+=1
-        sys.stdout.write("Creating titles dict (%d/%d)"%(i,num_lines))
+        sys.stdout.write("\rCreating titles dict (%d/%d)"%(i,num_lines))
         items=line.strip().split("\t")
         if len(items)==2:
             title_dict[int(items[0])]=items[1]
@@ -853,7 +853,7 @@ def send_similar_articles():
     i=0
     for line in f:
         i+=1
-        sys.stdout.write("Mapping similar articles (%d/%d)"%(i,num_lines))
+        sys.stdout.write("\rMapping similar articles (%d/%d)"%(i,num_lines))
         items=line.strip().split("\t")
         if len(items)==2:
             article_id.append(items[0])
@@ -873,7 +873,7 @@ def send_similar_articles():
     num_dropped=0
     for a_id,sim_str in zip(article_id,similar_articles):
         i+=1
-        sys.stdout.write("Sending to server (%d/%d) | Dropped:%d"%(i,num_total,num_dropped))        
+        sys.stdout.write("\rSending to server (%d/%d) | Dropped:%d"%(i,num_total,num_dropped))        
         cursor = server_conn.cursor()
         command = "UPDATE articles SET nearestarticles = \'"+sim_str+"\' "
         command += "WHERE id = "+str(a_id)+";"
@@ -1039,7 +1039,7 @@ def send_quality_importance_defunct():
     sys.stdout.write("\n")
     print("Done")
 
-# parsers quality.tsv and importance.tsv and sends quality and importance to server
+# parses quality.tsv and importance.tsv and sends quality and importance to server
 def send_quality_importance():
 
     if not os.path.isfile("quality.tsv"):
@@ -1075,7 +1075,7 @@ def send_quality_importance():
     i=0
     for line in f:
         i+=1
-        sys.stdout.write("Creating quality dict (%d/%d)"%(i,num_lines))
+        sys.stdout.write("\rCreating quality dict (%d/%d)"%(i,num_lines))
         items=line.strip().split("\t")
         if len(items)==2:
             quality_dict[int(items[0])]=items[1]
@@ -1088,7 +1088,7 @@ def send_quality_importance():
     i=0
     for line in f:
         i+=1
-        sys.stdout.write("Creating importance dict (%d/%d)"%(i,num_lines))
+        sys.stdout.write("\rCreating importance dict (%d/%d)"%(i,num_lines))
         items=line.strip().split("\t")
         if len(items)==2:
             importance_dict[int(items[0])]=items[1]
@@ -1101,7 +1101,7 @@ def send_quality_importance():
     num_dropped=0
     for a_id,a_qual in quality_dict.items():
         i+=1
-        sys.stdout.write("Sending to server (%d/%d) | Dropped:%d"%(i,num_total,num_dropped))      
+        sys.stdout.write("\rSending to server (%d/%d) | Dropped:%d"%(i,num_total,num_dropped))      
         a_imp=importance_dict[a_id]        
         cursor=server_conn.cursor()
         command = "UPDATE articles SET quality = \'"+a_qual+"\', importance = \'"+a_imp+"\'"
@@ -1112,6 +1112,129 @@ def send_quality_importance():
     server_conn.commit()
     sys.stdout.write("\nDone\n")
 
+# parses categories.tsv
+def largest_categories_compiler(n_largest=200,smart_combine=False):
+    if not os.path.isfile("categories.tsv"):
+        print("categories.tsv is required to run largest_categories_compiler()")
+        return
+
+    i=0
+    title_dict={}
+    f=open("titles.tsv","r")
+    for line in f:
+        i+=1
+        sys.stdout.write("\rCreating titles dict (%d/%d)"%(i,34200000))
+        items=line.strip().split("\t")
+        if len(items)==2: title_dict[int(items[0])]=items[1]
+    f.close()
+    sys.stdout.write("\n")
+
+
+    f=open("categories.tsv","r")
+    cat_size_dict={}
+    i=0
+    for line in f:
+        i+=1
+        sys.stdout.write("\rReading categories (%d/%d)"%(i,12119700))
+        items=line.strip().split("\t")
+        if len(items)==2:
+            line_cats=items[1].split(" ")
+            for l in line_cats:
+                try:
+                    temp=cat_size_dict[l]
+                    cat_size_dict[l]+=1
+                except:
+                    cat_size_dict[l]=0
+    f.close()
+    sys.stdout.write("\n")
+    print("Found %d categories"%(len(cat_size_dict)))
+
+
+    large_categories=[]
+    large_category_sizes=[]
+    seen={}
+    while len(large_categories)<n_largest:
+        sys.stdout.write("\rCompiling (%d/%d)"%(len(large_categories,n_largest)))
+        largest_size=0
+        largest_name="None"
+        for key,val in cat_size_dict.items():
+            if val>largest_size:
+                try:
+                    already_accounted_for=seen[key]
+                except:
+                    largest_size=val 
+                    largest_name=key 
+        try:
+            large_categories_strings.append(title_dict[int(largest_name)])
+            large_categories.append(largest_name)
+            large_category_sizes.append(largest_size)
+            seen[largest_name]=True 
+        except:
+            continue
+
+    f_id = open("largest_categories-ids.tsv","w")
+    f_str = open("largest_categories-string.tsv","w")
+    for i in range(len(large_category_sizes)):
+        sys.stdout.write("\rSaving largest (%d/%d)"%(i,len(large_category_sizes)))
+        c_size=large_category_sizes[i]
+        c_str=large_categories_strings[i]
+        c_id=large_categories[i]
+        f_id.write("%s\t%d\n"%(c_id,c_size))
+        f_str.write("%s\t%d\n"%(c_str,c_size))
+    f_id.close()
+    f_str.close()
+    sys.stdout.write("\n")
+
+
+    print("Writing metadata...")
+    f_meta = open("largest_categories-meta.txt","w")
+    f_meta.write("String | ID | Article Count\n\n")
+    for i in range(len(large_categories)):
+        f_meta.write("%s | %s | %d\n"%(large_categories_strings[i],large_categories[i],large_category_sizes[i]))
+    f_meta.close()
+
+
+    cat_id_to_string_dict={}
+    i=0
+    for p_id,p_str in zip(large_categories,large_categories_strings):
+        i+=1
+        sys.stdout.write("\rMapping ids to strings (%d/%d)"%(i,len(large_categories)))
+        cat_id_to_string_dict[p_id]=p_str
+    sys.stdout.write("\n")
+
+
+    f_id= open("article_categories-ids.tsv","w")
+    f_str = open("article_categories-string.tsv","w")
+
+    f=open("categories.tsv","r")
+    i=0
+    num_saved=0
+    for line in f:
+        i+=1
+        sys.stdout.write("\rMapping articles to categories (%d/%d) | %d"%(i,13119700,num_saved))
+        items=line.strip().split("\t")
+        if len(items)==2:
+            line_cats=items[1].split(" ")
+            cat_priority=None 
+            cat_id=None 
+            cat_str=None
+            for l in line_cats:
+                try:
+                    temp=cat_id_to_string_dict[l]
+                    if cat_priority==None or int(temp)<cat_priority:
+                        cat_str=title_dict[int(l)]
+                        cat_id=l 
+                        cat_priority=int(temp)
+                except:
+                    continue 
+            
+            if cat_id!=None:
+                f_str.write("%s\t%s\n"%(title_dict[int(items[0])],cat_str))
+                f_id.write("%s\t%s\n"%(items[0],cat_id))
+                num_saved+=1
+    f_id.close()
+    f_str.close()
+    sys.stdout.write("\nDone\n")
 
 def main():
     start_time = time.time()
@@ -1220,6 +1343,14 @@ def main():
             encoder.load(model_dir)
             classify_content(encoder,classifier_dir)
 
+        
+        # requires categories.tsv & titles.tsv, creates largest_categories.tsv, largest_categories-strings.tsv,
+        # largest_categories-meta.txt & article_categories.tsv
+        compile_largest_categories=True 
+        if compile_largest_categories:
+            largest_categories_compiler()
+        
+
         # requires a model and text.tsv, creates similar_articles-string.tsv & similar_articles-ids.tsv
         compile_similar_articles = False
         if compile_similar_articles:
@@ -1228,16 +1359,17 @@ def main():
             #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
             similar_articles_compiler(model_dir)
 
-        # update the server entries with related articles
+        # update the server entries with related articles, requires similar_articled-ids.tsv
         send_similar_articles_to_server = False
         if send_similar_articles_to_server:
             send_similar_articles()
 
-        # update the server entries with quality/importance attributes
+        # update the server entries with quality/importance attributes, requires quality.tsv & importance.tsv
         send_quality_importance_to_server=False
         if send_quality_importance_to_server:
             send_quality_importance()
 
+        
         # DEFUNCT
         # after parser is run, use this to map the article ids (talk ids) in quality.tsv 
         # to the article ids (real article ids) in text.tsv, saved in id_mapping.tsv
