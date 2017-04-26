@@ -11,7 +11,7 @@ long wikidump::get_server_used_bytes()
         pqxx::work size_job(*conn);
         pqxx::result size_result = size_job.exec(size_query);
         size_job.commit();
-        return std::stoi(size_result[0][0].c_str());
+        return std::stol(size_result[0][0].c_str());
     }
     else
     {

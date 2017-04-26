@@ -143,7 +143,7 @@ def get_classified_documents(
         for line in qf:
             i+=1
             if max_quality_dict_size!=-1 and i>max_quality_dict_size: break
-            sys.stdout.write("\rCreating classifications dict (%d/%d)"%(i,num_lines))
+            sys.stdout.write("\rCreating class dict (%d/%d)"%(i,num_lines))
             try:
                 article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
                 classification_dict[article_id] = article_quality
@@ -432,21 +432,27 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     class_sizes=[]
     class_map={} # from id to index in class_names_id
 
-    # load in content category strings, ids, and counts 
-    f=open("largest_categories-meta.txt","r")
-    lines = f.read().split("\n")
-    for l in lines:
-        items=l.strip().split(" | ")
-        if len(items)==3 and items[0]!="String":
-            class_map[items[0]]=len(class_names_string)
-            class_names_string.append(items[0])
-            class_names_id.append(items[1])
-            class_sizes.append(int(items[2]))
+    all_classes=False
+    if all_classes:
+        # load in content category strings, ids, and counts 
+        f=open("largest_categories-meta.txt","r")
+        lines = f.read().split("\n")
+        for l in lines:
+            items=l.strip().split(" | ")
+            if len(items)==3 and items[0]!="String":
+                class_map[items[1]]=len(class_names_string)
+                class_names_string.append(items[0])
+                class_names_id.append(items[1])
+                class_sizes.append(int(items[2]))
 
-    i=0
-    for c in class_names_string:
-        sys.stdout.write("%s\t\t%s\n"%("Classes:" if i==0 else "        ",c))
-        i+=1
+        i=0
+        for c in class_names_string:
+            sys.stdout.write("%s\t\t%s\n"%("Classes:" if i==0 else "        ",c))
+            i+=1
+
+    # custom loading of classes
+    else:
+        class_names_string=["living_people","films",""]
 
     #### SETTINGS
     dpipc=10
@@ -488,7 +494,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
 
 
-    classifier = vector_classifier_keras(class_names=class_names,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
+    classifier = vector_classifier_keras(class_names=class_names_string,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
     doc_idx = 0
     i=0
     while True:
@@ -496,13 +502,14 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
         print("\nIteration %d"%i)
         X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
-                                                class_names=class_names,
+                                                class_names=class_names_string,
                                                 class_map=class_map,
                                                 start_at=doc_idx,
                                                 remove_stop_words=remove_stop_words,
                                                 trim_vocab_to=limit_vocab_size,
                                                 replace_removed=replace_removed,
-                                                swap_with_word_idx=swap_with_word_idx )
+                                                swap_with_word_idx=swap_with_word_idx,
+                                                classifications="article_categories-ids.tsv" )
 
         last_loss=None 
         num_worse=0
@@ -1134,7 +1141,13 @@ def get_titles_dict():
         return title_dict
 
 # parses categories.tsv
-def largest_categories_compiler(n_largest=200,smart_combine=False):
+def largest_categories_compiler(n_largest=1000,smart_combine=False):
+
+    from bisect import bisect_left # for sorting
+
+    def get_row_size(row):
+        return row[1]
+
     if not os.path.isfile("categories.tsv"):
         print("categories.tsv is required to run largest_categories_compiler()")
         return
@@ -1159,6 +1172,21 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
     f.close()
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
     ###############################
+
+    num_total=len(cat_size_dict)
+    rows=[]
+    i=0
+    t0=time.time()
+    for key,val in cat_size_dict.items():
+        i+=1
+        sys.stdout.write("\rSorting categories (%d/%d)"%(i,num_total))
+        rows.append([key,val])
+    rows=sorted(rows,key=get_row_size)
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+
+    
+
+    '''
     t0=time.time()
     large_categories=[]
     large_category_sizes=[]
@@ -1170,6 +1198,7 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
         largest_size=200 # increase speed by skipping anything under this
         largest_name="None"
         for key,val in cat_size_dict.items():
+            if val<largest_size: continue
             try: already_accounted_for=seen[key]
             except:
                 if val>largest_size:
@@ -1182,6 +1211,11 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
             seen[largest_name]=True
         else: dropped+=1
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+    '''
+
+    
+
+
     ###############################
     f_id = open("largest_categories-ids.tsv","w")
     f_str = open("largest_categories-string.tsv","w")
@@ -1344,7 +1378,7 @@ def main():
             encoder.load(model_dir)
             classify_quality(encoder,classifier_dir)
 
-        train_content_classifier = True 
+        train_content_classifier = False 
         if train_content_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
@@ -1359,7 +1393,7 @@ def main():
         
         # requires categories.tsv & titles.tsv, creates largest_categories.tsv, largest_categories-strings.tsv,
         # largest_categories-meta.txt & article_categories.tsv
-        compile_largest_categories=False 
+        compile_largest_categories=True 
         if compile_largest_categories:
             largest_categories_compiler()
         

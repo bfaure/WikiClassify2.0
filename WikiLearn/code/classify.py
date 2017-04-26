@@ -234,7 +234,7 @@ class vector_classifier_keras(object):
         
         if plot:
             y_pred = make_integers(self.model.predict(test_x,batch_size=batch_size,verbose=0))
-            plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=True,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
+            plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=False,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
 
         loss, acc = self.model.evaluate(test_x, test_y_hot, batch_size=batch_size, verbose=0)
         sys.stdout.write(' - val_loss: %0.4f - val_acc: %0.1f%%\n'%(loss,100.0*acc))
@@ -472,14 +472,14 @@ def plot_confusion_matrix(y_test, y_pred, class_names, training_size, normalize=
     cm = confusion_matrix(y_test, y_pred)
     
     # Plot normalized confusion matrix
-    plt.figure(figsize=(10,10),dpi=120)
+    plt.figure(figsize=(20,20),dpi=120)
 
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names, rotation=45)
-    plt.yticks(tick_marks, class_names)
+    plt.xticks(tick_marks, class_names, rotation=45, fontsize=4)
+    plt.yticks(tick_marks, class_names, fontsize=4)
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -493,7 +493,7 @@ def plot_confusion_matrix(y_test, y_pred, class_names, training_size, normalize=
     plt.xlabel('Predicted label')
         
     if save_dir!=None:
-        plt.savefig(os.path.join(save_dir,"prediction-heatmap-%s.png"%meta),bbox_inches='tight',dpi=100)
+        plt.savefig(os.path.join(save_dir,"prediction-heatmap-%s.png"%meta),bbox_inches='tight',dpi=200)
         plt.close()
     else:
         plt.show()
