@@ -247,27 +247,27 @@ class vector_classifier_keras(object):
         self.val_log_file.flush()
 
         if plot:
-            t0=time.time()
-            sys.stdout.write("Plotting confusion matrix... ")
             y_pred = make_integers(self.model.predict(test_x,batch_size=batch_size,verbose=0))
             plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=False,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
-            sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
-
 
         if self.highest_acc==None or acc>self.highest_acc:
             self.highest_acc=acc 
-            self.model.save(os.path.join(self.directory,"%s-classifier.h5"%(self.model_type)))
-            self.save_exec_details(loss,acc)
+            self.model.save(os.path.join(self.directory,"%s-classifier-best.h5"%(self.model_type)))
+            self.exec_details_file.write("%d - Loss:%0.4f | Acc:%0.4f \n"%(int(time.time()),loss,acc))
 
         if iteration==1 and epoch==0:
             s=open(os.path.join(self.directory,"%s-classifier_architecture.json"%(self.model_type)),"w")
             s.write(self.model.to_json())
             s.close()
+
+        self.model.save(os.path.join(self.directory,"%s-classifier-last.h5"%(self.model_type)))
+
         return loss 
 
     def save_exec_details(self,loss,acc):
         cur_time=int(time.time())
         self.exec_details_file.write("%d - Loss:%0.5f Acc:%0.5f\n"%(cur_time,loss,acc))
+        self.exec_details_file.flush()
 
     def train_seq(self,X,y,test_ratio=0.2,epochs=None,batch_size=None,load_file=None):
         y_hot = make_one_hot(y)

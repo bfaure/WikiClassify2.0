@@ -106,7 +106,6 @@ def get_classified_documents(
         class_lengths[c]=0
 
     zero_vector              = [0.00]*300 # put in place of non-modeled words
-    max_quality_dict_size    = max_class_mappings # if -1, no limit, o.w. total articles limited to this
     print_sentences          = 0 # approx number of sentences to print during sentence encoding
     text                     = "text.tsv" # where to get article contents from 
     stop_words_filename      = "WikiLearn/data/stopwords/stopwords_long.txt" # source of stopwords
@@ -143,7 +142,7 @@ def get_classified_documents(
         classification_dict = {}
         for line in qf:
             i+=1
-            if max_quality_dict_size!=-1 and i>max_quality_dict_size: break
+            if max_class_mappings!=-1 and i>max_class_mappings: break
             sys.stdout.write("\rCreating class dict (%d/%d)"%(i,num_lines))
             try:
                 article_id,article_subclass = line.strip().split("\t")
@@ -182,7 +181,8 @@ def get_classified_documents(
         try:    
             #article_id, article_contents = line.decode('utf-8', errors='replace').strip().split('\t')
             article_id, article_contents = line.strip().split('\t')
-        except: continue
+        except: 
+            continue
         
         # see if this article has a quality mapping
         try: 
@@ -198,24 +198,18 @@ def get_classified_documents(
 
         # skip this article if we got farther than this on the last iteration for this class
         if seen_article_dict[art_effclass]>i: continue
-
-        # get the number we are using as the y for this quality (0,1,2,etc)
-        #qual_map = class_dict[str(qual[0])]
-        qual_map = art_effclass
         
         # if we have already loaded the maximum number of articles in this category
-        if counts[qual_map]>=seq_per_class: continue
+        if counts[art_effclass]>=seq_per_class: continue
         
         # split article into sentences
         article_sentences = article_contents.split(". ")
-        # create elems to hold entire document (if saving as single seq)
         full_doc = []
         full_doc_str = []
         doc_arr = np.zeros(shape=(max_words_per_seq,300)).astype(float)
         # iterate over each sentence in the article
         for a in article_sentences:
             if len(full_doc)>=max_words_per_seq: break
-
             cleaned_a = a.replace(","," ").replace("(","").replace(")","")
             cleaned_a = cleaned_a.replace("&nbsp;","").replace("   "," ")
             cleaned_a = cleaned_a.replace("  "," ").lower()
@@ -254,7 +248,7 @@ def get_classified_documents(
         if len(full_doc)<min_words_per_seq: continue 
         # print out doc maybe
         if random.randint(0,approx_total)<print_sentences:
-            sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[qual_map],''.join(e+" " for e in full_doc_str[:10])+"..."))
+            sys.stdout.write("\rExample %s sentence (decoded): %s\n"%(class_pretty[art_effclass],''.join(e+" " for e in full_doc_str[:10])+"..."))
         # populate numpy array with full_doc contents
         for q in range(len(full_doc)):
             if q==max_words_per_seq: break
@@ -263,12 +257,12 @@ def get_classified_documents(
         # add document/quality to total found so far
         x.append(doc_arr)
         y.append(art_eff_y)
-        counts[qual_map]+=1
-        class_lengths[qual_map]+=len(full_doc)
+        counts[art_effclass]+=1
+        class_lengths[art_effclass]+=len(full_doc)
         num_loaded+=1 
 
         # check if this class is now full
-        if counts[qual_map]>=seq_per_class:
+        if counts[art_effclass]>=seq_per_class:
             # take note of current location in file for next iteration
             seen_article_dict[art_effclass]=i+1
 
@@ -340,8 +334,6 @@ def classify_importance(encoder,directory,gif=True,model_type="lstm"):
     # tagged class : index of name in class_names (to treat it as)
     class_map = {"top":0,"high":1,"mid":2,"low":3}
 
-    model_type = "lstm"
-
     class_str = ""
     for c in class_names:
         class_str+=c
@@ -349,15 +341,8 @@ def classify_importance(encoder,directory,gif=True,model_type="lstm"):
     sys.stdout.write("Classes:\t\t%s\n"% (class_str))
 
     #### SETTINGS
-    #dpipc=10
-    #dpipc = 213 # documents per iteration per class, limited by available memory
-    #dpipc = 320
-    #dpipc = 640
     dpipc = 960
-    #dpipc = 1280
-    #min_words = 90 # trim any documents with less than this many words
     min_words = 2
-    #max_word=100
     max_words = 120 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
     max_class_mappings = 100000 # max items to load
@@ -376,7 +361,6 @@ def classify_importance(encoder,directory,gif=True,model_type="lstm"):
             print("WARNING: limit_vocab_size must be non -1 for CNN")
             sys.exit(0)
         remove_stop_words=True
-        #replace_removed=True
         swap_with_word_idx=False
 
     sys.stdout.write("Model Type:        \t%s\n"%model_type)
@@ -391,15 +375,19 @@ def classify_importance(encoder,directory,gif=True,model_type="lstm"):
     sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
     sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
 
-
     classifier = vector_classifier_keras(class_names=class_names,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
-    doc_idx = 0
-    i=0
-    while True:
-        i+=1
+    last_loss=None 
 
-        print("\nIteration %d"%i)
-        X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
+    for j in range(epochs):
+
+        reset_corpus()
+        doc_idx=0
+        i=0
+
+        while True:
+            i+=1
+            print("\nEpoch:%d | Iteration: %d | doc_idx: %d"%(j,i,doc_idx))
+            X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
                                                 class_names=class_names,
                                                 class_map=class_map,
                                                 start_at=doc_idx,
@@ -410,28 +398,12 @@ def classify_importance(encoder,directory,gif=True,model_type="lstm"):
                                                 classifications=classifications,
                                                 max_class_mappings=max_class_mappings )
 
-        last_loss=None 
-        num_worse=0
-        for j in range(epochs):
-            #plot = True if j==epochs-1 else False
-            plot=True
-            loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
-            if last_loss==None: last_loss=loss 
-            else:
-                if loss>last_loss:
-                    num_worse+=1
-                else:
-                    num_worse=0
-            if num_worse>1:
-                break
-
-        if doc_idx==-1: break
+            loss=classifier.train_seq_iter(X,y,i,j,plot=True)
+            if doc_idx==-1: break
 
     # write out ordered gif of all items in picture directory (heatmaps)
     if gif: make_gif(classifier.pic_dir)
-
     sys.stdout.write("\nReached end of text.tsv")
-    #test_model_interactive(classifier,encoder)
 
 def classify_content(encoder,directory,gif=True,model_type="lstm"):
     if not os.path.exists(directory): os.makedirs(directory)
@@ -467,10 +439,8 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
             sys.stdout.write("%s\t\t%s\n"%("Classes:" if i==0 else "        ",c))
             i+=1
 
-    # custom loading of classes
-    else:
-
-        #  "space" --> #[ "moon","planet"],\
+    custom_classes=False 
+    if custom_classes:
 
         class_names_string=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
 
@@ -559,14 +529,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
     #### SETTINGS
     dpipc=150
-
-    #dpipc = 213 # documents per iteration per class, limited by available memory
-    #dpipc = 320
-    #dpipc = 640
-    #dpipc = 1280
-    #min_words = 90 # trim any documents with less than this many words
     min_words = 2
-    #max_word=100
     max_words = 120 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
     limit_vocab_size = -1 # if !=-1, trim vocab to 'limit_vocab_size' words
@@ -582,7 +545,6 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
             print("WARNING: limit_vocab_size must be non -1 for CNN")
             sys.exit(0)
         remove_stop_words=True
-        #replace_removed=True
         swap_with_word_idx=False
 
     sys.stdout.write("Model Type:        \t%s\n"%model_type)
@@ -627,9 +589,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
     # write out ordered gif of all items in picture directory (heatmaps)
     if gif: make_gif(classifier.pic_dir)
-
     sys.stdout.write("\nReached end of text.tsv")
-    #test_model_interactive(classifier,encoder)
 
 def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
     if not os.path.exists(directory): os.makedirs(directory)
@@ -639,14 +599,21 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
     directory = os.path.join(directory,str(cur_time))
 
     # all output quality classes
+    class_names = ["good","mediocre","poor"]
+    # tagged class : index of name in class_names (to treat it as)
+    class_map = {"fa":0,"a":0,"ga":0,"bplus":0,"b":1,"c":2,"stub":2}
+
+    # all output quality classes
     #class_names = ["featured","good","mediocre","poor"]
     # tagged class : index of name in class_names (to treat it as)
     #class_map = {"fa":0,"a":0,"ga":1,"bplus":1,"b":1,"c":2,"start":3,"stub":3}
 
-    # all output quality classes
-    class_names = ["featured","good","mediocre","poor"]
-    # tagged class : index of name in class_names (to treat it as)
-    class_map = {"fa":0,"a":0,"ga":1,"bplus":1,"b":1,"c":2,"start":3,"stub":3}
+    #class_names=["Featured","A","Good","B+","B","C","Start","Stub"]
+    #class_map = {"fa":0,"a":1,"ga":2,"bplus":3,"b":4,"c":5,"start":6,"stub":7}
+
+    #class_names=["Good","Poor"]
+    #class_map = {"fa":0,"a":0,"ga":0,"bplus":0,"b":0,"c":1,"stub":1}
+
 
     class_str = ""
     for c in class_names:
@@ -655,22 +622,15 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
     sys.stdout.write("Classes:\t\t%s\n"% (class_str))
 
     #### SETTINGS
-    #dpipc=10
-    #dpipc = 213 # documents per iteration per class, limited by available memory
-    #dpipc = 320
-    #dpipc = 640
     dpipc = 960
-    #dpipc = 1280
-    #min_words = 90 # trim any documents with less than this many words
     min_words = 2
-    #max_word=100
     max_words = 120 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
-    limit_vocab_size = 3000 # if !=-1, trim vocab to 'limit_vocab_size' words
+    limit_vocab_size = 500 # 3000 # location at which to start allowing words in word_list.tsv
     batch_size = None    # if None, defaults to whats set in classify.py, requires vram
     replace_removed = True # replace words not found in model with zero vector
     swap_with_word_idx = False
-    epochs=1
+    epochs=5
     ####
 
     # if using CNN, this must be non -1
@@ -679,7 +639,6 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
             print("WARNING: limit_vocab_size must be non -1 for CNN")
             sys.exit(0)
         remove_stop_words=True
-        #replace_removed=True
         swap_with_word_idx=False
 
     sys.stdout.write("Model Type:        \t%s\n"%model_type)
@@ -696,43 +655,31 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
 
 
     classifier = vector_classifier_keras(class_names=class_names,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
-    doc_idx = 0
-    i=0
-    while True:
-        i+=1
 
-        print("\nIteration %d"%i)
-        X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
-                                                class_names=class_names,
-                                                class_map=class_map,
-                                                start_at=doc_idx,
-                                                remove_stop_words=remove_stop_words,
-                                                trim_vocab_to=limit_vocab_size,
-                                                replace_removed=replace_removed,
-                                                swap_with_word_idx=swap_with_word_idx )
+    last_loss=None 
+    for j in range(epochs):
 
-        last_loss=None 
-        num_worse=0
-        for j in range(epochs):
-            #plot = True if j==epochs-1 else False
-            plot=True
-            loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
-            if last_loss==None: last_loss=loss 
-            else:
-                if loss>last_loss:
-                    num_worse+=1
-                else:
-                    num_worse=0
-            if num_worse>1:
-                break
-
-        if doc_idx==-1: break
+        reset_corpus()
+        doc_idx=0
+        i=0
+        while True:
+            i+=1
+            print("\nEpoch:%d | Iteration: %d | doc_idx: %d"%(j,i,doc_idx))
+            X,y,doc_idx = get_classified_documents(    encoder, dpipc, min_words, max_words,
+                                        class_names=class_names,
+                                        class_map=class_map,
+                                        start_at=doc_idx,
+                                        remove_stop_words=remove_stop_words,
+                                        trim_vocab_to=limit_vocab_size,
+                                        replace_removed=replace_removed,
+                                        swap_with_word_idx=swap_with_word_idx )
+            
+            loss=classifier.train_seq_iter(X,y,i,j,plot=True)
+            if doc_idx==-1: break # if at end of the corpus 
 
     # write out ordered gif of all items in picture directory (heatmaps)
     if gif: make_gif(classifier.pic_dir)
-
     sys.stdout.write("\nReached end of text.tsv")
-    #test_model_interactive(classifier,encoder)
 
 def test_classifier(classifier,encoder):
     print("\nEnter sentences to test model (q to quit)...")
@@ -1577,6 +1524,80 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
     sys.stdout.write("Done\n")
 
+def build_category_tree():
+    if not os.path.isfile("category_parents-string.tsv"):
+        title_dict={}
+        i=0
+        f=open("titles.tsv","r")
+        for line in f:
+            i+=1
+            sys.stdout.write("\rMappings titles.tsv (%d/%d)"%(i,32000000))
+            items=line.strip().split("\t")
+            if len(items)==2:
+                title_dict[int(items[0])]=items[1]
+        f.close()
+        sys.stdout.write("\n")
+
+        f=open("category_parents.tsv","r")
+        dest=open("category_parents-string.tsv","w")
+
+        j=0
+        dropped=0
+        for line in f:
+            j+=1
+            sys.stdout.write("\rSaving category parents strings (%d) | Dropped:%d"%(j,dropped))
+            items=line.strip().split("\t")
+            try:
+                for i in range(len(items)):
+                    dest.write("%s%s"%(title_dict[int(items[i])],"\t" if i!=len(items)-1 else "\n"))
+            except:
+                dropped+=1
+        f.close()
+        dest.close()
+        sys.stdout.write("\n")
+
+    f=open("category_parents-string.tsv","r")
+
+    category_children={}
+
+    i=0
+    for line in f:
+        i+=1
+        sys.stdout.write("\rAssembling category parents %d"%i)
+        items=line.strip().split("\t")
+        if len(items)>1:
+            for p in items[1:]:
+                try:
+                    temp=category_children[p]
+                    category_children[p].append(items[0])
+                except:
+                    category_children[p]=[items[0]]
+    f.close()
+    sys.stdout.write("\n")
+
+    cat_sizes=[]
+    print("Sorting categories by number of children")
+    i=0
+    for key,value in category_children.items():
+        cat_sizes.append([key,len(value)])
+        i+=1
+
+    def get_size(row):
+        return row[1]
+
+    cat_sizes=sorted(cat_sizes,key=get_size,reverse=True)
+
+    f=open("category_children-string.tsv","w")
+    i=0
+    for key,_ in cat_sizes:
+        i+=1
+        sys.stdout.write("\rSaving %d"%i)
+        f.write("%s\t"%key)
+        children=category_children[key]
+        for c in children:
+            f.write("%s%s"%(c,"\t" if children.index(c)!=len(children)-1 else "\n"))
+    f.close()
+    sys.stdout.write("\nDone\n")
 
 def main():
     start_time = time.time()
@@ -1597,6 +1618,11 @@ def main():
 
     # if we have a copy of the parsed datadump
     if os.path.isfile('text.tsv'):
+
+        tree=True 
+        if tree:
+            build_category_tree()
+            return
 
         # trains a new Doc2Vec encoder on the contents of text.tsv
         run_doc2vec = False
@@ -1659,13 +1685,13 @@ def main():
             encoder.load(model_dir)
             classify_importance(encoder,classifier_dir)
 
-        train_quality_classifier = False
+        train_quality_classifier = True
         if train_quality_classifier:
             #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
             #model_dir = get_most_recent_model('/home/bfaure/Desktop/WikiClassify2.0/WikiLearn/data/models/doc2vec')
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
-            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
             # directory to save classifier to
             classifier_dir = "WikiLearn/data/models/classifier/quality" 
@@ -1685,7 +1711,7 @@ def main():
             encoder.load(model_dir)
             classify_content(encoder,classifier_dir)
 
-        create_classifier_samples=True 
+        create_classifier_samples=False 
         if create_classifier_samples:
             
             create_content_samples=True 
