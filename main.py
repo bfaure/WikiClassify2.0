@@ -1129,7 +1129,7 @@ def send_quality_importance_defunct():
     print("Done")
 
 # parses quality.tsv and importance.tsv and sends quality and importance to server
-def send_quality_importance():
+def send_quality_importance(start_at=0):
 
     if not os.path.isfile("quality.tsv"):
         print("File quality.tsv must be present to perform this task")
@@ -1199,6 +1199,8 @@ def send_quality_importance():
     sent=0
     for a_id,a_qual in quality_dict.items():
         i+=1
+
+        if i<start_at: continue
 
         sys.stdout.write("\rPreparing server data (%d/%d) | Dropped:%d | Sent:%d"%(i,num_total,num_dropped,sent))      
         a_imp=importance_dict[a_id]
@@ -1513,7 +1515,7 @@ def main():
             encoder.load(model_dir)
             classify_quality(encoder,classifier_dir)
 
-        train_content_classifier = True 
+        train_content_classifier = False 
         if train_content_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
@@ -1548,9 +1550,9 @@ def main():
             send_similar_articles()
 
         # update the server entries with quality/importance attributes, requires quality.tsv & importance.tsv
-        send_quality_importance_to_server=False
+        send_quality_importance_to_server=True
         if send_quality_importance_to_server:
-            send_quality_importance()
+            send_quality_importance(start_at=650000)
 
         
         # DEFUNCT
