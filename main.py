@@ -427,39 +427,32 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     cur_time = int(time.time())
     directory = os.path.join(directory,str(cur_time))
 
-    class_names_string = []
+    class_names_string=[]
+    class_names_id=[]
+    class_sizes=[]
+    class_map={} # from id to index in class_names_id
 
-    f = open("largest_categories-string.tsv","r")
-    for line in f:
-        items = line.strip().split("\t")
-        if len(items)==2:
+    # load in content category strings, ids, and counts 
+    f=open("largest_categories-meta.txt","r")
+    lines = f.read().split("\n")
+    for l in lines:
+        items=l.strip().split(" | ")
+        if len(items)==3 and items[0]!="String":
+            class_map[items[0]]=len(class_names_string)
             class_names_string.append(items[0])
-    f.close()
-
-    class_names=[]
-    class_map = {}
+            class_names_id.append(items[1])
+            class_sizes.append(int(items[2]))
 
     i=0
-    f = open("largest_categories.tsv","r")
-    for line in f:
-        items = line.strip().split("\t")
-        if len(items)==2:
-            class_names.append(items[0])
-            class_map[items[0]]=i 
-            i+=1
-    f.close()
-
     for c in class_names_string:
-        class_str+=c
-        if class_names_string.index(c)!=len(class_names_string)-1: class_str+=" | "
-    sys.stdout.write("Classes:\t\t%s\n"% (class_str))
+        sys.stdout.write("%s\t\t%s\n"%("Classes:" if i==0 else "        ",c))
+        i+=1
 
     #### SETTINGS
-    #dpipc=10
+    dpipc=10
     #dpipc = 213 # documents per iteration per class, limited by available memory
     #dpipc = 320
     #dpipc = 640
-    dpipc = 960
     #dpipc = 1280
     #min_words = 90 # trim any documents with less than this many words
     min_words = 2
@@ -534,7 +527,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     sys.stdout.write("\nReached end of text.tsv")
     #test_model_interactive(classifier,encoder)
 
-def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
+def classify_quality(encoder=None, directory=None, gif=True, model_type="lstm"):
     if not os.path.exists(directory): os.makedirs(directory)
 
     print("\nClassifying quality by word-vector sequences...\n")
@@ -550,8 +543,6 @@ def classify_quality(encoder=None, directory=None, gif=True, model_type="cnn"):
     class_names = ["featured","good","mediocre","poor"]
     # tagged class : index of name in class_names (to treat it as)
     class_map = {"fa":0,"a":0,"ga":1,"bplus":1,"b":1,"c":2,"start":3,"stub":3}
-
-    model_type = "lstm"
 
     class_str = ""
     for c in class_names:
@@ -1353,7 +1344,7 @@ def main():
             encoder.load(model_dir)
             classify_quality(encoder,classifier_dir)
 
-        train_content_classifier = False 
+        train_content_classifier = True 
         if train_content_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
@@ -1368,7 +1359,7 @@ def main():
         
         # requires categories.tsv & titles.tsv, creates largest_categories.tsv, largest_categories-strings.tsv,
         # largest_categories-meta.txt & article_categories.tsv
-        compile_largest_categories=True 
+        compile_largest_categories=False 
         if compile_largest_categories:
             largest_categories_compiler()
         
