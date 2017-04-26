@@ -1117,25 +1117,28 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
     if not os.path.isfile("categories.tsv"):
         print("categories.tsv is required to run largest_categories_compiler()")
         return
-
+    ###############################
+    t0=time.time()
     i=0
+    dropped=0
     title_dict={}
     f=open("titles.tsv","r")
     for line in f:
         i+=1
-        sys.stdout.write("\rCreating titles dict (%d/%d)"%(i,34200000))
+        sys.stdout.write("\rCreating titles dict (%d/%d) | Dropped:%d"%(i,34178963,dropped))
         items=line.strip().split("\t")
-        if len(items)==2: title_dict[int(items[0])]=items[1]
+        if len(items)==2: title_dict[items[0]]=items[1]
+        else: dropped+=1
     f.close()
-    sys.stdout.write("\n")
-
-
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+    ###############################
+    t0=time.time()
     f=open("categories.tsv","r")
     cat_size_dict={}
     i=0
     for line in f:
         i+=1
-        sys.stdout.write("\rReading categories (%d/%d)"%(i,12119700))
+        sys.stdout.write("\rReading categories (%d/%d)"%(i,14697972))
         items=line.strip().split("\t")
         if len(items)==2:
             line_cats=items[1].split(" ")
@@ -1143,35 +1146,33 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
                 try:
                     temp=cat_size_dict[l]
                     cat_size_dict[l]+=1
-                except:
-                    cat_size_dict[l]=0
+                except: cat_size_dict[l]=0
     f.close()
-    sys.stdout.write("\n")
-    print("Found %d categories"%(len(cat_size_dict)))
-
-
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+    ###############################
+    t0=time.time()
     large_categories=[]
     large_category_sizes=[]
+    large_categories_strings=[]
+    dropped=0
     seen={}
     while len(large_categories)<n_largest:
-        sys.stdout.write("\rCompiling (%d/%d)"%(len(large_categories,n_largest)))
+        sys.stdout.write("\rCompiling (%d/%d) | Dropped:%d"%(len(large_categories),n_largest,dropped))
         largest_size=0
         largest_name="None"
         for key,val in cat_size_dict.items():
-            if val>largest_size:
-                try:
-                    already_accounted_for=seen[key]
-                except:
+            try: already_accounted_for=seen[key]
+            except:
+                if val>largest_size:
                     largest_size=val 
-                    largest_name=key 
-        try:
-            large_categories_strings.append(title_dict[int(largest_name)])
+                    largest_name=key
+        if largest_name!="None":
+            large_categories_strings.append(title_dict[largest_name])
             large_categories.append(largest_name)
             large_category_sizes.append(largest_size)
-            seen[largest_name]=True 
-        except:
-            continue
-
+        else: dropped+=1
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+    ###############################
     f_id = open("largest_categories-ids.tsv","w")
     f_str = open("largest_categories-string.tsv","w")
     for i in range(len(large_category_sizes)):
@@ -1184,15 +1185,13 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
     f_id.close()
     f_str.close()
     sys.stdout.write("\n")
-
-
+    ###############################
     print("Writing metadata...")
     f_meta = open("largest_categories-meta.txt","w")
     f_meta.write("String | ID | Article Count\n\n")
     for i in range(len(large_categories)):
         f_meta.write("%s | %s | %d\n"%(large_categories_strings[i],large_categories[i],large_category_sizes[i]))
     f_meta.close()
-
 
     cat_id_to_string_dict={}
     i=0
@@ -1201,17 +1200,16 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
         sys.stdout.write("\rMapping ids to strings (%d/%d)"%(i,len(large_categories)))
         cat_id_to_string_dict[p_id]=p_str
     sys.stdout.write("\n")
-
-
+    ###############################
     f_id= open("article_categories-ids.tsv","w")
     f_str = open("article_categories-string.tsv","w")
-
+    t0=time.time()
     f=open("categories.tsv","r")
     i=0
     num_saved=0
     for line in f:
         i+=1
-        sys.stdout.write("\rMapping articles to categories (%d/%d) | %d"%(i,13119700,num_saved))
+        sys.stdout.write("\rMapping articles to categories (%d/%d) | Saved:%d"%(i,13119700,num_saved))
         items=line.strip().split("\t")
         if len(items)==2:
             line_cats=items[1].split(" ")
@@ -1222,16 +1220,15 @@ def largest_categories_compiler(n_largest=200,smart_combine=False):
                 try:
                     temp=cat_id_to_string_dict[l]
                     if cat_priority==None or int(temp)<cat_priority:
-                        cat_str=title_dict[int(l)]
+                        cat_str=title_dict[l]
                         cat_id=l 
                         cat_priority=int(temp)
-                except:
-                    continue 
-            
+                except: continue 
             if cat_id!=None:
-                f_str.write("%s\t%s\n"%(title_dict[int(items[0])],cat_str))
+                f_str.write("%s\t%s\n"%(title_dict[items[0]],cat_str))
                 f_id.write("%s\t%s\n"%(items[0],cat_id))
                 num_saved+=1
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
     f_id.close()
     f_str.close()
     sys.stdout.write("\nDone\n")
