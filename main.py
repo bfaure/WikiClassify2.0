@@ -1491,10 +1491,10 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
 
     max_len=120
     max_words=30000
-    trim_under_prob=0.9
+    trim_under_prob=0.7
 
-    start_tsv_at=800000
-    end_tsv_at=100
+    start_tsv_at =1000000
+    end_tsv_at   =3000
 
     zero_vector = [0.0]*300
     
@@ -1511,11 +1511,11 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
         i+=1
         f_targ_floats.write("%s%s"%(c,"\t" if i!=len(class_names) else "\n"))
 
-
+    '''
     word_dict={}
     for line in f:
         l=line.strip()
-        
+    '''
 
     num_total=len(open(text,"r").read().split("\n"))
     dropped=0
@@ -1534,6 +1534,7 @@ def generate_classifier_samples(classifier,class_names,encoder,text="20k_most_co
         if word.find("nbsp")!=-1: continue
         if word.find("ndash")!=-1: continue 
         if word.find("_")!=-1: continue
+        
         skip=False
         for p in range(10):
             if word.find(str(p))!=-1:
