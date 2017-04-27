@@ -352,7 +352,108 @@ class vector_classifier_keras(object):
         print("\nAccuracy: %0.5f" % score[1])
         """
 
-    def train(self, X, y, test_ratio=0.2):
+    def train_doc_iter(self,X,y,iteration,epoch,test_ratio=0.2,batch_size=None,plot=False,load_file=None):
+
+        p = np.random.permutation(X.shape[0])
+        X,y = X[p], y[p]
+
+        y_hot = make_one_hot(y)
+
+        num_samples = X.shape[0]
+        input_dim = X.shape[1]
+        output_dim = y_hot.shape[1]
+        test_size = int(num_samples*test_ratio)
+        train_size=num_samples-test_size 
+
+        if iteration==1 and epoch==0:
+            print("Train/Test split: %d | %d"%(train_size,test_size))
+
+        test_y_hot = y_hot[train_size:]
+        test_y = y[train_size:]
+        test_x = X[train_size:]
+
+        train_x = X[0:train_size]
+        train_y = y[0:train_size]
+        train_y_hot = y_hot[0:train_size]
+
+        batch_size=50000
+        train_batch_extra = train_size%batch_size
+
+        if iteration==1 and epoch==0:
+            print("Using batch size: %d" % batch_size)
+
+        if self.model==None:
+            '''
+            self.model = Sequential()
+            self.model.add(LSTM(input_dim*10),input_shape=(1,input_dim))
+            self.model.add(Dropout(0.3))
+            self.model.add(Dense(output_dim))
+            self.model.add(Activation("sigmoid"))
+            if load_file!=None: self.model.load_weights(load_file)
+            print("Compiling model...")
+            sys.stdout.flush()
+            self.model.compile(loss="binary_crossentropy",optimizer="adam",metrics=['accuracy'])
+            '''
+            self.model=Sequential()
+            self.model.add(Dense(64,activation='relu',input_dim=input_dim))
+            self.model.add(Dropout(0.5))
+            self.model.add(Dense(64,activation='relu'))
+            self.model.add(Dropout(0.5))
+            self.model.add(Dense(output_dim,activation='softmax')) # output layer
+            sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+            if load_file!=None: self.model.load_weights(load_file)
+            print("Compiling model...")
+            self.model.compile(loss='binary_crossentropy',optimizer=sgd,metrics=['accuracy'])
+
+        num_batches = train_size/batch_size
+        start_time = time.time()
+        for i in range(num_batches):
+            num_items = int( float(i+1)/float(num_batches)*float(30) )
+            progress_string = "Epoch %d (%d/%d)" % (epoch,(i+1)*batch_size,train_size)
+            while len(progress_string)<15:
+                progress_string+=" "
+            progress_string+="["
+
+            for prog_index in range(30):
+                if prog_index<=num_items: progress_string+="="
+                else: progress_string += "."
+            progress_string += "]"
+
+            t0 = i*batch_size 
+            t1 = t0+batch_size
+
+            loss,acc = self.model.train_on_batch(train_x[t0:t1],train_y_hot[t0:t1],class_weight='auto')
+
+            progress_string += " - %ds"% int(time.time()-start_time)
+            progress_string += " - loss: %0.4f - acc: %0.1f%%"%(loss,100.0*acc)
+            sys.stdout.write("\r%s"%progress_string)
+
+            self.log_file.write("%0.5f\t%0.1f\n"%(loss,100.0*acc)) # write data to log file
+            self.log_file.flush()
+
+        if train_batch_extra!=0:
+            s_pt = train_size-train_batch_extra
+            self.model.train_on_batch(train_x[s_pt:],train_y_hot[s_pt:],class_weight='auto')
+
+        loss, acc = self.model.evaluate(test_x, test_y_hot, batch_size=10000, verbose=0)
+        sys.stdout.write(' - val_loss: %0.4f - val_acc: %0.1f%%\n'%(loss,100.0*acc))
+
+        self.val_log_file.write("%0.5f\t%0.1f\n"%(loss,100.0*acc))
+        self.val_log_file.flush()
+
+        if plot:
+            y_pred = make_integers(self.model.predict(test_x,verbose=0))
+            plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=True,save_dir=self.pic_dir,meta="Epoch:%d-Iter:%d"%(epoch,iteration))
+
+        if iteration==1 and epoch==0:
+            s=open(os.path.join(self.directory,"%s-classifier_architecture.json"%(self.model_type)),"w")
+            s.write(self.model.to_json())
+            s.close()
+
+        #self.model.save(os.path.join(self.directory,"%s-classifier-last.h5"%(self.model_type)))
+        return loss 
+
+    def train_doc(self, X, y, test_ratio=0.2):
 
         y_hot = make_one_hot(y)
 
