@@ -248,7 +248,12 @@ class vector_classifier_keras(object):
 
         if plot:
             y_pred = make_integers(self.model.predict(test_x,batch_size=batch_size,verbose=0))
-            plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=False,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
+            
+            old_save_format=False
+            if old_save_format:
+                plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=False,save_dir=self.pic_dir,meta="Iter:%d-Epoch:%d"%(iteration,epoch))
+            else:
+                plot_confusion_matrix(test_y,y_pred,self.class_names,10,normalize=False,save_dir=self.pic_dir,meta="Epoch:%d-Iter:%d"%(epoch,iteration))
 
         if self.highest_acc==None or acc>self.highest_acc:
             self.highest_acc=acc 

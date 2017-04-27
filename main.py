@@ -304,9 +304,15 @@ def make_gif(parent_folder,frame_duration=0.3):
         lowest = 10000000
         lowest_idx = -1
         for p in png_filenames:
-            iter_val = int(p.split("-")[2].split(":")[1])
-            epoch_val = int(p.split("-")[3].split(":")[1].split(".")[0])
-            val = float(iter_val)+0.1*epoch_val
+            old_save_format=False 
+            if old_save_format:
+                iter_val = int(p.split("-")[2].split(":")[1])
+                epoch_val = int(p.split("-")[3].split(":")[1].split(".")[0])
+                val = float(iter_val)+0.1*epoch_val
+            else:
+                iter_val = int(p.split("-")[3].split(":")[1].split(".")[0])
+                epoch_val = int(p.split("-")[2].split(":")[1])
+                val = float(epoch_val)+0.1*iter_val
 
             if lowest_idx==-1 or val<lowest:
                 lowest = val
@@ -346,11 +352,11 @@ def classify_importance(encoder,directory,gif=True,model_type="lstm"):
     max_words = 120 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
     max_class_mappings = 100000 # max items to load
-    limit_vocab_size = 3000 # if !=-1, trim vocab to 'limit_vocab_size' words
+    limit_vocab_size = 1000 # if !=-1, trim vocab to 'limit_vocab_size' words
     batch_size = None    # if None, defaults to whats set in classify.py, requires vram
     replace_removed = True # replace words not found in model with zero vector
     swap_with_word_idx = False
-    epochs=1
+    epochs=50
     ####
 
     classifications = "importance.tsv"
@@ -955,23 +961,6 @@ def send_similar_articles(start_at=0):
 
     sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
     sys.stdout.write("\nDone\n")
-
-    '''
-    i=0
-    num_total=len(article_id)
-    num_dropped=0
-    for a_id,sim_str in zip(article_id,similar_articles):
-        i+=1
-        sys.stdout.write("\rSending to server (%d/%d) | Dropped:%d"%(i,num_total,num_dropped))        
-        cursor = server_conn.cursor()
-        command = "UPDATE articles SET nearestarticles = \'"+sim_str+"\' "
-        command += "WHERE id = "+str(a_id)+";"
-        try:    cursor.execute(command)
-        except: num_dropped+=1
-        cursor.close()
-    server_conn.commit()
-    sys.stdout.write("\nDone\n")
-    '''
 
 # parsers quality.tsv and importance.tsv and sends quality and importance to server
 # defunct because it relies on id_mapping.tsv which we no longer use, see the new
@@ -1626,7 +1615,7 @@ def main():
     # if we have a copy of the parsed datadump
     if os.path.isfile('text.tsv'):
 
-        tree=True 
+        tree=False 
         if tree:
             build_category_tree()
             return
@@ -1678,13 +1667,11 @@ def main():
             encoder.load(model_dir)
             test_classifier(classifier,encoder) 
 
-        train_importance_classifier=False
+        train_importance_classifier=True
         if train_importance_classifier:
-
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
-            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"            
-
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"            
             # directory to save classifier to
             classifier_dir = "WikiLearn/data/models/classifier/importance" 
 
@@ -1692,7 +1679,7 @@ def main():
             encoder.load(model_dir)
             classify_importance(encoder,classifier_dir)
 
-        train_quality_classifier = True
+        train_quality_classifier = False
         if train_quality_classifier:
             #model_dir = get_most_recent_model('WikiLearn/data/models/doc2vec')
             #model_dir = get_most_recent_model('/home/bfaure/Desktop/WikiClassify2.0/WikiLearn/data/models/doc2vec')
@@ -1721,7 +1708,7 @@ def main():
         create_classifier_samples=False 
         if create_classifier_samples:
             
-            create_content_samples=True 
+            create_content_samples=False 
             if create_content_samples:
                 classifier_t = get_most_recent_classifier("content")
                 model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
@@ -1734,6 +1721,17 @@ def main():
 
                 class_names=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
                 generate_classifier_samples(classifier_t,class_names,encoder,text=src_words)
+
+            create_quality_samples=True 
+            if create_quality_samples:
+                classifier_t = get_most_recent_classifier("quality")
+                model_dir="/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+                encoder=doc2vec()
+                encoder.load(model_dir)
+
+                src_words="WikiLearn/data/models/dictionary/text/word_list.tsv"
+                class_names=[""]
+                ### WIP
 
         
         # requires categories.tsv & titles.tsv, creates largest_categories.tsv, largest_categories-strings.tsv,
