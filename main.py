@@ -590,7 +590,7 @@ def classify_us_state(encoder,directory,gif=True,model_type="lstm"):
     class_names_string=[]
     class_names_id=[]
     class_sizes=[]
-    class_map={} # from id to index in class_names_id
+    class_map={} 
 
     cat_tree=False 
     if cat_tree:
@@ -629,6 +629,7 @@ def classify_us_state(encoder,directory,gif=True,model_type="lstm"):
             line = line.strip().lower().replace(" ","_")
             if len(line)>2:
                 us_states.append(line)
+        s_f.close()
 
         class_names_string=us_states 
 
@@ -709,7 +710,7 @@ def classify_us_state(encoder,directory,gif=True,model_type="lstm"):
             i+=1
 
     #### SETTINGS
-    dpipc=80
+    dpipc=160
     min_words = 2
     max_words = 120 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
@@ -801,13 +802,15 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     if all_classes:
         limit=100
         # load in content category strings, ids, and counts 
-        f=open("largest_categories-meta.txt","r")
+        #f=open("largest_categories-meta.txt","r")
+        f=open("sorted_categories.tsv","r")
         lines = f.read().split("\n")
         i=0
         for l in lines:
             i+=1
             if i>limit: break
-            items=l.strip().split(" | ")
+            #items=l.strip().split(" | ")
+            items=l.strip().split("\t")
             if len(items)==3 and items[0]!="String":
                 class_map[items[1]]=len(class_names_string)
                 class_names_string.append(items[0])
@@ -820,8 +823,165 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
             sys.stdout.write("%s\t\t%s\n"%("Classes:" if i==0 else "        ",c))
             i+=1
 
-    custom_classes=True 
+
+    # read from titles.tsv and search actual titles rather than categories here
+    custom_from_titles=True
+    if custom_from_titles:
+        
+        if os.path.isfile("mapped-std_categories.txt"):
+            print("Loading mapped articles...")
+            f=open("mapped-std_categories.txt","r")
+            class_names_string=[]
+            class_map={}
+            class_tags=[]
+            contained_classes
+
+
+        else:
+            f_dest=open("mapped-std_categories.txt","w")
+            f=open("std_categories.txt","r")
+            class_names_string=[]
+            class_map={}
+            class_tags=[]
+            contained_classes={}
+
+            cur_class_tags=[]
+            last_line=None 
+            comment=False
+            for line in f:
+                line=line.strip()
+                if line=="/*":
+                    comment=True 
+                    continue 
+                if line=="*/":
+                    comment=False 
+                    continue
+                if comment:
+                    continue
+
+                if last_line==None:
+                    #class_names_string.append(line)
+                    last_line=line
+                    continue 
+
+                if line=="=":
+                    class_names_string.append(last_line)
+                    contained_classes[last_line]=[]
+                    continue
+                
+                if line=="]":
+                    class_tags.append(cur_class_tags)
+                    cur_class_tags=[]
+                    continue
+
+                last_line=last_line.lower().replace(" ","_").replace("&","&amp;")
+
+                for line_tag in last_line.split("/"):
+                    for line_tag2 in line_tag.split("&"):
+                        class_map[line_tag2]=len(class_names_string)-1
+                        contained_classes[class_names_string[-1]].append(line_tag2)
+                        cur_class_tags.append(line_tag2)
+
+                last_line=line
+                
+            class_sizes={} # number of articles in each class 
+            for c in class_names_string:
+                class_sizes[c]=0
+
+            class_names_id=[]
+
+            t0=time.time()
+            #f=open("largest_categories-meta.txt","r")
+            f=open("titles.tsv","r")
+            #f=open("sorted_categories.tsv","r")
+            #lines=f.read().split("\n")
+            lines=13000000
+            i=0
+            print_counts=True
+            num_mapped=0
+            for l in f:
+                i+=1
+                if print_counts:
+                    sys.stdout.write("\rMapping titles (%d/%d) | Mapped:%d | Counts: {"%(i,lines,num_mapped))
+                    for c in class_names_string:
+                        sys.stdout.write("%s:%d%s"%(c,class_sizes[c],", " if class_names_string.index(c)!=len(class_names_string)-1 else "}"))
+
+                else:
+                    sys.stdout.write("\rMapping titles (%d/%d) | Mapped:%d"%(i,lines,num_mapped))
+                items=l.strip().split("\t")
+                if len(items)==2:
+                    cur_title_str = items[1].lower()
+                    cur_title_id = items[0]
+                    #cur_cat_ct = int(items[2])
+
+                    #if cur_cat_ct==0: continue # skip this cat if not articles in it
+                    found_class=False
+
+                    # mapping this cat to a class
+                    c_index=0
+                    # iterate over each class and its tags
+                    for c_name,c_tags in zip(class_names_string,class_tags):
+
+                        # iterate over each tag for a match 
+                        for t in c_tags:
+                            tag_loc=cur_title_str.find(t)
+
+                            if tag_loc!=-1:
+                                if tag_loc!=0: # if maybe just the end of another word (dont include)
+                                    if cur_title_str[tag_loc-1]!="_": 
+                                        continue 
+                                if tag_loc+len(t)!=len(cur_title_str): # if not at the end of the category string
+                                    if cur_title_str[tag_loc+len(t)] not in ["_","s"]: # if the beginning of another word
+                                        continue
+
+                                if found_class:
+                                    continue
+
+                                found_class=True  
+                                class_map[cur_title_id]=c_index
+                                f_dest.write("%s\t%s\n"%(cur_title_str,c_name))
+                                contained_classes[c_name].append(cur_title_str)
+                                class_sizes[c_name]+=1 
+
+                        if found_class: 
+                            num_mapped+=1
+                            break
+                        c_index+=1
+            f.close()
+            sys.stdout.write("%s\n"%(make_seconds_pretty(time.time()-t0)))
+
+            i=0
+            for c in class_names_string:
+                contained_str=""
+                q=0
+                for cont in contained_classes[c]:
+                    q+=1
+                    contained_str+=cont
+                    if q!=len(contained_classes[c]): contained_str+=","
+
+                sys.stdout.write("%s\t\t%s - %d\n"%("Classes:" if i==0 else "        ",c,class_sizes[c]))
+
+                print_full_classes=True
+                if print_full_classes:
+                    sys.stdout.write("        \t%s\n"%(contained_str))
+                i+=1
+
+
+    custom_classes=False
     if custom_classes:
+
+        avoid=["people",""]
+
+        class_names_string=[    "arts_entertainment","automotive","business","education","family","health","food","home","law_govt_politics","news",\
+                                "science","sports","technoloy_computers","real_estate","shopping","religion"]
+
+
+        class_targs=[   ["book","literature","celebrity","celebrities","art","entertainment","humor","movies","music","television"]      ,\
+                        ["automotive","auto","car","convertible","coupe","crossover","diesel","vehicle","hatchback","hybrid","minivan","motorcycle","navigation","truck","wagon"]  ,\
+                        ["business","advertising","agriculture","biotech","construction","forestry","government","human_resources","marketing","market"]    ,\
+                        ["education",""    ]]
+
+
 
         class_names_string=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
 
@@ -910,7 +1070,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
             i+=1
 
     #### SETTINGS
-    dpipc=150
+    dpipc=80
     min_words = 2
     max_words = 120 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
@@ -918,7 +1078,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     batch_size = None    # if None, defaults to whats set in classify.py, requires vram
     replace_removed = True # replace words not found in model with zero vector
     swap_with_word_idx = False
-    epochs=1
+    epochs=10
     ####
 
     # if using CNN, this must be non -1
@@ -963,7 +1123,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
                                                     trim_vocab_to=limit_vocab_size,
                                                     replace_removed=replace_removed,
                                                     swap_with_word_idx=swap_with_word_idx,
-                                                    classifications="article_categories-ids.tsv" )
+                                                    classifications="categories.tsv" )
             num_worse=0
             plot=True 
             loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
@@ -1798,14 +1958,145 @@ def get_most_recent_classifier(which,parent_dir="WikiLearn/data/models/classifie
     classifier = load_model(classifier_f)
     return classifier
 
-def generate_classifier_samples(classifier,class_names,encoder,which):
+# use input classifier and encoder to classify all documents in text.tsv
+def generate_classifier_samples_docs(classifier,class_names,encoder,which):
+
+    text = "text.tsv"
+
+    max_len=120 # length of input sequences classifier was trained with
+    zero_vector = [0.0]*300
+    trim_under = 3000 # trim_under used when classifier was trained
+    
+    t0=time.time()
+
+    f_targ=open("classified_articles-%s.txt"%which,"w")
+    f_targ_floats=open("classified_articles_float-%s.txt"%which,"w")
+
+    f_targ_floats.write("Classes\t")
+    i=0
+    for c in class_names:
+        i+=1
+        f_targ_floats.write("%s%s"%(c,"\t" if i!=len(class_names) else "\n"))
+
+    '''
+    i=0
+    #f=open("titles.tsv","r").read().split("\n")
+    f=open("titles.tsv","r")
+    title_dict={}
+    for line in f:
+        i+=1
+        sys.stdout.write("\rBuilding titles dict (%d/%d)"%(i,34000000))
+        items=line.strip().split("\t")
+        if len(items)==2:
+            title_dict[items[0]]=items[1]
+    sys.stdout.write("\n")
+    f.close()
+    '''
+    
+    
+    i=0
+    word_list_filename = "WikiLearn/data/models/dictionary/text/word_list.tsv" # source of word list
+    #f=open(word_list_filename,"r").read().split("\n")
+    f=open(word_list_filename,"r")
+    word_dict={}
+    for line in f:
+        i+=1
+        sys.stdout.write("\rBuilding words dict (%d/%d)"%(i,13000000))
+        items=line.strip().split("\t")
+        if len(items)==3 and int(items[2])>trim_under:
+            try:
+                in_model=encoder.model[items[1].lower()]
+                word_dict[items[1]]=True
+            except:
+                continue
+    sys.stdout.write("\n")
+    f.close()
+    
+
+    #num_total=len(open(text,"r").read().split("\n"))
+    num_total=13000000
+    dropped=0
+    kept=1
+    total_len=0.0
+    f=open(text,"r")
+    i=0
+    for line in f:
+        i+=1
+        sys.stdout.write("\rClassifying (%d/%d/%d) | Dropped:%d | Avg. len:%0.2f"%(kept,i+1,num_total,dropped,float(total_len/kept)))
+        items=line.strip().split("\t")
+        #if len(items)==2:
+        try:
+            article_title_id,article_contents=items[0],items[1]
+            article_title_str=title_dict[article_title_id]
+            #article_title_str=str(article_title_id)
+
+            words=article_contents
+            #words=article_contents.replace("."," ")
+            #words=article_contents.split(" ")
+
+            cleaned_a = a.replace(","," ").replace("(","").replace(")","")
+            cleaned_a = cleaned_a.replace("&nbsp;","").replace("   "," ")
+            cleaned_a = cleaned_a.replace("  "," ").lower()
+            words = cleaned_a.split(" ")
+
+
+            wordvecs=[]
+
+            for w in words:
+                try:
+                    in_dict=word_dict[w.lower()]
+                    try:
+                        encoded_word=encoder.model[w.lower()]
+                        wordvecs.append(encoded_word)
+                    except:
+                        wordvecs.append(zero_vector)
+                    if len(wordvecs)==max_len: break 
+                    
+                except:
+                    continue 
+
+            kept+=1
+            total_len+=len(wordvecs)
+
+            while len(wordvecs)<120:
+                wordvecs.append(zero_vector)
+
+            inputs=np.array([wordvecs])
+            probs=classifier.predict(inputs,batch_size=1,verbose=0)
+
+            f_targ_floats.write("%s\t"%article_title_str)
+
+            max_prob=0.0 
+            j=0
+            for p in probs[0]:
+                if p>max_prob:
+                    max_prob=p 
+                    pred_class=class_names[j]
+                f_targ_floats.write("%0.5f%s"%(p,"\t" if j!=len(class_names)-1 else "\n"))
+                f_targ_floats.flush()
+                j+=1
+
+            if max_prob!=0.0:
+                f_targ.write("%s\t%s\n"%(article_title_str,pred_class))
+                f_targ.flush()
+            else:
+                dropped+=1
+        except:
+            dropped+=1
+
+    sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+    sys.stdout.write("Done\n")
+
+# use input classifier and encoder to classify all words in word_list.tsv
+# save results to 20k_most_common-'which'.txt and 20k_most_common_float-'which'.txt
+def generate_classifier_samples_words(classifier,class_names,encoder,which):
 
     text = "WikiLearn/data/models/dictionary/text/word_list.tsv"
 
     break_items=["nbsp","ndash","_"]
 
     max_len=120 # length of input sequences classifier was trained with
-    trim_under_prob=0.7 # trim word if the classifier is less confident than this
+    trim_under_prob=0.2 #0.7 # trim word if the classifier is less confident than this
 
     start_tsv_at =1000000 # highest word frequency to allow (see 3rd col in word_list.tsv)
     end_tsv_at   =3000
@@ -1870,10 +2161,12 @@ def generate_classifier_samples(classifier,class_names,encoder,which):
                     max_prob=p 
                     pred_class=class_names[j]
                 f_targ_floats.write("%0.5f%s"%(p,"\t" if j!=len(class_names)-1 else "\n"))
+                f_targ_floats.flush()
                 j+=1
             if max_prob!=trim_under_prob:
                 kept+=1
                 f_targ.write("%s\t%s\n"%(word,pred_class))
+                f_targ.flush()
             else:
                 dropped+=1
 
@@ -1983,6 +2276,7 @@ def main():
             build_category_tree()
             return
 
+        ##############################################################################
         # trains a new Doc2Vec encoder on the contents of text.tsv
         run_doc2vec = False
         if run_doc2vec:
@@ -2017,7 +2311,7 @@ def main():
             # train model on text corpus
             encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
         
-
+        ##############################################################################
         test_quality_classifier = False 
         if test_quality_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
@@ -2030,6 +2324,7 @@ def main():
             encoder.load(model_dir)
             test_classifier(classifier,encoder) 
 
+        ##############################################################################
         train_importance_classifier_docs=False 
         if train_importance_classifier_docs:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
@@ -2068,7 +2363,7 @@ def main():
             encoder.load(model_dir)
             classify_quality(encoder,classifier_dir)
 
-        train_us_state_classifier=True 
+        train_us_state_classifier=False 
         if train_us_state_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
@@ -2080,54 +2375,87 @@ def main():
             encoder.load(model_dir)
             classify_us_state(encoder,classifier_dir)
 
-        train_content_classifier = False 
+        train_content_classifier = True 
         if train_content_classifier:
-            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            #model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             # very small model for testing
-            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
             # directory to save classifier to
             classifier_dir = "WikiLearn/data/models/classifier/content" 
             encoder = doc2vec()
             encoder.load(model_dir)
             classify_content(encoder,classifier_dir)
-
-        create_classifier_samples=False 
-        if create_classifier_samples:
             
-            create_content_samples=False 
-            if create_content_samples:
-                classifier_t = get_most_recent_classifier("content")
-                model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
-                #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+        ##############################################################################
+        create_content_samples=False 
+        if create_content_samples:
+            classifier_t = get_most_recent_classifier("content")
+            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
-                encoder=doc2vec()
-                encoder.load(model_dir)
+            encoder=doc2vec()
+            encoder.load(model_dir)
 
-                class_names=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
-                generate_classifier_samples(classifier_t,class_names,encoder,"content")
+            class_names=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
+            generate_classifier_samples_words(classifier_t,class_names,encoder,"content")
 
-            create_importance_samples=False 
-            if create_importance_samples:
-                classifier_t = get_most_recent_classifier("importance",spec="last")
-                model_dir="/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
-                encoder=doc2vec()
-                encoder.load(model_dir)
+        create_importance_samples=False 
+        if create_importance_samples:
+            classifier_t = get_most_recent_classifier("importance",spec="last")
+            model_dir="/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            encoder=doc2vec()
+            encoder.load(model_dir)
 
-                class_names = ["top","high","mid","low"]
-                generate_classifier_samples(classifier_t,class_names,encoder,"importance")
+            class_names = ["top","high","mid","low"]
+            generate_classifier_samples_words(classifier_t,class_names,encoder,"importance")
 
-            create_quality_samples=False 
-            if create_quality_samples:
-                classifier_t = get_most_recent_classifier("quality",spec="last")
-                model_dir="/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
-                encoder=doc2vec()
-                encoder.load(model_dir)
+        create_quality_samples=False 
+        if create_quality_samples:
+            classifier_t = get_most_recent_classifier("quality",spec="last")
+            model_dir="/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            encoder=doc2vec()
+            encoder.load(model_dir)
 
-                class_names = []
-                generate_classifier_samples(classifier_t,class_names,encoder,"quality")
+            class_names = []
+            generate_classifier_samples_words(classifier_t,class_names,encoder,"quality")
 
+        create_us_state_samples=False 
+        if create_us_state_samples:
+            classifier_t = get_most_recent_classifier("us_state",spec="best")
+            model_dir="/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            encoder=doc2vec()
+            encoder.load(model_dir)
+
+            us_states=[]
+            s_f=open("us_states.txt","r")
+            for line in s_f:
+                line = line.strip().lower().replace(" ","_")
+                if len(line)>2:
+                    us_states.append(line)
+            s_f.close()
+            generate_classifier_samples_words(classifier_t,us_states,encoder,"us_state")
+
+        ##############################################################################
+        create_us_state_samples_docs=False 
+        if create_us_state_samples_docs:
+            #classifier_t = get_most_recent_classifier("us_state",spec="epoch_0")
+            classifier_t = get_most_recent_classifier("us_state",spec="best")
+            model_dir="/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            encoder=doc2vec()
+            encoder.load(model_dir)
+
+            us_states=[]
+            s_f=open("us_states.txt","r")
+            for line in s_f:
+                line = line.strip().lower().replace(" ","_")
+                if len(line)>2:
+                    us_states.append(line)
+            s_f.close()
+            generate_classifier_samples_docs(classifier_t,us_states,encoder,"us_state")
         
+        ##############################################################################
         # requires categories.tsv & titles.tsv, creates largest_categories.tsv, largest_categories-strings.tsv,
         # largest_categories-meta.txt, article_categories.tsv, sorted_categories.tsv
         # faster after first run (loads sorted_categories.tsv for speed)
@@ -2135,7 +2463,6 @@ def main():
         if compile_largest_categories:
             largest_categories_compiler()
         
-
         # requires a model and text.tsv, creates similar_articles-string.tsv & similar_articles-ids.tsv
         compile_similar_articles = False
         if compile_similar_articles:
@@ -2144,6 +2471,7 @@ def main():
             #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
             similar_articles_compiler(model_dir)
 
+        ##############################################################################
         # update the server entries with related articles, requires similar_articled-ids.tsv
         send_similar_articles_to_server = False
         if send_similar_articles_to_server:
@@ -2154,7 +2482,7 @@ def main():
         if send_quality_importance_to_server:
             send_quality_importance(start_at=0)
 
-        
+        ##############################################################################
         # DEFUNCT
         # after parser is run, use this to map the article ids (talk ids) in quality.tsv 
         # to the article ids (real article ids) in text.tsv, saved in id_mapping.tsv
