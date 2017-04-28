@@ -828,17 +828,9 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     custom_from_titles=True
     if custom_from_titles:
         
-        if os.path.isfile("mapped-std_categories.txt"):
+        load=False
+        if os.path.isfile("mapped-std_categories-ids.txt") and load:
             print("Loading mapped articles...")
-            f=open("mapped-std_categories.txt","r")
-            class_names_string=[]
-            class_map={}
-            class_tags=[]
-            contained_classes
-
-
-        else:
-            f_dest=open("mapped-std_categories.txt","w")
             f=open("std_categories.txt","r")
             class_names_string=[]
             class_map={}
@@ -878,11 +870,71 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
                 for line_tag in last_line.split("/"):
                     for line_tag2 in line_tag.split("&"):
-                        class_map[line_tag2]=len(class_names_string)-1
+                        line_tag2=line_tag2.strip("_")
+                        #class_map[line_tag2]=len(class_names_string)-1
+                        contained_classes[class_names_string[-1]].append(line_tag2)
+                        cur_class_tags.append(line_tag2)
+                last_line=line
+            f.close()
+
+            i=0
+            for c in class_names_string:
+                class_map[c]=i
+                i+=1
+        else:
+            f_dest=open("mapped-std_categories.txt","w")
+            f_dest_ids=open("mapped-std_categories-ids.txt","w")
+            f=open("std_categories.txt","r")
+            class_names_string=[]
+            class_map={}
+            class_tags=[]
+            contained_classes={}
+
+            cur_class_tags=[]
+            last_line=None 
+            comment=False
+            for line in f:
+                line=line.strip()
+                if line=="/*":
+                    comment=True 
+                    continue 
+                if line=="*/":
+                    comment=False 
+                    continue
+                if comment:
+                    continue
+
+                if last_line==None:
+                    #class_names_string.append(line)
+                    last_line=line
+                    continue 
+
+                if line=="=":
+                    class_names_string.append(last_line)
+                    contained_classes[last_line]=[]
+                    continue
+                
+                if line=="]":
+                    class_tags.append(cur_class_tags)
+                    cur_class_tags=[]
+                    continue
+
+                last_line=last_line.lower().replace(" ","_")
+
+                for line_tag in last_line.split("/"):
+                    for line_tag2 in line_tag.split("&"):
+                        line_tag2=line_tag2.strip("_")
+                        #class_map[line_tag2]=len(class_names_string)-1
                         contained_classes[class_names_string[-1]].append(line_tag2)
                         cur_class_tags.append(line_tag2)
 
                 last_line=line
+            f.close()
+
+            i=0
+            for c in class_names_string:
+                class_map[c]=i
+                i+=1
                 
             class_sizes={} # number of articles in each class 
             for c in class_names_string:
@@ -901,6 +953,9 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
             num_mapped=0
             for l in f:
                 i+=1
+
+                #if i>100000: break
+
                 if print_counts:
                     sys.stdout.write("\rMapping titles (%d/%d) | Mapped:%d | Counts: {"%(i,lines,num_mapped))
                     for c in class_names_string:
@@ -910,18 +965,15 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
                     sys.stdout.write("\rMapping titles (%d/%d) | Mapped:%d"%(i,lines,num_mapped))
                 items=l.strip().split("\t")
                 if len(items)==2:
-                    cur_title_str = items[1].lower()
-                    cur_title_id = items[0]
-                    #cur_cat_ct = int(items[2])
-
-                    #if cur_cat_ct==0: continue # skip this cat if not articles in it
+                    cur_title_str = items[1].lower() # title of current article
+                    cur_title_id = items[0] # id of current article
                     found_class=False
 
                     # mapping this cat to a class
-                    c_index=0
+                    c_index=-1
                     # iterate over each class and its tags
                     for c_name,c_tags in zip(class_names_string,class_tags):
-
+                        c_index+=1
                         # iterate over each tag for a match 
                         for t in c_tags:
                             tag_loc=cur_title_str.find(t)
@@ -938,17 +990,20 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
                                     continue
 
                                 found_class=True  
-                                class_map[cur_title_id]=c_index
+                                #class_map[cur_title_id]=c_index
                                 f_dest.write("%s\t%s\n"%(cur_title_str,c_name))
+                                f_dest_ids.write("%s\t%s\n"%(cur_title_id,c_name))
                                 contained_classes[c_name].append(cur_title_str)
                                 class_sizes[c_name]+=1 
 
                         if found_class: 
                             num_mapped+=1
                             break
-                        c_index+=1
+
             f.close()
-            sys.stdout.write("%s\n"%(make_seconds_pretty(time.time()-t0)))
+            sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+            f_dest.close()
+            f_dest_ids.close()
 
             i=0
             for c in class_names_string:
@@ -961,7 +1016,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
                 sys.stdout.write("%s\t\t%s - %d\n"%("Classes:" if i==0 else "        ",c,class_sizes[c]))
 
-                print_full_classes=True
+                print_full_classes=False
                 if print_full_classes:
                     sys.stdout.write("        \t%s\n"%(contained_str))
                 i+=1
@@ -1101,6 +1156,8 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
     sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
 
+    #classifications="categories.tsv"
+    classifications="mapped-std_categories-ids.txt"
 
     classifier = vector_classifier_keras(class_names=class_names_string,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
 
@@ -1123,7 +1180,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
                                                     trim_vocab_to=limit_vocab_size,
                                                     replace_removed=replace_removed,
                                                     swap_with_word_idx=swap_with_word_idx,
-                                                    classifications="categories.tsv" )
+                                                    classifications=classifications )
             num_worse=0
             plot=True 
             loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
