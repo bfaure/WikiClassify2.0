@@ -125,7 +125,7 @@ class vector_classifier_keras(object):
             self.val_log_file = open(os.path.join(self.directory,"%s-validation_log.tsv"%model_type),"w")
 
     # Can be called multiple times, similar to train_seq
-    def train_seq_iter(self,X,y,iteration,epoch,test_ratio=0.2,batch_size=None,load_file=None,plot=False,embedding_layer=None):
+    def train_seq_iter(self,X,y,iteration,epoch,test_ratio=0.2,batch_size=None,load_file=None,plot=False,embedding_layer=None,save_all=True):
 
         #self.log_file.write("Iteration:%d\tEpoch:%d\n"%(iteration,epoch))
 
@@ -265,7 +265,7 @@ class vector_classifier_keras(object):
             s.write(self.model.to_json())
             s.close()
 
-        self.model.save(os.path.join(self.directory,"%s-classifier-last.h5"%(self.model_type)))
+        if save_all: self.model.save(os.path.join(self.directory,"%s-classifier-last.h5"%(self.model_type)))
 
         return loss 
 

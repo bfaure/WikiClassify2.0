@@ -57,7 +57,8 @@ def get_classified_sequences(
     max_class_mappings=-1,      # if non -1, limit size of classification mapping
     classifications="quality.tsv", # where to pull article classifications from
     tailored_to_content=False, # diff. exec for content-classified documents
-    total_seq=None # if seq_per_class is -1, this is used to specify the number of total seqs
+    total_seq=None, # if seq_per_class is -1, this is used to specify the number of total seqs
+    multi_class_file=False # if true, class mapping file may contain multiple classes per article
     ):
     
     global classification_dict # holds mappings from article_id to classification
@@ -73,8 +74,14 @@ def get_classified_sequences(
 
     if classes==None:
         classes = {}
+        '''
         for key,val in class_map.items():
+            print(key,val)
             classes[key] = np.array([class_map[key]],dtype=int)
+        '''
+        #for i in range(len(class_names)):
+        #    classes[key]=
+        pass
 
     longest_class_len = 0
     counts = {}
@@ -103,8 +110,8 @@ def get_classified_sequences(
             class_pretty[class_names[i]]=class_name_pretty
 
     class_lengths = {}
-    for c in class_names:
-        class_lengths[c]=0
+    for i in range(len(class_names)):
+        class_lengths[i]=0
 
     zero_vector              = [0.00]*300 # put in place of non-modeled words
     print_sentences          = 0 # approx number of sentences to print during sentence encoding
@@ -120,6 +127,64 @@ def get_classified_sequences(
             if s not in [""," "] and len(s)>0:
                 stop_words_dict[s] = True
 
+    # Create the classifications dictionary if not yet loaded
+    if classification_dict==None:
+        num_lines = len(open(classifications,"r").read().split("\n"))
+        qf = open(classifications,"r")
+        i=0
+        kept=0
+        num_overmapped=0
+        classification_dict = {}
+        for line in qf:
+            i+=1
+            if max_class_mappings!=-1 and i>max_class_mappings: break
+            sys.stdout.write("\rCreating class dict (%d/%d) | Kept:%d | Overmapped:%d"%(i,num_lines,kept,num_overmapped))
+            try:
+                if multi_class_file:
+                    items=line.strip().split("\t")
+                    article_id=items[0]
+                    article_subclasses=items[1].split(" ")
+                    mapped_class=None
+                    overmapped=False 
+                    for a in article_subclasses:
+                        try:
+                            cur_mapped_class = class_map[a]
+                            if mapped_class==None:
+                                mapped_class = class_map[a]
+                            else:
+                                if cur_mapped_class!=mapped_class:
+                                    overmapped=True 
+                                    break 
+                        except:
+                            continue
+
+                    if overmapped==False and mapped_class!=None:
+                        classification_dict[article_id]=mapped_class 
+                        class_lengths[mapped_class]+=1
+                        kept+=1
+                    else:
+                        num_overmapped+=1
+                else:
+                    article_id,article_subclass = line.strip().split("\t")
+                    mapped_class = class_map[article_subclass]
+                    classification_dict[article_id] = mapped_class
+                    class_lengths[mapped_class]+=1
+                    kept+=1
+            except:
+                i+=-1
+                continue
+        sys.stdout.write("\n")
+        qf.close()
+
+    print_class_counts=False
+    if print_class_counts:
+        for key,val in class_lengths.items():
+            print("%s\t%d\n"%(key,val))
+
+    class_lengths = {}
+    for c in class_names:
+        class_lengths[c]=0
+
     # if trimming vocabulary
     if ((trim_vocab_to!=-1 or swap_with_word_idx) and most_common_dict==None):
         most_common_dict = {}
@@ -134,26 +199,6 @@ def get_classified_sequences(
                     w_idx+=1
                 except:
                     continue
-
-    # Create the classifications dictionary if not yet loaded
-    if classification_dict==None:
-        num_lines = len(open(classifications,"r").read().split("\n"))
-        qf = open(classifications,"r")
-        i=0
-        classification_dict = {}
-        for line in qf:
-            i+=1
-            if max_class_mappings!=-1 and i>max_class_mappings: break
-            sys.stdout.write("\rCreating class dict (%d/%d)"%(i,num_lines))
-            try:
-                article_id,article_subclass = line.strip().split("\t")
-                #article_id, article_quality = line.decode('utf-8', errors='replace').strip().split('\t')
-                classification_dict[article_id] = article_subclass
-            except:
-                i+=-1
-                continue
-        sys.stdout.write("\n")
-        qf.close()
 
     # number of total items we will have to load (sentences or docs)
     if seq_per_class!=-1:
@@ -178,9 +223,6 @@ def get_classified_sequences(
         perc_loaded  = "%0.1f%%" % (100.0 *float(i)/13119700.0)
         sys.stdout.write("\rEncoding: %s done (%d/%d) | %s total | %s  "% (percent_done,num_loaded+1,approx_total,perc_loaded,make_seconds_pretty(time.time()-enc_start_time)))
         sys.stdout.flush()
-        
-        #for key,val in counts.items():
-        #    sys.stdout.write("%s:%d"%(key,val))
 
         # load in the current line
         try:    
@@ -189,12 +231,11 @@ def get_classified_sequences(
         except: 
             continue
         
-        # see if this article has a quality mapping
+        # see if this article has a class mapping
         try: 
-            art_subclass = classification_dict[article_id] # check if quality mapping
-            art_eff_y = classes[art_subclass]
-            art_effclass_idx = classes[art_subclass][0]
+            art_effclass_idx = classification_dict[article_id]
             art_effclass = class_names[art_effclass_idx]
+            art_eff_y = art_effclass_idx
 
         except: 
             # skip article if no listed quality
@@ -261,7 +302,8 @@ def get_classified_sequences(
 
         # add document/quality to total found so far
         x.append(doc_arr)
-        y.append(art_eff_y)
+        #y.append(art_eff_y)
+        y.append(art_effclass_idx)
         counts[art_effclass]+=1
         class_lengths[art_effclass]+=len(full_doc)
         num_loaded+=1 
@@ -288,7 +330,8 @@ def get_classified_sequences(
             print("%s avg length (words): %0.1f"%(key,float(value/seq_per_class)))
         sys.stdout.write("\n")
     
-    y = np.ravel(np.array(y)) # flatten classifications
+    y=np.array(y)
+    #y = np.ravel(np.array(y)) # flatten classifications
     X = np.array(x) # 
 
     if seq_per_class==-1: earliest_class_full_at=i
@@ -444,7 +487,7 @@ def classify_importance_docs(encoder,directory,gif=True,model_type="lstm"):
                 i+=1
                 print("\nEpoch:%d | Iteration: %d | doc_idx: %d"%(j,i,doc_idx))
                 X,y,doc_idx = get_classified_docs(encoder,"importance.tsv",class_names,class_map,doc_idx,per_class)
-                loss = classifier.train_doc_iter(X,y,iteration=i,epoch=j,plot=True)
+                loss = classifier.train_doc_iter(X,y,iteration=i,epoch=j,plot=True,save_all=False)
                 if doc_idx==-1: break 
 
     classifier.model.save(os.path.join(classifier.directory,"%s-classifier-last.h5"%(model_type)))
@@ -538,9 +581,9 @@ def classify_importance(encoder,directory,gif=True,model_type="lstm"):
     if gif: make_gif(classifier.pic_dir)
     sys.stdout.write("\nReached end of text.tsv")
 
-def classify_content(encoder,directory,gif=True,model_type="lstm"):
+def classify_us_state(encoder,directory,gif=True,model_type="lstm"):
     if not os.path.exists(directory): os.makedirs(directory)
-    print("Classifying contents by word-vector sequences...\n")
+    print("Classifying U.S. states by word-vector sequences...\n")
     cur_time = int(time.time())
     directory = os.path.join(directory,str(cur_time))
 
@@ -549,12 +592,10 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     class_sizes=[]
     class_map={} # from id to index in class_names_id
 
-    cat_tree=True 
+    cat_tree=False 
     if cat_tree:
         limit=1000 
         f=open("category_children-string.tsv")
-        
-
 
     all_classes=False
     if all_classes:
@@ -579,7 +620,207 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
             sys.stdout.write("%s\t\t%s\n"%("Classes:" if i==0 else "        ",c))
             i+=1
 
-    custom_classes=False 
+    custom_classes=True 
+    if custom_classes:
+
+        us_states=[]
+        s_f=open("us_states.txt","r")
+        for line in s_f:
+            line = line.strip().lower().replace(" ","_")
+            if len(line)>2:
+                us_states.append(line)
+
+        class_names_string=us_states 
+
+        class_tags=[]
+        for c in class_names_string:
+            class_tags.append([c])
+        
+        class_map={} # dict from cat id to class_name_string index to use as class 
+        
+        contained_classes={}
+        for c in class_names_string:
+            contained_classes[c]=[]
+        
+        class_sizes={} # number of articles in each class 
+        for c in class_names_string:
+            class_sizes[c]=0
+
+        class_names_id=[]
+
+        t0=time.time()
+        #f=open("largest_categories-meta.txt","r")
+        f=open("sorted_categories.tsv","r")
+        lines=f.read().split("\n")
+        i=0
+        for l in lines:
+            i+=1
+            sys.stdout.write("\rMapping categories (%d/%d)"%(i,len(lines)))
+            items=l.strip().split("\t")
+            if len(items)==3 and items[0]!="String":
+                cur_cat_str = items[0].lower()[9:]
+                cur_cat_id = items[1]
+                cur_cat_ct = int(items[2])
+
+                if cur_cat_ct==0: continue # skip this cat if not articles in it
+                found_class=False
+
+                # mapping this cat to a class
+                c_index=0
+                for c_name,c_tags in zip(class_names_string,class_tags):
+                    # iterate over each tag for a match 
+                    for t in c_tags:
+                        tag_loc=cur_cat_str.find(t)
+
+                        if tag_loc!=-1:
+                            if tag_loc!=0: # if maybe just the end of another word (dont include)
+                                if cur_cat_str[tag_loc-1]!="_": 
+                                    continue 
+                            if tag_loc+len(t)!=len(cur_cat_str): # if not at the end of the category string
+                                if cur_cat_str[tag_loc+len(t)] not in ["_","s"]: # if the beginning of another word
+                                    continue
+
+                            if c_name=="virginia" and cur_cat_str.find("west_virginia")!=-1: continue
+
+                            found_class=True  
+                            class_map[cur_cat_id]=c_index
+                            contained_classes[c_name].append(cur_cat_str)
+                            class_sizes[c_name]+=cur_cat_ct 
+
+                    if found_class: break
+                    c_index+=1
+        f.close()
+        sys.stdout.write(" | %s\n"%(make_seconds_pretty(time.time()-t0)))
+
+        i=0
+        for c in class_names_string:
+            contained_str=""
+            q=0
+            for cont in contained_classes[c]:
+                q+=1
+                contained_str+=cont
+                if q!=len(contained_classes[c]): contained_str+=","
+
+            sys.stdout.write("%s\t\t%d - %s\n"%("Classes:" if i==0 else "        ",class_sizes[c],c))
+
+            print_full_classes=False
+            if print_full_classes:
+                sys.stdout.write("        \t%s\n"%(contained_str))
+            i+=1
+
+    #### SETTINGS
+    dpipc=80
+    min_words = 2
+    max_words = 120 # maximum number of words to maintain in each document
+    remove_stop_words = False # if True, removes stop words before calculating sentence lengths
+    limit_vocab_size = 3000 # if !=-1, trim vocab to 'limit_vocab_size' words
+    batch_size = None    # if None, defaults to whats set in classify.py, requires vram
+    replace_removed = True # replace words not found in model with zero vector
+    swap_with_word_idx = False
+    epochs=100
+    ####
+
+    # if using CNN, this must be non -1
+    if model_type=="cnn":
+        if limit_vocab_size==-1:
+            print("WARNING: limit_vocab_size must be non -1 for CNN")
+            sys.exit(0)
+        remove_stop_words=True
+        swap_with_word_idx=False
+
+    sys.stdout.write("Model Type:        \t%s\n"%model_type)
+    sys.stdout.write("Max Words/Doc:     \t%d\n"%max_words)
+    sys.stdout.write("Min Words/Doc:     \t%d\n"%min_words)
+    sys.stdout.write("Stopwords:         \t%s\n"%("<leave>" if not remove_stop_words else "<remove>"))
+    sys.stdout.write("Limit Vocab:       \t%s\n"%("<none>" if limit_vocab_size==-1 else str(limit_vocab_size)))
+    sys.stdout.write("Replace Non-Model: \t%s\n"%("True" if replace_removed else "False"))
+    sys.stdout.write("Swap w/ Index:     \t%s\n"%("True" if swap_with_word_idx else "False"))
+    sys.stdout.write("Doc/Class/Iter:    \t%d\n\n"%dpipc)
+
+    sys.stdout.write("Batch Size: %s\n"%("<default>" if batch_size is None else str(batch_size)))
+    sys.stdout.write("Epochs:     %s\n\n"%("<default>" if epochs is None else str(epochs)))
+
+
+    classifier = vector_classifier_keras(class_names=class_names_string,directory=directory,model_type=model_type,vocab_size=limit_vocab_size)
+
+    last_loss=None 
+
+    # iterate over the full corpus on each iteration
+    for j in range(epochs):
+
+        reset_corpus() # tell get_classified_sequences to reset all state variables
+        doc_idx = 0
+        i=0
+        while True:
+            i+=1
+            print("\nEpoch:%d | Iteration: %d | doc_idx: %d"%(j,i,doc_idx))
+            X,y,doc_idx = get_classified_sequences(    encoder, dpipc, min_words, max_words,
+                                                    class_names=class_names_string,
+                                                    class_map=class_map,
+                                                    start_at=doc_idx,
+                                                    remove_stop_words=remove_stop_words,
+                                                    trim_vocab_to=limit_vocab_size,
+                                                    replace_removed=replace_removed,
+                                                    swap_with_word_idx=swap_with_word_idx,
+                                                    classifications="categories.tsv",
+                                                    multi_class_file=True )
+            num_worse=0
+            plot=True 
+            loss = classifier.train_seq_iter(X,y,i,j,plot=plot,save_all=False)
+            if doc_idx==-1: break # if at the end of the corpus
+
+        classifier.model.save(os.path.join(classifier.directory,"%s-classifier-epoch_%d.h5"%(model_type,j)))
+
+        if last_loss==None:
+            last_loss = loss 
+        elif loss>last_loss:
+            print("\nLoss is increasing, ending training.\n")
+            break
+
+    # write out ordered gif of all items in picture directory (heatmaps)
+    if gif: make_gif(classifier.pic_dir)
+    sys.stdout.write("\nReached end of text.tsv")
+
+def classify_content(encoder,directory,gif=True,model_type="lstm"):
+    if not os.path.exists(directory): os.makedirs(directory)
+    print("Classifying contents by word-vector sequences...\n")
+    cur_time = int(time.time())
+    directory = os.path.join(directory,str(cur_time))
+
+    class_names_string=[]
+    class_names_id=[]
+    class_sizes=[]
+    class_map={} # from id to index in class_names_id
+
+    cat_tree=False 
+    if cat_tree:
+        limit=1000 
+        f=open("category_children-string.tsv")
+
+    all_classes=False
+    if all_classes:
+        limit=100
+        # load in content category strings, ids, and counts 
+        f=open("largest_categories-meta.txt","r")
+        lines = f.read().split("\n")
+        i=0
+        for l in lines:
+            i+=1
+            if i>limit: break
+            items=l.strip().split(" | ")
+            if len(items)==3 and items[0]!="String":
+                class_map[items[1]]=len(class_names_string)
+                class_names_string.append(items[0])
+                class_names_id.append(items[1])
+                class_sizes.append(int(items[2]))
+        f.close()
+
+        i=0
+        for c in class_names_string:
+            sys.stdout.write("%s\t\t%s\n"%("Classes:" if i==0 else "        ",c))
+            i+=1
+
+    custom_classes=True 
     if custom_classes:
 
         class_names_string=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
@@ -611,6 +852,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
 
         t0=time.time()
         f=open("largest_categories-meta.txt","r")
+        #f=open("sorted_categories.tsv","r")
         lines=f.read().split("\n")
         i=0
         for l in lines:
@@ -1826,6 +2068,18 @@ def main():
             encoder.load(model_dir)
             classify_quality(encoder,classifier_dir)
 
+        train_us_state_classifier=True 
+        if train_us_state_classifier:
+            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            # very small model for testing
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+
+            # directory to save classifier to
+            classifier_dir = "WikiLearn/data/models/classifier/us_state" 
+            encoder = doc2vec()
+            encoder.load(model_dir)
+            classify_us_state(encoder,classifier_dir)
+
         train_content_classifier = False 
         if train_content_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
@@ -1853,7 +2107,7 @@ def main():
                 class_names=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
                 generate_classifier_samples(classifier_t,class_names,encoder,"content")
 
-            create_importance_samples=True 
+            create_importance_samples=False 
             if create_importance_samples:
                 classifier_t = get_most_recent_classifier("importance",spec="last")
                 model_dir="/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
