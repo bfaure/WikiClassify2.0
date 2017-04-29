@@ -2155,7 +2155,7 @@ def generate_classifier_samples_words(classifier,class_names,encoder,which):
     break_items=["nbsp","ndash","_"]
 
     max_len=120 # length of input sequences classifier was trained with
-    trim_under_prob=0.8 #0.7 # trim word if the classifier is less confident than this
+    trim_under_prob=0.6 #0.7 # trim word if the classifier is less confident than this
 
     start_tsv_at =1000000 # highest word frequency to allow (see 3rd col in word_list.tsv)
     end_tsv_at   =3000
@@ -2311,6 +2311,16 @@ def build_category_tree():
     sys.stdout.write("\nDone\n")
 
 def load_standard_categories(fname="std_categories.txt"):
+
+    if fname.find(".tsv")!=-1:
+        titles=[]
+        f=open(fname,"r")
+        for line in f:
+            items=line.strip().split("\t")
+            if len(items)>1:
+                titles.append(items[0])
+        return titles,None
+
     f=open(fname,"r")
     class_names_string=[]
     class_map={}
@@ -2478,7 +2488,6 @@ def get_most_recent_doc2vec(directory="WikiLearn/data/models/doc2vec"):
 
 def main():
     start_time = time.time()
-
 
     #fname=get_most_recent_doc2vec()
     #similar_interface(fname,"backup")
@@ -2786,7 +2795,7 @@ def main():
             encoder.load(model_dir)
             classify_us_state(encoder,classifier_dir)
 
-        train_content_classifier = True  
+        train_content_classifier = False  
         if train_content_classifier:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
             model_dir = "WikiLearn/data/models/doc2vec/old"
@@ -2800,9 +2809,9 @@ def main():
             classify_content(encoder,classifier_dir)
             
         ##############################################################################
-        create_content_samples=False 
+        create_content_samples=True 
         if create_content_samples:
-            #classifier_f =  "WikiLearn/data/models/classifier/content/"
+            classifier_f =  "WikiLearn/data/models/classifier/content/1493194726/lstm-classifier.h5"
             from keras.models import load_model
             classifier_t = load_model(classifier_f)
             #classifier_t = get_most_recent_classifier("content",spec="best")
