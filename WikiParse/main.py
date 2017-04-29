@@ -152,6 +152,58 @@ def parse_wikidump(dump_path, cutoff_date='20010115', creds=None, version=None):
 def tokenize(text):
     return re.split('\W+', utils.to_unicode(text).lower())
 
+
+class item_corpus(object):
+
+    def __init__(self, tsv_path, n_examples=100000):
+        print("Getting %s iterator..." % tsv_path)
+        self.n_examples = n_examples
+        self.document_path = tsv_path
+        self.fin = open(self.document_path,'rb')
+        self.instances = sum(1 for line in open(tsv_path))
+        self.bigram = Phraser(Phrases())
+        self.trigram = Phraser(Phrases())
+
+    def __iter__(self):
+        for i, doc in self.indexed_docs(self.n_examples):
+            yield TaggedDocument(self.process(doc),[i])
+
+    def indexed_docs(self, n_examples=-1):
+        if n_examples == -1:
+            with open(self.document_path,'rb') as fin:
+                for line in fin:
+                    try:
+                        i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
+                        yield i, doc
+                    except:
+                        pass
+        else:
+            current_example = 0
+            for line in self.fin:
+                if (current_example < n_examples):
+                    try:
+                        i, doc = line.decode('utf-8', errors='replace').strip().split('\t')
+                        current_example+=1
+                        yield i,doc                        
+                    except:
+                        pass
+                else:
+                    raise StopIteration
+
+    def process(self, text):
+        return text.split()
+
+    def docs(self, n_examples=None):
+        if n_examples == None:
+            n_examples = self.n_examples
+        for _, doc in self.indexed_docs(n_examples):
+            yield self.process(doc)
+
+    def reset_docs(self):
+        self.fin.close()
+        self.fin = open(self.document_path,'rb')
+
+
 class text_corpus(object):
 
     def __init__(self, tsv_path, n_examples=100000):

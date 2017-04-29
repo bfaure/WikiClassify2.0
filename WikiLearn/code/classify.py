@@ -184,10 +184,10 @@ class vector_classifier_keras(object):
                 # ideas from
                 # https://www.bonaccorso.eu/2016/08/02/reuters-21578-text-classification-with-gensim-and-keras/
                 self.model = Sequential()
-                self.model.add(LSTM(int(timesteps*10),input_shape=(timesteps, input_dim)))
-                self.model.add(Dropout(0.3))
+                self.model.add(LSTM(int(output_dim*2),input_shape=(timesteps, input_dim)))
+                #self.model.add(Dropout(0.3))
                 self.model.add(Dense(output_dim))
-                self.model.add(Activation('sigmoid'))
+                self.model.add(Activation('softmax'))
                 if load_file!=None: self.model.load_weights(load_file)
                 print("Compiling model...")
                 sys.stdout.flush()

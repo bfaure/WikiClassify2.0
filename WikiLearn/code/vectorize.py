@@ -24,6 +24,7 @@ from gensim.models.ldamodel import LdaModel
 from gensim.models import Doc2Vec
 from gensim.models import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
+from gensim.matutils import cossim
 
 #                            Local imports
 #-----------------------------------------------------------------------------#
@@ -151,6 +152,9 @@ class doc2vec(object):
         print('Initializing doc2vec encoder...')
         pass
 
+    def compare_vecs(self, v1, v2):
+        return cossim(v1, v2)
+
     def get_all_docvecs():
         return np.array(self.model.docvecs)
 
@@ -189,10 +193,11 @@ class doc2vec(object):
         print_predicted_times(corpus.n_examples,self.iterations)
 
         t_e = time.time()
-        sys.stdout.write("\t\tBuilding vocab... ")
-        self.model.build_vocab(corpus)
-        corpus.reset_docs() # start iterator at beginning of corpus
-        sys.stdout.write("%s\n" % (make_seconds_pretty(time.time()-t_e)))
+        if len(self.model.wv.vocab) < 1:
+            sys.stdout.write("\t\tBuilding vocab... ")
+            self.model.build_vocab(corpus)
+            corpus.reset_docs() # start iterator at beginning of corpus
+            sys.stdout.write("%s\n" % (make_seconds_pretty(time.time()-t_e)))
 
         last_acc = None # track acc on last epoch
         acc      = None # current epoch accuracy
@@ -278,10 +283,12 @@ class doc2vec(object):
             self.model = KeyedVectors.load_word2vec_format(path,binary=True)
             print("Loaded pretrained %s model" % version)
 
-    def load(self, directory):
+    def load(self, directory, spec=''):
         sys.stdout.write("\tLoading doc2vec model... ")
         start_time = time.time()
-        self.model = Doc2Vec.load(os.path.join(directory,'word2vec.d2v'))
+        model_name=os.path.join(directory,"word2vec%s.d2v"%("-%s"%spec if spec!='' else ''))
+        #self.model = Doc2Vec.load(os.path.join(directory,spec))
+        self.model = Doc2Vec.load(model_name)
         self.features = self.model.docvecs[0].shape[0]
         sys.stdout.write("%0.2f sec\n" % (time.time()-start_time))
 

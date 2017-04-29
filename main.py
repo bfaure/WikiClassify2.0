@@ -16,10 +16,10 @@ import imageio
 from keras.layers import Embedding 
 
 import cPickle
-
+from gensim.models.doc2vec     import TaggedDocument
 #                            Local imports
 #-----------------------------------------------------------------------------#
-from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus
+from WikiParse.main           import download_wikidump, parse_wikidump, text_corpus, item_corpus
 from WikiLearn.code.vectorize import doc2vec, make_seconds_pretty
 from WikiLearn.code.classify  import vector_classifier_keras
 
@@ -828,7 +828,7 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
     custom_from_titles=True
     if custom_from_titles:
         
-        load=False
+        load=True
         if os.path.isfile("mapped-std_categories-ids.txt") and load:
             print("Loading mapped articles...")
             f=open("std_categories.txt","r")
@@ -1125,7 +1125,8 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
             i+=1
 
     #### SETTINGS
-    dpipc=80
+    dpipc=-1
+    dpi=2000
     min_words = 2
     max_words = 120 # maximum number of words to maintain in each document
     remove_stop_words = False # if True, removes stop words before calculating sentence lengths
@@ -1180,7 +1181,8 @@ def classify_content(encoder,directory,gif=True,model_type="lstm"):
                                                     trim_vocab_to=limit_vocab_size,
                                                     replace_removed=replace_removed,
                                                     swap_with_word_idx=swap_with_word_idx,
-                                                    classifications=classifications )
+                                                    classifications=classifications,
+                                                    total_seq=dpi )
             num_worse=0
             plot=True 
             loss = classifier.train_seq_iter(X,y,i,j,plot=plot)
@@ -2153,7 +2155,7 @@ def generate_classifier_samples_words(classifier,class_names,encoder,which):
     break_items=["nbsp","ndash","_"]
 
     max_len=120 # length of input sequences classifier was trained with
-    trim_under_prob=0.2 #0.7 # trim word if the classifier is less confident than this
+    trim_under_prob=0.8 #0.7 # trim word if the classifier is less confident than this
 
     start_tsv_at =1000000 # highest word frequency to allow (see 3rd col in word_list.tsv)
     end_tsv_at   =3000
@@ -2304,12 +2306,288 @@ def build_category_tree():
         f.write("%s\t"%key)
         children=category_children[key]
         for c in children:
-            f.write("%s%s"%(c,"\t" if children.index(c)!=len(children)-1 else "\n"))
+            f.write("%s%s"%(c," " if children.index(c)!=len(children)-1 else "\n"))
     f.close()
     sys.stdout.write("\nDone\n")
 
+def load_standard_categories(fname="std_categories.txt"):
+    f=open(fname,"r")
+    class_names_string=[]
+    class_map={}
+    class_tags=[]
+    contained_classes={}
+
+    cur_class_tags=[]
+    last_line=None 
+    comment=False
+    for line in f:
+        line=line.strip()
+        if line=="/*":
+            comment=True 
+            continue 
+        if line=="*/":
+            comment=False 
+            continue
+        if comment:
+            continue
+        if last_line==None:
+            last_line=line
+            continue 
+
+        if line=="=":
+            class_names_string.append(last_line)
+            contained_classes[last_line]=[]
+            continue
+        
+        if line=="]":
+            class_tags.append(cur_class_tags)
+            cur_class_tags=[]
+            continue
+
+        last_line=last_line.lower().replace(" ","_").replace("&","&amp;")
+
+        for line_tag in last_line.split("/"):
+            for line_tag2 in line_tag.split("&"):
+                line_tag2=line_tag2.strip("_")
+                #class_map[line_tag2]=len(class_names_string)-1
+                contained_classes[class_names_string[-1]].append(line_tag2)
+                cur_class_tags.append(line_tag2)
+        last_line=line
+    f.close()
+
+    i=0
+    for c in class_names_string:
+        class_map[c]=i
+        i+=1
+
+    return class_names_string,contained_classes
+
+def similar_interface(enc_fname,spec):
+    encoder = doc2vec()
+    encoder.load(enc_fname,spec)
+
+    def title(id):
+        f=open("titles.tsv","r")
+        for line in f:
+            if line.strip().split("\t")[0]==str(id):
+                return line.strip().split("\t")[1]
+        f.close()
+        return "None"
+
+    def id(title):
+        f=open("titles.tsv","r")
+        for line in f:
+            if line.strip().split("\t")[1]==str(title):
+                return line.strip().split("\t")[0]
+        f.close()
+        return "None"
+    
+    while True:
+        sent = raw_input("Enter a word: ")
+        if sent=="q": break 
+        #word_id = title_dict[sent]
+        try:
+            similar=encoder.model.docvecs.most_similar(sent)
+            print(similar)
+        except:
+            print("Not in model")
+
+std_cat_dict=None 
+def std_category_dist(query,encoder,disp=False):
+    global std_cat_dict
+    if std_cat_dict==None:
+        std_cat_dict={}
+        with open("std_categories.tsv","r") as f:
+            for line in f:
+                items=line.strip().split("\t")
+                name=items[0]
+                doc=[]
+                for d in items[1].split(" "):
+                    if len(d)>2: doc.append(d)
+                docvec=encoder.model.infer_vector(doc)
+                #docvec=encoder.model[doc[0].split(" ")[0]]
+                std_cat_dict[name]=docvec 
+
+    #query_vec = encoder.model[query]
+    try:
+        query_vec=encoder.model.docvecs[query]
+        print("INTERPRETED AS A DOCUMENT")
+    except:
+        try:
+            query_vec=encoder.model[query]
+            print("INTERPRETED AS A WORD")
+        except:
+            print("Query not in model")
+
+    if disp:
+        #print(query_vec)
+        print(encoder.model.docvecs.most_similar([query_vec]))
+        try:
+            print(encoder.model.most_similar([query_vec]))
+        except:
+            print("Couldn't get similar words.")
+
+    query_dist=[]
+    for cat_name,cat_doc in std_cat_dict.items():
+        query_dist.append(np.dot(query_vec,cat_doc))
+        distance=np.dot(query_vec,cat_doc)
+
+        try:
+            sim=encoder.model.similarity(query_vec,cat_doc)
+            print("%s similarity: %0.5f"%(cat_name,sim))
+        except:
+            continue
+
+    if disp:
+        for cat_name, cat_doc in std_cat_dict.items():
+            distance = np.dot(query_vec, cat_doc)
+            print("%s: %0.2f" % (cat_name, distance))
+    return np.array(query_dist)
+
+
+def std_categories_to_vectors(query, encoder, fname="std_categories.tsv"):
+
+    cat_dict={}
+    with open(fname,"r") as f:
+        for line in f:
+            items=line.strip().split("\t")
+            name=items[0]
+            docvec=encoder.model.infer_vector(items[1:])
+            #print(docvec)
+            cat_dict[name]=docvec 
+            print("name:%s\t%d"%(name,docvec.size))
+
+    labels
+    for cat_name, cat_doc in cat_dict.items():
+        distance = np.dot(query.model.infer_vector(query), cat_doc)
+        print("%s: %0.2f" % (cat_name, distance))
+
+def get_most_recent_doc2vec(directory="WikiLearn/data/models/doc2vec"):
+    items=os.listdir(directory)
+    newest=None 
+    for item in items:
+        try:
+            timestamp=int(item.split("-")[0].split(":")[1])
+            if timestamp>newest:
+                newest=timestamp
+                newest_name=os.path.join(directory,item)
+        except:
+            continue
+    print(newest_name)
+    return newest_name
+
 def main():
     start_time = time.time()
+
+
+    #fname=get_most_recent_doc2vec()
+    #similar_interface(fname,"backup")
+    #return
+
+    create_deeper_categories=False 
+    if create_deeper_categories:
+
+        cat_parents_dict={}
+        total_len=1.0
+        f=open("category_parents-string.tsv","r")
+        i=0
+        for line in f:
+            i+=1
+            sys.stdout.write("\rMapping category parents (%d) | Avg. len: %0.5f"%(i,float(total_len/i)))
+            items=line.strip().split("\t")
+            if len(items)>1:
+                cat_parents_dict[items[0]]=items[1:]
+                total_len+=len(items[1:])
+            else:
+                i-=1
+
+        f.close()
+        sys.stdout.write("\n")
+        dropped=0
+        i=0
+        total_len=1.0
+        limit_depth_to=2 # two steps up tree max
+        for c in cat_parents_dict.keys():
+            i+=1
+            expand_at=0
+            orig_len=len(cat_parents_dict[c])
+            break_len=-1
+            while True:
+                if expand_at==orig_len: break_len=len(cat_parents_dict[c])
+                if expand_at==break_len and limit_depth_to==2: break 
+                if expand_at>=len(cat_parents_dict[c]): break 
+                sys.stdout.write("\rDeepening categories %d | Avg. len:%0.5f"%(i,float(total_len/i)))
+                old_categories=cat_parents_dict[c]
+                expanding_parent = old_categories[expand_at]
+                try: new_parents = cat_parents_dict[expanding_parent]
+                except: new_parents=[]
+                if len(new_parents)!=0: 
+                    for n in new_parents:
+                        if n not in cat_parents_dict[c]: cat_parents_dict[c].append(n)
+                expand_at+=1
+            total_len+=len(cat_parents_dict[c])
+        sys.stdout.write("\n")
+
+        f_dest=open("categories_deeper-string.tsv","w")
+        f=open("categories-string.tsv","r")
+        total_len=0
+        i=0
+        dropped=0
+        for line in f:
+            i+=1
+            sys.stdout.write("\rExpanding categories (%d) | Avg. len: %0.5f | Dropped:%d"%(i,float(total_len/i),dropped))
+            items=line.split("\t")
+            if len(items)<2: continue
+            article_title,current_categories = line.strip().split("\t")
+            initial_categories=current_categories.split(" ")
+            f_dest.write("%s\t"%(article_title))
+            f_dest.flush()
+            for c in initial_categories:
+                f_dest.write("%s "%c)
+                total_len+=1
+                try:
+                    for c1 in cat_parents_dict[c]:
+                        f_dest.write("%s "%c1)
+                        total_len+=1
+                except:
+                    dropped+=1
+            f_dest.write("\n")
+        f.close()
+        f_dest.close()
+        sys.stdout.write("\n")
+        return
+
+    test_iterator=False  
+    if test_iterator:
+        corpi=["categories-string.tsv","category_children-string.tsv","titles.tsv"]
+        for c in corpi:
+            print("\n%s"%c)
+            corpus=item_corpus(c,n_examples=100)
+            for i in corpus:
+                print(i)
+        return
+
+
+    test_doc2vec=False
+    if test_doc2vec:
+
+        fname=get_most_recent_doc2vec()
+        #fname="WikiLearn/data/models/doc2vec/unix:1493414378-examples:-1-features:300-window:40-epochs:20-ppe:1/"
+
+        encoder=doc2vec()
+        encoder.load(fname,spec="backup")
+        #std_category_dist("Category:Arts",encoder,True)
+
+        interactive=True 
+        if interactive:
+            while True:
+                article = raw_input("Enter title: ")
+                if article=="q": return 
+                article=article.replace(" ","_")
+                std_category_dist(article,encoder,True)
+        else:
+            std_category_dist("Anarchism",encoder,True)
+        return
 
     # command line argument to open the gui window
     if len(sys.argv)==2 and sys.argv[1] in ["-g","-gui"]:
@@ -2333,41 +2611,118 @@ def main():
             build_category_tree()
             return
 
+        make_category_strings=False 
+        if make_category_strings:
+
+            f=open("titles.tsv","r")
+            title_dict={}
+            i=0
+            for line in f:
+                i+=1
+                sys.stdout.write("\rBuilding titles dict (%d/34000000)"%(i))
+                try:
+                    article_id,article_title=line.strip().split("\t")
+                    #sys.stdout.write("\r                                                                                                       ")
+                    #sys.stdout.write("\rBuilding titles dict (%d) - %s                                                                                  "%(i,article_title))
+                    title_dict[article_id]=article_title 
+                except:
+                    continue 
+            f.close()
+            sys.stdout.write("\n")
+
+            cat_dest=open("categories-string.tsv","w")
+            cat_src=open("categories.tsv","r")
+
+            i=0
+            for line in cat_src:
+                try:
+                    article_id,cat_id = line.strip().split("\t")
+                    sys.stdout.write("\rSaving (%d)"%i)
+                    cat_dest.write("%s\t"%(title_dict[article_id]))
+                    body=' '.join(title_dict[a] for a in cat_id.split(" "))
+                    cat_dest.write("%s\n"%body)
+                except:
+                    continue
+                i+=1
+            sys.stdout.write("\n")
+            cat_dest.close()
+            cat_src.close()
+            return
+
+
         ##############################################################################
         # trains a new Doc2Vec encoder on the contents of text.tsv
         run_doc2vec = False
         if run_doc2vec:
 
-            # training configuration
-            n_examples      = 20000000 # number of articles to consume per epoch 
-            features        = 300      # vector length
-            context_window  = 8        # words to analyze on either side of current word 
-            threads         = 8        # number of worker threads during training
-            epochs          = 20       # maximum number of epochs
-            pass_per_epoch  = 1        # number of passes across corpus / epoch (gensim default:5)
-            print_epoch_acc = True     # print the accuracy after each epoch
-            stop_early      = True     # cut off training if accuracy falls 
-            backup          = True     # if true, model is saved after each epoch with "-backup" in filename
+            text=False
+            if text:
+                # training configuration
+                n_examples      = 20000000 # number of articles to consume per epoch 
+                features        = 300      # vector length
+                context_window  = 8        # words to analyze on either side of current word 
+                threads         = 8        # number of worker threads during training
+                epochs          = 20       # maximum number of epochs
+                pass_per_epoch  = 1        # number of passes across corpus / epoch (gensim default:5)
+                print_epoch_acc = True     # print the accuracy after each epoch
+                stop_early      = True     # cut off training if accuracy falls 
+                backup          = True     # if true, model is saved after each epoch with "-backup" in filename
 
-            model_name  = "unix:%d-examples:%d-features:%d-window:%d-epochs:%d-ppe:%d" % (int(time.time()),n_examples,features,context_window,epochs,pass_per_epoch)
-            phraser_dir = 'WikiLearn/data/models/dictionary/text'         # where to save/load phraser from
-            model_dir   = "WikiLearn/data/models/doc2vec/%s" % model_name # where to save new doc2vec model
+                model_name  = "unix:%d-examples:%d-features:%d-window:%d-epochs:%d-ppe:%d" % (int(time.time()),n_examples,features,context_window,epochs,pass_per_epoch)
+                phraser_dir = 'WikiLearn/data/models/dictionary/text'         # where to save/load phraser from
+                model_dir   = "WikiLearn/data/models/doc2vec/%s" % model_name # where to save new doc2vec model
 
-            # print out launch config
-            print("\nphraser_dir: %s" % phraser_dir)
-            print("model_dir:   %s\n" % (' | '.join(x for x in model_name.split("-"))))
+                # print out launch config
+                print("\nphraser_dir: %s" % phraser_dir)
+                print("model_dir:   %s\n" % (' | '.join(x for x in model_name.split("-"))))
 
-            # create corpus object to allow for text tagging/iteration
-            documents = text_corpus('text.tsv', n_examples=n_examples)
-            # assemble bigram/trigrams from corpus
-            documents.get_phraser(phraser_dir)
-            # create doc2vec object    
-            encoder = doc2vec()
-            # set model hyperparameters
-            encoder.build(features=features,context_window=context_window,threads=threads,iterations=pass_per_epoch)
-            # train model on text corpus
-            encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
-        
+                # create corpus object to allow for text tagging/iteration
+                documents = text_corpus('text.tsv', n_examples=n_examples)
+                # assemble bigram/trigrams from corpus
+                documents.get_phraser(phraser_dir)
+                # create doc2vec object    
+                encoder = doc2vec()
+                # set model hyperparameters
+                encoder.build(features=features,context_window=context_window,threads=threads,iterations=pass_per_epoch)
+                # train model on text corpus
+                encoder.train(corpus=documents,epochs=epochs,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
+            
+            category=True 
+            if category:
+                n_examples = -1
+                features = 300
+                context_window = 40
+                threads=4
+                epochs=15
+                pass_per_epoch=1
+                print_epoch_acc=False
+                stop_early=False
+                backup=True 
+
+                model_name  = "unix:%d-examples:%d-features:%d-window:%d-epochs:%d-ppe:%d" % (int(time.time()),n_examples,features,context_window,epochs,pass_per_epoch)
+                model_dir   = "WikiLearn/data/models/doc2vec/%s" % model_name # where to save new doc2vec model
+
+                print("model_dir:   %s\n" % (' | '.join(x for x in model_name.split("-"))))
+
+                encoder = doc2vec()
+                encoder.build(features=features,context_window=context_window,threads=threads,iterations=pass_per_epoch)
+                '''
+                categories = []
+                with open('titles.tsv') as f:
+                    for line in f:
+                        doc_id, title = line.split()
+                        if title.startswith("Category:"):
+                            print("Title: %s, Doc_id: %s"%(title,doc_id))
+                            categories.append(TaggedDocument(title,[doc_id]))
+                encoder.model.build_vocab(categories)
+                '''
+                #category_children = item_corpus("category_children-string.tsv", n_examples=-1)
+                #encoder.train(corpus=category_children,epochs=10,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
+                #print(encoder.model.wv.vocab)
+                documents=item_corpus("categories_deeper-string.tsv", n_examples=-1)
+                encoder.train(corpus=documents,epochs=10,directory=model_dir,test=print_epoch_acc,stop_early=stop_early,backup=backup)
+                #print(encoder.model.wv.vocab)
+
         ##############################################################################
         test_quality_classifier = False 
         if test_quality_classifier:
@@ -2381,7 +2736,6 @@ def main():
             encoder.load(model_dir)
             test_classifier(classifier,encoder) 
 
-        ##############################################################################
         train_importance_classifier_docs=False 
         if train_importance_classifier_docs:
             model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
@@ -2432,11 +2786,12 @@ def main():
             encoder.load(model_dir)
             classify_us_state(encoder,classifier_dir)
 
-        train_content_classifier = True 
+        train_content_classifier = True  
         if train_content_classifier:
-            #model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            model_dir = "WikiLearn/data/models/doc2vec/old"
             # very small model for testing
-            model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
+            #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
             # directory to save classifier to
             classifier_dir = "WikiLearn/data/models/classifier/content" 
@@ -2447,15 +2802,22 @@ def main():
         ##############################################################################
         create_content_samples=False 
         if create_content_samples:
-            classifier_t = get_most_recent_classifier("content")
-            model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            #classifier_f =  "WikiLearn/data/models/classifier/content/"
+            from keras.models import load_model
+            classifier_t = load_model(classifier_f)
+            #classifier_t = get_most_recent_classifier("content",spec="best")
+            #model_dir = "/media/bfaure/Local Disk/Ubuntu_Storage" # holding full model on ssd for faster load
+            model_dir = "WikiLearn/data/models/doc2vec/old"
             #model_dir = "/home/bfaure/Desktop/WikiClassify2.0 extra/WikiClassify Backup/(2)/doc2vec/older/5"
 
             encoder=doc2vec()
             encoder.load(model_dir)
 
-            class_names=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
-            generate_classifier_samples_words(classifier_t,class_names,encoder,"content")
+            class_names,_ = load_standard_categories("std_categories.txt")            
+            #print(class_names)
+
+            #class_names=["film","nature","music","athletics","video_game","economics","war","infrastructure_transport","politics","populated_areas","architecture"]
+            generate_classifier_samples_words(classifier_t,class_names,encoder,"content-new")
 
         create_importance_samples=False 
         if create_importance_samples:
