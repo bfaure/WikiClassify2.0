@@ -2496,9 +2496,135 @@ def get_most_recent_doc2vec(directory="WikiLearn/data/models/doc2vec"):
 def main():
 	start_time = time.time()
 
-	#fname=get_most_recent_doc2vec()
-	#similar_interface(fname,"backup")
-	#return
+	# interactive converter from article id to title
+	convert_ids_to_titles=False  
+	if convert_ids_to_titles:
+		f=open("titles.tsv","r")
+		title_dict={}
+		i=0
+		for line in f:
+			i+=1
+			sys.stdout.write("\rMapping titles %d"%i)
+			items=line.strip().split("\t")
+			if len(items)==2:
+				title_dict[items[0]]=items[1]
+		f.close()
+		sys.stdout.write("\n")
+		while True:
+			t = raw_input("Enter id: ")
+			if t=="q": break 
+			try:
+				title = title_dict[t]
+				print(title)
+			except:
+				print("Could not find title")
+		return
+
+	# create "source qualities" for each article
+	create_source_qualities=True  
+	if create_source_qualities:
+
+		f=open("quality.tsv","r")
+		qual_dict={}
+		i=0
+		for line in f:
+			i+=1
+			sys.stdout.write("\rCreating qualities dict %d"%i)
+			items=line.strip().split("\t")
+			if len(items)==2:
+				qual_dict[items[0]]=items[1]
+		f.close()
+		sys.stdout.write("\n")
+
+		f=open("links.tsv","r")
+		link_dict={}
+		i=0
+		total_links=0
+		for line in f:
+			i+=1
+			sys.stdout.write("\rCreating links dict %d | Avg. Num: %0.3f"%(i,float(total_links/i)))
+			items=line.strip().split("\t")
+			if len(items)==2:
+				link_dict[items[0]]=items[1].split(" ")
+				total_links += len(items[1].split(" "))
+			else:
+				i+=-1
+
+		f.close()
+		sys.stdout.write("\n")
+
+		link_mapping = {"fa":6,"a":5,"ga":4,"b":3,"c":2,"start":1,"stub":0}
+		link_mapping_rev = {7:"fa",6:"fa",5:"a",4:"ga",3:"b",2:"c",1:"start",0:"stub"}
+
+		f_dest=open("link_quality-ids.tsv","w")
+		j=0
+		dropped=0
+		for article_id,link_ids in link_dict.items():
+			j+=1
+			sys.stdout.write("\rCreating link qualities (%d/%d) | Dropped: %d"%(j,i,dropped))
+			if len(link_ids)<1:
+				dropped+=1
+				continue
+			try:
+				num_links=0
+				link_qualities=0
+				for l in link_ids:
+					try:
+						link_qual = qual_dict[l]
+						link_weight = link_mapping[link_qual]
+						link_qualities+=link_weight
+						num_links+=1
+					except: 
+						continue
+
+				avg_qual = int(float(link_qualities)/float(num_links)+0.5)
+				avg_qual_label = link_mapping_rev[avg_qual]
+				f_dest.write("%s\t%s\n"%(article_id,avg_qual_label))
+
+			except:
+				dropped+=1
+		f_dest.close()
+		sys.stdout.write("\n")
+		return
+
+	push_source_qualities=False 
+	if push_source_qualities:
+
+		command_str = "UPDATE articles as t set"
+		command_str += " source_quality = c.source_quality "
+		command_str += "from (values"
+
+		num_total = len(open("link_quality-string.tsv","r").split("\n"))
+		i=0
+		dropped=0
+		sent=0
+		f=open("link_quality-string.tsv","r")
+		for line in f:
+			i+=1 
+			sys.stdout.write("\rPreparing server data %d | Dropped:%d | Sent:%d"%(i,dropped,sent))
+
+			items=line.strip().split("\t")
+			if len(items)==2:
+				a_title = items[0]
+				qual_str = items[1]
+
+				command = " (\'"+qual_str+"\', "+a_title+")"
+				command_str+=command 
+
+				if i%5000==0 or i==num_total:
+					command_str += " ) as c(source_quality, title) where c.title = t.title;"
+					cursor=server_conn.cursor()
+					cursor.execute(command_str)
+					server_conn.commit()
+					sent+=1 
+
+					command_str = "UPDATE articles as t set"
+					command_str += " source_quality = c.source_quality "
+					command_str += "from (values"
+				else:
+					command_str += ","
+		f.close()
+		sys.stdout.write("\n")
 
 
 	create_deeper_categories=False 
