@@ -2496,6 +2496,7 @@ def get_most_recent_doc2vec(directory="WikiLearn/data/models/doc2vec"):
 def main():
 	start_time = time.time()
 
+
 	# interactive converter from article id to title
 	convert_ids_to_titles=False  
 	if convert_ids_to_titles:
@@ -2521,7 +2522,7 @@ def main():
 		return
 
 	# create "source qualities" for each article
-	create_source_qualities=True  
+	create_source_qualities=False  
 	if create_source_qualities:
 
 		f=open("quality.tsv","r")
@@ -2549,7 +2550,6 @@ def main():
 				total_links += len(items[1].split(" "))
 			else:
 				i+=-1
-
 		f.close()
 		sys.stdout.write("\n")
 
@@ -2571,8 +2571,7 @@ def main():
 				for l in link_ids:
 					try:
 						link_qual = qual_dict[l]
-						link_weight = link_mapping[link_qual]
-						link_qualities+=link_weight
+						link_qualities+=link_mapping[link_qual]
 						num_links+=1
 					except: 
 						continue
@@ -2587,32 +2586,51 @@ def main():
 		sys.stdout.write("\n")
 		return
 
-	push_source_qualities=False 
+	push_source_qualities=True 
 	if push_source_qualities:
+
+		import psycopg2
+		from psycopg2 import connect
+		from bisect import bisect_left
+
+		# connecting to database
+		username = "waynesun95"
+		host = "aa9qiuq51j8l7b.cja4xyhmyefl.us-east-1.rds.amazonaws.com"
+		port = "5432"
+		dbname = "ebdb"
+		password = raw_input("Enter server password: ")
+
+		sys.stdout.write("Trying to connect... ")
+		try:
+			server_conn = connect("user="+username+" host="+host+" port="+port+" password="+password+" dbname="+dbname)
+		except:
+			sys.stdout.write("failure\n")
+			return
+		sys.stdout.write("success\n")
 
 		command_str = "UPDATE articles as t set"
 		command_str += " source_quality = c.source_quality "
 		command_str += "from (values"
 
-		num_total = len(open("link_quality-string.tsv","r").split("\n"))
+		num_total = len(open("link_quality-ids.tsv","r").split("\n"))
 		i=0
 		dropped=0
 		sent=0
-		f=open("link_quality-string.tsv","r")
+		f=open("link_quality-ids.tsv","r")
 		for line in f:
 			i+=1 
 			sys.stdout.write("\rPreparing server data %d | Dropped:%d | Sent:%d"%(i,dropped,sent))
 
 			items=line.strip().split("\t")
 			if len(items)==2:
-				a_title = items[0]
+				a_id = items[0]
 				qual_str = items[1]
 
-				command = " (\'"+qual_str+"\', "+a_title+")"
+				command = " (\'"+qual_str+"\', "+str(a_id)+")"
 				command_str+=command 
 
 				if i%5000==0 or i==num_total:
-					command_str += " ) as c(source_quality, title) where c.title = t.title;"
+					command_str += " ) as c(source_quality, title) where c.id = t.id;"
 					cursor=server_conn.cursor()
 					cursor.execute(command_str)
 					server_conn.commit()
