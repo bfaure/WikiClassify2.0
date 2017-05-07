@@ -2554,7 +2554,7 @@ def main():
 		sys.stdout.write("\n")
 
 		link_mapping = {"fa":6,"a":5,"ga":4,"b":3,"c":2,"start":1,"stub":0}
-		link_mapping_rev = {7:"fa",6:"fa",5:"a",4:"ga",3:"b",2:"c",1:"start",0:"stub"}
+		link_mapping_rev = {7:"Featured",6:"Featured",5:"A-Class",4:"Good",3:"B",2:"C",1:"Start",0:"Stub"}
 
 		f_dest=open("link_quality-ids.tsv","w")
 		j=0
@@ -2612,7 +2612,7 @@ def main():
 		command_str += " source_quality = c.source_quality "
 		command_str += "from (values"
 
-		num_total = len(open("link_quality-ids.tsv","r").split("\n"))
+		num_total = len(open("link_quality-ids.tsv","r").read().split("\n"))
 		i=0
 		dropped=0
 		sent=0
@@ -2630,7 +2630,7 @@ def main():
 				command_str+=command 
 
 				if i%5000==0 or i==num_total:
-					command_str += " ) as c(source_quality, title) where c.id = t.id;"
+					command_str += " ) as c(source_quality, id) where c.id = t.id;"
 					cursor=server_conn.cursor()
 					cursor.execute(command_str)
 					server_conn.commit()
